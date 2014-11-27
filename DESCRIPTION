@@ -1,4 +1,4 @@
-Package: moddicomV3
+Package: moddicom
 Type: Package
 Title: handles DICOM files in order to handle voxels, shapes, and meshes.
 Version: 0.4
