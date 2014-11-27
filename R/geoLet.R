@@ -1,6 +1,6 @@
 # Help is needed
 # please enter an Help
-# according with CRAN and R packages policies 
+# according with CRAN and R packages policies
 geoLet<-function() {
   
   dataStorage<-list();          # Attribute with ALL the data
