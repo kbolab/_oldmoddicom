@@ -1,6 +1,9 @@
-# Help is needed
-# please enter an Help
-# modifica di Roberto (2)
+#' class for handling DICOM files (load, etc.)
+#' 
+#' @param 
+#' @description   Instantiate an object of the class \code{geoLet}.
+#' @import stringr XML
+#' @export
 geoLet<-function() {
   
   dataStorage<-list();          # Attribute with ALL the data
