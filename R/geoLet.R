@@ -1,5 +1,6 @@
 # Help is needed
 # please enter an Help
+# modifica di Roberto
 geoLet<-function() {
   
   dataStorage<-list();          # Attribute with ALL the data
