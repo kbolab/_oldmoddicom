@@ -1,0 +1,15 @@
+Package: moddicomV3
+Type: Package
+Title: handles DICOM files in order to handle voxels, shapes, and meshes.
+Version: 0.4
+Date: 2014-11-26
+Author: Nicola Dinapoli, Roberto Gatta
+Maintainer: Nicola Dinapoli <nicola.dinapoli.74@gmail.com>
+Description: Allows to load DICOM CT scans, RTStruct, RTDose and RTPlan, CT,
+    RMN. The aim is to give a tool to make dose analysis, handle voxels and ROI
+    in a 3D space.
+License: GPL-2
+Imports:
+    XML (>= 3.98-1.1),
+    stringr (>= 0.6.2)
+NeedsCompilation: yes
