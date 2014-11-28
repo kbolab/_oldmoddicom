@@ -1,6 +1,5 @@
 #' class for handling DICOM files (load, etc.)
 #' 
-#' @param 
 #' @description   Instantiate an object of the class \code{geoLet}.
 #' @import stringr XML
 #' @export
