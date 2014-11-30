@@ -3,12 +3,13 @@
 \alias{moddicom}
 \docType{package}
 \title{
-What the package does (short line)
-It allows to handle DICOM files in order to extract/calculate and do statistical inference on DVHs
+DICOM RT files handler, dose/response models creation, ROI voxels analyzer
 }
 \description{
-More about what it does (maybe more than one line)
-~~ A concise (1-5 lines) description of the package ~~
+This package allows to load DICOM CT scans, MRIs, RTStruct, RTDose
+and RTPlan. The aim of the package is to give a tool to perform
+radiaotherapy dose analysis, handle voxels and ROI in a 3D space. A list of
+wrappers for performing dose-response models analysis and fitting is given.
 }
 \details{
 \tabular{ll}{

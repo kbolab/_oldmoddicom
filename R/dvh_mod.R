@@ -33,7 +33,7 @@ HI.generate<-function(dvh.number, type=c("random","convex","concave","mix"),
   volumes<-runif(n = dvh.number, min = min.vol, max = max.vol)
   volbin.num<-round(volumes/((volbin.side/10)^3)) # number of bins for each volume
   convex.dvh<-function(n) {
-    return(rnorm(n = n, mean = runif(n = 1, min = max.dose - (max.dose/10), max = max.dose), sd = 5))
+    return(rnorm(n = n, mean = runif(n = 1, min = max.dose - (max.dose/10), max = max.dose), sd = 2.5))
   }
-  return(cbind(convex.dvh(volbin.num)))
+  return(sapply(X = volbin.num, FUN = convex.dvh))
 }
