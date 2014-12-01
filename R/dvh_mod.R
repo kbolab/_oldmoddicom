@@ -27,13 +27,23 @@ HI.generate<-function(dvh.number, type=c("random","convex","concave","mix"),
                       max.dose = 75, dose.bin = 0.5, volbin.side = 2.5, min.vol=180, max.vol=220) {
   if (min.vol<2) {
     warning("Minimum volumes under 2 cc aren't allowed, min.vol set to 2.")
-    min.vol<-2
+    min.vol <- 2
   }
+  if (max.dose <= 10) stop("max.dose must by higher than 10 Gy")
   # create the vector of volumes
-  volumes<-runif(n = dvh.number, min = min.vol, max = max.vol)
-  volbin.num<-round(volumes/((volbin.side/10)^3)) # number of bins for each volume
-  convex.dvh<-function(n) {
-    return(rnorm(n = n, mean = runif(n = 1, min = max.dose - (max.dose/10), max = max.dose), sd = 2.5))
+  volumes <- runif(n = dvh.number, min = min.vol, max = max.vol)
+  volbin.num <- round(volumes/((volbin.side/10)^3)) # number of bins for each volume
+  # function for generating convex DVHs voxels series
+  convex.dvh <- function(n) {
+    mean.dose <- runif(n = 1, min = max.dose - (max.dose/4), max = max.dose)
+    sd.dose <- (max.dose - mean.dose)/2.5
+    return(rnorm(n = n, mean = mean.dose, sd = sd.dose))
   }
-  return(sapply(X = volbin.num, FUN = convex.dvh))
+  # function for generating concave DVHs voxels series
+  concave.dvh <- function(n) {
+    mean.dose <- runif(n = 1, min = 2, max = max(10, max.dose/4))
+    
+  }
+  # voxels creation
+  dose.voxels<-sapply(X = volbin.num, FUN = convex.dvh)
 }
