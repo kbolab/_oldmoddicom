@@ -22,7 +22,7 @@
 #' @references Van den Heuvela F. \emph{Decomposition analysis of differential dose volume histograms.} Med Phys. 2006 Feb;33(2):297-307. PubMed PMID: 16532934.
 #' @return An object of \code{"dvhmatrix"} class.
 #' @export
-HI.generate<-function(dvh.number, type=c("random","convex","concave","mix"), 
+DVH.generate<-function(dvh.number, type=c("random","convex","concave","mix"), 
                       dvh.type=c("differential", "cumulative"), vol.distr=c("relative", "absolute"),
                       max.dose = 75, dose.bin = 0.5, volbin.side = 2.5, min.vol=180, max.vol=220) {
   if (min.vol<2) {
@@ -42,8 +42,16 @@ HI.generate<-function(dvh.number, type=c("random","convex","concave","mix"),
   # function for generating concave DVHs voxels series
   concave.dvh <- function(n) {
     mean.dose <- runif(n = 1, min = 2, max = max(10, max.dose/4))
-    
+    sd.dose <- mean.dose/3
+    result<-rnorm(n = n, mean = mean.dose, sd = sd.dose)
+    # takes only the voxels with dose>=0
+    result<-result[which(result>=0)];browser()
+    # adds more voxels to reach the expected number with random uniform distribution
+    result<-c(result, runif(n = n - length(result), min = 0, max = 2*mean.dose))
   }
   # voxels creation
-  dose.voxels<-sapply(X = volbin.num, FUN = convex.dvh)
+  type <- match.arg(type)
+  if (type=="convex") dose.voxels<-sapply(X = volbin.num, FUN = convex.dvh)
+  if (type=="concave") dose.voxels<-sapply(X = volbin.num, FUN = concave.dvh)
+  return(dose.voxels)
 }
