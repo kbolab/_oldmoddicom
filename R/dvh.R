@@ -31,14 +31,14 @@ convex.dvh <- function(convex.mind = 0, convex.maxd = 75, convex.dsbin = 0.5)
 # }
 
 # function for creating concave DVHs
-concave.dvh <- function(concave.mind = 0, concave.maxd = 75, concave.dsbin = 0.5, sdadd = 2.5, meanpos=.1)
-{
-  nbins <- concave.maxd/concave.dsbin                                # calculation of bin numbers
-  concave.maxd <- (concave.maxd - concave.mind) * meanpos            # decreases the maxdose using mean position
-  meandose <- runif(1, concave.mind, concave.maxd)                   # mean dose calculation
-  sddose <- (concave.maxd - meandose) * runif(1) + sdadd             # standard deviation plus addendum to smooth DVH
-  temp.dvh <- dnorm(c(1:nbins)*concave.dsbin,meandose,sddose)        # temporary DVH
-}
+# concave.dvh <- function(concave.mind = 0, concave.maxd = 75, concave.dsbin = 0.5, sdadd = 2.5, meanpos=.1)
+# {
+#   nbins <- concave.maxd/concave.dsbin                                # calculation of bin numbers
+#   concave.maxd <- (concave.maxd - concave.mind) * meanpos            # decreases the maxdose using mean position
+#   meandose <- runif(1, concave.mind, concave.maxd)                   # mean dose calculation
+#   sddose <- (concave.maxd - meandose) * runif(1) + sdadd             # standard deviation plus addendum to smooth DVH
+#   temp.dvh <- dnorm(c(1:nbins)*concave.dsbin,meandose,sddose)        # temporary DVH
+# }
 
 # function for creating DVH with 2 mixed series
 mix2.dvh <- function(mind = 0, maxd = 75, dsbin = 0.5)
