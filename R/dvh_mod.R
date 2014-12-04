@@ -85,6 +85,7 @@ DVH.generate<-function(dvh.number, type=c("random","convex","concave","mix"),
 
 
 
+
 extractDVH<-function(x, maxDose=NULL, stepDose=.25, dvh.type=c("differential","cumulative"), 
                      vol.distr=c("relative","absolute"), createObj=FALSE, VolBin=0.015625) {
   # default VolBin is given in cm3
