@@ -63,11 +63,43 @@ DVH.generate<-function(dvh.number, type=c("random","convex","concave","mix"),
     result<-result[which(result>=0)]    
     # compensate the negative values when available
     return(c(result, runif(n = n - length(result), min = 0, max = max.dose)))    
-  }  
+  }
+  # function that creates random DVHs according the previous three given functions
+  random.dvh <- function(n) {
+    FUN <- sample(x = c(convex.dvh, concave.dvh, mix.dvh), size = 1, replace = T)
+    return(FUN[[1]](n))
+  }
+  
   # voxels creation
   type <- match.arg(type)
   if (type=="convex") dose.voxels<-sapply(X = volbin.num, FUN = convex.dvh)
   if (type=="concave") dose.voxels<-sapply(X = volbin.num, FUN = concave.dvh)
   if (type=="mix") dose.voxels<-sapply(X = volbin.num, FUN = mix.dvh)
+  if (type=="random") dose.voxels<-sapply(X = volbin.num, FUN = random.dvh)
+  VolBin<-volbin.side^3/1000 # Volume Bin in cc
+  # creates the vector of structures volumes
+  volume<-unlist(lapply(X = dose.voxels, FUN = function(x) VolBin * length(x))) 
+  
   return(dose.voxels)
+}
+
+
+
+extractDVH<-function(x, maxDose=NULL, stepDose=.25, dvh.type=c("differential","cumulative"), 
+                     vol.distr=c("relative","absolute"), createObj=FALSE, VolBin=0.015625) {
+  # default VolBin is given in cm3
+  TotalVol<-length(x)*VolBin
+  dvh.type=match.arg(dvh.type)
+  vol.distr=match.arg(vol.distr)
+  if (is.null(x=maxDose)) maxDose<-max(x)+stepDose*4
+  h<-hist(x=x, breaks=seq(from=0, to=maxDose,by=stepDose), plot=FALSE)
+  diff<-cbind(h$mids, h$density/sum(h$density)*TotalVol)
+  # return matrix without dvhmatrix class structure
+  if ((dvh.type=="differential") && (vol.distr=="absolute"))  final.matrix<-diff
+  if ((dvh.type=="differential") && (vol.distr=="relative"))  final.matrix<-rel.diff.dvh(diff)
+  if ((dvh.type=="cumulative")   && (vol.distr=="absolute"))  final.matrix<-cum.dvh(dvh.matrix=diff, relative=FALSE)
+  if ((dvh.type=="cumulative")   && (vol.distr=="relative"))  final.matrix<-cum.dvh(dvh.matrix=diff, relative=TRUE)
+  if (createObj=="FALSE") return(final.matrix)
+  # return matrix within a dvhmatrix object
+  if (createObj==TRUE) return(new("dvhmatrix", dvh=final.matrix, dvh.type=dvh.type, vol.distr=vol.distr, volume=TotalVol))  
 }
