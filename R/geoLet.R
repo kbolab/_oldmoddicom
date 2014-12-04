@@ -450,6 +450,6 @@ GL.plot<-function() {
 #  Examples
 # --------------------------------------------------------------------------------------------------------------------
 
-obj<-geoLet()
-obj$setAttribute("verbose",list("lv1"=TRUE,"lv2"=TRUE))
-obj$openDICOMFolder("/progetti/immagini/Positive/POST/DAgostini")
+#obj<-geoLet()
+#obj$setAttribute("verbose",list("lv1"=TRUE,"lv2"=TRUE))
+#obj$openDICOMFolder("/progetti/immagini/Positive/POST/DAgostini")
