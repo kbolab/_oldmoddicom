@@ -45,13 +45,29 @@ DVH.generate<-function(dvh.number, type=c("random","convex","concave","mix"),
     sd.dose <- mean.dose/3
     result<-rnorm(n = n, mean = mean.dose, sd = sd.dose)
     # takes only the voxels with dose>=0
-    result<-result[which(result>=0)];browser()
+    result<-result[which(result>=0)]
     # adds more voxels to reach the expected number with random uniform distribution
-    result<-c(result, runif(n = n - length(result), min = 0, max = 2*mean.dose))
+    return(c(result, runif(n = n - length(result), min = 0, max = 2*mean.dose)))
   }
+  # function for creating mix DVHs voxels series
+  mix.dvh <- function(n) {
+    contrib<-c(runif(n = 1, min = .2, max = .6), runif(n = 1, min = 0, max = .3))
+    # proportions in contributions to final DVH
+    contrib<-c(contrib[1], 1 - sum(contrib), contrib[2])
+    part1<-concave.dvh(n = round(contrib[1] * n))
+    part3<-convex.dvh(n = round(contrib[3] * n))
+    part2<-rnorm(n = n - (length(part1) + length(part3)), 
+                 mean = runif(n = 1, min = max.dose/10, max = max.dose - max.dose/10), 
+                 sd = runif(n = 1, min = max.dose/10, max = max.dose/5))
+    result<-c(part1, part2, part3)
+    result<-result[which(result>=0)]    
+    # compensate the negative values when available
+    return(c(result, runif(n = n - length(result), min = 0, max = max.dose)))    
+  }  
   # voxels creation
   type <- match.arg(type)
   if (type=="convex") dose.voxels<-sapply(X = volbin.num, FUN = convex.dvh)
   if (type=="concave") dose.voxels<-sapply(X = volbin.num, FUN = concave.dvh)
+  if (type=="mix") dose.voxels<-sapply(X = volbin.num, FUN = mix.dvh)
   return(dose.voxels)
 }
