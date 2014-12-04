@@ -2,5 +2,6 @@
 
 export(DVH.generate)
 export(geoLet)
+export(logHandler)
 import(XML)
 import(stringr)

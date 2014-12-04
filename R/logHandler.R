@@ -1,3 +1,7 @@
+#' class for handling DICOM files (load, etc)
+#' 
+#' @description  Instantiate an object of the class \code{geoLet}.
+#' @export
 logHandler<-function() {
   onScreen<-TRUE;
   onFile<-FALSE;

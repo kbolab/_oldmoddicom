@@ -1,15 +1,16 @@
 #' class for handling DICOM files (load, etc)
 #' 
-#' @description   Instantiate an object of the class \code{geoLet}.
-#' @import stringr XML
+#' @description  Instantiate an object of the class \code{geoLet}.
+#' @import stringr XML 
 #' @export
 geoLet<-function() {
-  
+
   dataStorage<-list();          # Attribute with ALL the data
   dataChache<-list();           # Cache (internal use)
   SOPClassUIDList<-list();      # SOPClassUIDList
   attributeList<-list()
   logObj<-list()               # log handler
+  objServ<-list();
   
   # ------------------------------------------------
   # openDICOMFolder
@@ -105,7 +106,7 @@ geoLet<-function() {
       for(k in names(dataStorage$structures)) {
         for(t in names(dataStorage$structures[[k]])) {
           punto<-dataStorage$structures[[k]][[t]][[1]][1,]
-          distanza<-SV.getPointPlaneDistance(Punto=punto, Piano=planes[[i]])
+          distanza<-objServ$SV.getPointPlaneDistance(Punto=punto, Piano=planes[[i]])
           
           if( abs(distanza)<0.1 ) {
             if(dataStorage$info[[1]][[i]][["ROIList"]][1]==''  ) {
@@ -172,10 +173,10 @@ geoLet<-function() {
               immagine<-getDICOMTag(i,"7fe0,0010");
               # three points to find out plane equation
               Pa<-c(oM[1,4],oM[2,4],oM[3,4])  
-              Pb<-SV.get3DPosFromNxNy(1000,0,oM)
-              Pc<-SV.get3DPosFromNxNy(0,1000,oM)
+              Pb<-objServ$SV.get3DPosFromNxNy(1000,0,oM)
+              Pc<-objServ$SV.get3DPosFromNxNy(0,1000,oM)
 
-              abcd<-SV.getPlaneEquationBetween3Points(Pa,Pb,Pc) 
+              abcd<-objServ$SV.getPlaneEquationBetween3Points(Pa,Pb,Pc) 
                 
               piano<-matrix(abcd,nrow=1)
               colnames(piano)<-c("a","b","c","d")
@@ -402,6 +403,8 @@ geoLet<-function() {
     attributeList$verbose<<-list("lv1"=TRUE,"lv2"=TRUE,"lv3"=FALSE,"onScreen"=TRUE,"onFile"=FALSE)
     logObj<<-logHandler()
     logObj$setOutput( onScreen = attributeList$verbose$onScreen,   onFile = attributeList$verbose$onFile   )
+    
+    objServ<<-services()
   }
   constructor()
   return(list(openDICOMFolder=openDICOMFolder,getAttribute=getAttribute,getPlanningSeries=getPlanningSeries,
@@ -447,6 +450,6 @@ GL.plot<-function() {
 #  Examples
 # --------------------------------------------------------------------------------------------------------------------
 
-#obj<-geoLet()
-#obj$setAttribute("verbose",list("lv1"=TRUE,"lv2"=TRUE))
-#obj$openDICOMFolder("/progetti/immagini/Positive/POST/DAgostini")
+obj<-geoLet()
+obj$setAttribute("verbose",list("lv1"=TRUE,"lv2"=TRUE))
+obj$openDICOMFolder("/progetti/immagini/Positive/POST/DAgostini")
