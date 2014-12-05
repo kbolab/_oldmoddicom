@@ -79,7 +79,14 @@ DVH.generate<-function(dvh.number, type=c("random","convex","concave","mix"),
   VolBin<-volbin.side^3/1000 # Volume Bin in cc
   # creates the vector of structures volumes
   volume<-unlist(lapply(X = dose.voxels, FUN = function(x) VolBin * length(x))) 
-  
+  result<-new(dvhmatrix)
+  # creates the dvhmatrix object
+  result@dvh.type<-dvh.type
+  result@vol.distr<-vol.distr
+  result@volume<-volume
+  if (dvh.type=="differential") {
+    
+  }
   return(dose.voxels)
 }
 
