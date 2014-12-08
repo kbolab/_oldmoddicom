@@ -35,7 +35,7 @@ DVH.generate<-function(dvh.number, type=c("random","convex","concave","mix"),
   volbin.num <- round(volumes/((volbin.side/10)^3)) # number of bins for each volume
   # function for generating convex DVHs voxels series
   convex.dvh <- function(n) {
-    mean.dose <- runif(n = 1, min = max.dose - (max.dose/4), max = max.dose)
+    mean.dose <- runif(n = 1, min = max.dose - (max.dose/4), max = max.dose - max.dose/8)
     sd.dose <- (max.dose - mean.dose)/2.5
     return(rnorm(n = n, mean = mean.dose, sd = sd.dose))
   }
@@ -57,8 +57,8 @@ DVH.generate<-function(dvh.number, type=c("random","convex","concave","mix"),
     part1<-concave.dvh(n = round(contrib[1] * n))
     part3<-convex.dvh(n = round(contrib[3] * n))
     part2<-rnorm(n = n - (length(part1) + length(part3)), 
-                 mean = runif(n = 1, min = max.dose/10, max = max.dose - max.dose/10), 
-                 sd = runif(n = 1, min = max.dose/10, max = max.dose/5))
+                 mean = runif(n = 1, min = max.dose/12, max = max.dose - max.dose/5), 
+                 sd = runif(n = 1, min = max.dose/15, max = max.dose/9))
     result<-c(part1, part2, part3)
     result<-result[which(result>=0)]    
     # compensate the negative values when available
@@ -86,13 +86,17 @@ DVH.generate<-function(dvh.number, type=c("random","convex","concave","mix"),
   result@dvh.type<-dvh.type
   result@vol.distr<-vol.distr
   result@volume<-volume
+  #browser()
   # creates the list of differential histograms
-  hlist<-lapply(X = dose.voxels, FUN = hist, breaks = seq(from = 0, to = max(volume, max.dose), by = dose.bin), plot = FALSE)
+  hlist<-lapply(X = dose.voxels, FUN = hist, 
+                breaks = seq(from = 0, to = max(c(unlist(lapply(X = dose.voxels, FUN = max))) + dose.bin * 4, 
+                             max.dose), by = dose.bin), plot = FALSE)
   if ((dvh.type=="differential") && (vol.distr=="absolute"))
+    result@dvh<-cbind(hlist[[1]]$mids, sapply(X = hlist, FUN = function(x) cbind(x$counts * VolBin), simplify = TRUE, USE.NAMES = FALSE))
 
-  browser()
+  
 
-  return(hlist)
+  return(result)
 }
 
 
