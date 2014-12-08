@@ -4,6 +4,7 @@
 #' @slot dvh.type A character slot giving the \code{"cumulative"} or \code{"differential"} representation of the volume(s).
 #' @slot vol.distr A character slot setting the \code{"absolute"} or \code{"relative"} value of the volume(s).
 #' @slot volume A numeric vector giving the value(s) of the total volume(s) of the structure(s) in the DVH(s).
+#' @exportClass dvhmatrix
 
 setClass("dvhmatrix", 
          representation(

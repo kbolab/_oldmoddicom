@@ -3,5 +3,6 @@
 export(DVH.generate)
 export(geoLet)
 export(logHandler)
+exportClasses(dvhmatrix)
 import(XML)
 import(stringr)

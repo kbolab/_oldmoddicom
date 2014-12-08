@@ -79,15 +79,20 @@ DVH.generate<-function(dvh.number, type=c("random","convex","concave","mix"),
   VolBin<-volbin.side^3/1000 # Volume Bin in cc
   # creates the vector of structures volumes
   volume<-unlist(lapply(X = dose.voxels, FUN = function(x) VolBin * length(x))) 
-  result<-new(dvhmatrix)
+  result<-new("dvhmatrix")
   # creates the dvhmatrix object
+  dvh.type<-match.arg(arg = dvh.type)
+  vol.distr<-match.arg(arg = vol.distr)
   result@dvh.type<-dvh.type
   result@vol.distr<-vol.distr
   result@volume<-volume
-  if (dvh.type=="differential") {
-    
-  }
-  return(dose.voxels)
+  # creates the list of differential histograms
+  hlist<-lapply(X = dose.voxels, FUN = hist, breaks = seq(from = 0, to = max(volume, max.dose), by = dose.bin), plot = FALSE)
+  if ((dvh.type=="differential") && (vol.distr=="absolute"))
+
+  browser()
+
+  return(hlist)
 }
 
 
