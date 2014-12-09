@@ -111,7 +111,7 @@ DVH.generate<-function(dvh.number, type=c("random","convex","concave","mix"),
 #' @return Either an object of class \code{dvhmatrix} or a \code{matrix} according the argument \code{dvh}.
 #' @export
 DVH.diff.to.cum <- function(dvh, relative=TRUE) {
-  if ((!is.matrix(dvh))&&(class(dvh)!="dvhmatrix")) stop("dvh MUST be either an bobject of class dvhmatrix or a matrix")
+  if ((!is.matrix(dvh))&&(class(dvh)!="dvhmatrix")) stop("dvh MUST be either an object of class dvhmatrix or a matrix")
   if (class(dvh)=="dvhmatrix") dvh.matrix<-dvh@dvh else dvh.matrix<-dvh  
   dvh.size <- dim(dvh.matrix)
   DVHList <- matrix(nrow=dvh.size[1] + 1, ncol=dvh.size[2])   # create the matrix of cumulative DVHs     
@@ -140,6 +140,37 @@ DVH.diff.to.cum <- function(dvh, relative=TRUE) {
   } else return(DVHList)
 }
 
+
+#' Function that converts cumulative DVHs into differential ones
+#' 
+#' @param dvh Either an object of class \code{dvhmatrix} or \code{matrix} type.
+#' @param relative If \code{TRUE} the structure volume bins are divided by the total volume.
+#' @description Function that converts an object of class \code{dvhmatrix} or a simple \code{matrix} that 
+#'              represents a cumulative DVH into a differential one.
+#' @return Either an object of class \code{dvhmatrix} or a \code{matrix} according the argument \code{dvh}.
+#' @export
+DVH.cum.to.diff <- function(dvh, relative=TRUE) {
+  if ((!is.matrix(dvh))&&(class(dvh)!="dvhmatrix")) stop("dvh MUST be either an object of class dvhmatrix or a matrix")
+  if (class(dvh)=="dvhmatrix") dvh.matrix<-dvh@dvh else dvh.matrix<-dvh
+  dvh.size <- dim(dvh.matrix)
+  DVHList <- matrix(nrow=dvh.size[1] - 1, ncol=dvh.size[2])   # create the matrix of differential DVHs
+  for (m in 2:dvh.size[2]) {                                  # loop for columns (volumes)
+    total.volume<-dvh.matrix[1,m]                             # set total volume to 1st element of the cumulative DVH
+    for (n in 2:dvh.size[1]) {                                # loop for rows
+      if (relative==TRUE) DVHList[n-1,m] <- (dvh.matrix[n-1,m]-dvh.matrix[n,m])/total.volume # calculate differential volume
+      else DVHList[n-1,m] <- (dvh.matrix[n-1,m]-dvh.matrix[n,m])   # differential volume for absolute distribution
+    }    
+  }       
+  for (m in 2:dvh.size[1]) {                                   # loop for column of dose values
+    DVHList[m-1,1]<-dvh.matrix[m-1,1]+(dvh.matrix[m,1]-dvh.matrix[m-1,1])/2 # sets the dose values
+  }
+  if (class(dvh)=="dvhmatrix") {
+    dvh@dvh<-DVHList
+    dvh@dvh.type<-"differential"
+    if (relative==TRUE) dvh@vol.distr<-"relative" else dvh@vol.distr<-"absolute"
+    return(dvh)
+  } else return(DVHList)
+}
 
 
 extractDVH<-function(x, maxDose=NULL, stepDose=.25, dvh.type=c("differential","cumulative"), 
