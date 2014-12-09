@@ -1,4 +1,4 @@
-#' Function that creates DVH matrix, 1st column is the dose bins, other columns are volume steps
+#' Function that creates a \code{dvhmatrix} class object
 #' 
 #' @param dvh.number The number of DVHs to be generated
 #' @param type The type of DVH to be generated: \code{random} generates all possible variation in dose distribution, 
@@ -21,6 +21,12 @@
 #'          class objects.
 #' @references Van den Heuvela F. \emph{Decomposition analysis of differential dose volume histograms.} Med Phys. 2006 Feb;33(2):297-307. PubMed PMID: 16532934.
 #' @return An object of \code{dvhmatrix} class.
+#' @examples # creates a dvhmatrix object with 200 differential - relative histograms
+#' a<-DVH.generate(dvh.number=200, dvh.type="differential", vol.distr="relative")
+#' 
+#' # creates a dvhmatrix object containing 150 cumulative - absolute histograms
+#' # maximum dose in simulated series is 60 Gy
+#' b<-DVH.generate(dvh.number=150, dvh.type="cumulative", vol.distr="absolute", max.dose=60)
 #' @export
 DVH.generate<-function(dvh.number, type=c("random","convex","concave","mix"), 
                       dvh.type=c("differential", "cumulative"), vol.distr=c("relative", "absolute"),
@@ -113,6 +119,7 @@ DVH.generate<-function(dvh.number, type=c("random","convex","concave","mix"),
 DVH.diff.to.cum <- function(dvh, relative=TRUE) {
   if ((!is.matrix(dvh))&&(class(dvh)!="dvhmatrix")) stop("dvh MUST be either an object of class dvhmatrix or a matrix")
   if (class(dvh)=="dvhmatrix") dvh.matrix<-dvh@dvh else dvh.matrix<-dvh  
+  if (class(dvh)=="dvhmatrix") if (dvh@dvh.type=="cumulative") stop("dvh object is already a cumulative DVH")
   dvh.size <- dim(dvh.matrix)
   DVHList <- matrix(nrow=dvh.size[1] + 1, ncol=dvh.size[2])   # create the matrix of cumulative DVHs     
   for (m in 2:dvh.size[2]) {                                  # loop for columns (volumes) 
@@ -152,6 +159,7 @@ DVH.diff.to.cum <- function(dvh, relative=TRUE) {
 DVH.cum.to.diff <- function(dvh, relative=TRUE) {
   if ((!is.matrix(dvh))&&(class(dvh)!="dvhmatrix")) stop("dvh MUST be either an object of class dvhmatrix or a matrix")
   if (class(dvh)=="dvhmatrix") dvh.matrix<-dvh@dvh else dvh.matrix<-dvh
+  if (class(dvh)=="dvhmatrix") if (dvh@dvh.type=="differential") stop("dvh object is already a differential DVH")
   dvh.size <- dim(dvh.matrix)
   DVHList <- matrix(nrow=dvh.size[1] - 1, ncol=dvh.size[2])   # create the matrix of differential DVHs
   for (m in 2:dvh.size[2]) {                                  # loop for columns (volumes)
@@ -172,22 +180,39 @@ DVH.cum.to.diff <- function(dvh, relative=TRUE) {
   } else return(DVHList)
 }
 
-
-extractDVH<-function(x, maxDose=NULL, stepDose=.25, dvh.type=c("differential","cumulative"), 
-                     vol.distr=c("relative","absolute"), createObj=FALSE, VolBin=0.015625) {
+#' Extracts a DVH from a vector of dose bins
+#' @param x vector of dose bins.
+#' @param max.dose Upper dose bound for limiting the DVH computation.
+#' @param dose.bin The dose bin for DVH computation in Gy.
+#' @param dvh.type The type of volume distribution to be created: \code{differential} or \code{cumulative}.
+#' @param vol.distr Defines if the volume bins have to be divided by the total volume of the structure (\code{relative}) or not (\code{absolute}).
+#' @param createObj if \code{TRUE} returns a \code{dvhmatrix} class object.
+#' @param volbin.side The value of the side of each cube (in mm) that builds the final volume of the structure.
+#' @description Function that given a vector of dose bins (either a vector got from sampling a 3D mesh or a vector of
+#' simple values of dose) extracts the DVH that summarizes that vector.
+#' @return Either an object of class \code{dvhmatrix} or a \code{matrix} according the argument \code{dvh} type.
+#' @examples # creates a vector of doses
+#' doses <- c(rnorm(n = 10000, mean = 45, sd = 3), rnorm(n = 7000, mean = 65, sd = 2.5))
+#' 
+#' # creates a dvhmatrix class object
+#' DVH<-DVH.extract(x = doses)
+#' @export
+DVH.extract<-function(x, max.dose=NULL, dose.bin=.25, dvh.type=c("differential","cumulative"), 
+                     vol.distr=c("relative","absolute"), createObj=TRUE, volbin.side=2.5) {
   # default VolBin is given in cm3
+  VolBin<-(volbin.side/10)^3 
   TotalVol<-length(x)*VolBin
   dvh.type=match.arg(dvh.type)
   vol.distr=match.arg(vol.distr)
-  if (is.null(x=maxDose)) maxDose<-max(x)+stepDose*4
-  h<-hist(x=x, breaks=seq(from=0, to=maxDose,by=stepDose), plot=FALSE)
+  if (is.null(x=max.dose)) max.dose<-max(x)+dose.bin*4
+  h<-hist(x=x, breaks=seq(from=0, to=max.dose,by=dose.bin), plot=FALSE)
   diff<-cbind(h$mids, h$density/sum(h$density)*TotalVol)
   # return matrix without dvhmatrix class structure
   if ((dvh.type=="differential") && (vol.distr=="absolute"))  final.matrix<-diff
   if ((dvh.type=="differential") && (vol.distr=="relative"))  final.matrix<-rel.diff.dvh(diff)
   if ((dvh.type=="cumulative")   && (vol.distr=="absolute"))  final.matrix<-cum.dvh(dvh.matrix=diff, relative=FALSE)
   if ((dvh.type=="cumulative")   && (vol.distr=="relative"))  final.matrix<-cum.dvh(dvh.matrix=diff, relative=TRUE)
-  if (createObj=="FALSE") return(final.matrix)
+  if (createObj==FALSE) return(final.matrix)
   # return matrix within a dvhmatrix object
   if (createObj==TRUE) return(new("dvhmatrix", dvh=final.matrix, dvh.type=dvh.type, vol.distr=vol.distr, volume=TotalVol))  
 }

@@ -2,6 +2,7 @@
 
 export(DVH.cum.to.diff)
 export(DVH.diff.to.cum)
+export(DVH.extract)
 export(DVH.generate)
 export(geoLet)
 export(logHandler)
