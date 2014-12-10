@@ -1,4 +1,4 @@
-#' class for handling DICOM files and present dat in an ordered way
+#' class for loading and presenting DICOM data
 #' 
 #' @description  Instantiate an object of the class \code{geoLet}.This represents just the classname, 
 #'               for each instantiated object many methods are available, not in canonical S3 or S4.
