@@ -267,3 +267,21 @@ DVH.absolute<-function(dvh) {
   dvh@vol.distr<-"absolute"
   return(dvh)
 }
+
+#' Calculates Equivalent Uniform Dose for a \code{dvhmatrix} object
+#' @param dvh A \code{dvhmatrix} class object
+#' @param a Factor for parallel-serial correlation in radiobiological response
+#' @description Function that calculates the value of Equivalent Uniform Dose (EUD) for a \code{dvhmatrix} object.
+#' @return A vector containing the values of EUD(s) for the given DVH(s)
+#' @export
+#' @useDynLib moddicom
+DVH.eud<-function(dvh, a = 1) {
+  Ncol<-ncol(dvh@dvh) - 1
+  Nrow<-nrow(dvh@dvh)
+  ceud<-rep.int(x = 0, times = Ncol) 
+  dosebin<-dvh@dvh[,1]
+  volumebin<-dvh@dvh[,2:(Ncol + 1)]
+  result<-.C("cEUD", as.double(dosebin), as.double(volumebin), as.double(a), as.integer(Nrow), 
+             as.integer(Ncol), as.double(ceud))
+  return(result[[6]])
+}
