@@ -1,6 +1,45 @@
-#' class for handling DICOM files (load, etc)
+#' class for handling DICOM files and present dat in an ordered way
 #' 
-#' @description  Instantiate an object of the class \code{geoLet}.
+#' @description  Instantiate an object of the class \code{geoLet}.This represents just the classname, 
+#'               for each instantiated object many methods are available, not in canonical S3 or S4.
+#'               
+#'               Many methods are available for objects built from this class:
+#'               \itemize{
+#'               \item \code{openDICOMFolder(pathToOpen)} 
+#'               \cr\cr is a method used to open an indicated folder. This method loads all the DICOM objects within
+#'               the given folder (without recursion) and build and internal model, in memory, storing it into
+#'               private attributes of the object. Information can be retrieved using \code{getAttribute} method or 
+#'               more specific methods.
+#'               \cr
+#'               \item \code{getAttribute(attribute,seriesInstanceUID="",fileName="")} 
+#'               \cr\cr Is a method used to get internal attributes. Allowed values fot \code{attributes} are:
+#'               
+#'               \itemize{
+#'                 \item \code{\emph{dataStorage}} : return a structured list with all the information retrieved from the 
+#'                 DICOM object in the folder. More detailed information about the structur of the returned list
+#'                 are available at <inserire link>
+#'                 \item \code{\emph{ROIPointList}} : return the ROI point List for all the stored ROIs;
+#'                 \item \code{\emph{PatientName}} : return the content of the (0010,0010) DICOM tag(*);
+#'                 \item \code{\emph{PatientID}} : return the content of the (0010,0020) DICOM tag(*);
+#'                 \item \code{\emph{Rows}} : return the content of the (0028,0010) DICOM tag(*);
+#'                 \item \code{\emph{Columns}} : return the content of the (0028,0011) DICOM tag(*);
+#'                 \item \code{\emph{StudyDate}} : return the content of the (0028,0011) DICOM tag(*);
+#'                 \item \code{\emph{Modality}} : return the content of the (0008,0060) DICOM tag(*);
+#'                 \item \code{\emph{PatientSex}} : return the content of the (0010,0040) DICOM tag(*);
+#'                 \item \code{\emph{SeriesInstanceUID}} : return the content of the (0020,000e) DICOM tag(*);
+#'                 \item \code{\emph{SliceThickness}} : return the content of the (0018,0050) DICOM tag(*);
+#'                 \item \code{\emph{ImagePositionPatient}} : return the content of the (0020,0032) DICOM tag(*);
+#'                 \item \code{\emph{ImageOrientationPatient}} : return the content of the (0020,0037) DICOM tag(*);
+#'                 \item \code{\emph{PixelSpacing}} : return the content of the (0028,0030) DICOM tag(*);
+#'                 
+#'               }
+#'               \cr (*) If no \code{seriesInstanceUID} or \code{filename} are provided, it returns the tag found in 
+#'               what seems to be the referencing CT or RMN scan. Pay attention to this point: in case of doubt about the
+#'               content of the folder this can lead to errors.
+#'               
+#'               }
+#' @aliases      prova
+#' @details      \code{openDICOMFolder} is a method     
 #' @import stringr XML 
 #' @export
 geoLet<-function() {
@@ -16,6 +55,10 @@ geoLet<-function() {
   # openDICOMFolder
   # Loads a Folder containing one or more DICOM Studies
   # ------------------------------------------------
+  #' Open a folder and load the content
+  #' 
+  #' @description  Instantiate an object of the class \code{geoLet}.  
+  #' @exportMethod  
   openDICOMFolder<-function(pathToOpen) {
     if( attributeList$verbose$lv1 == TRUE ) logObj$sendLog(pathToOpen)
     # get the dcm file type
