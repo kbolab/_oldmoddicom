@@ -1,6 +1,60 @@
-#' class for handling DICOM files (load, etc)
+#' class for loading and presenting DICOM data
 #' 
-#' @description  Instantiate an object of the class \code{geoLet}.
+#' @description  Instantiate an object of the class \code{geoLet}.This represents just the classname, 
+#'               for each instantiated object many methods are available, not in canonical S3 or S4.
+#'               
+#'               Many methods are available for objects built by this class:
+#'               \itemize{
+#'               \item \code{openDICOMFolder(pathToOpen)} 
+#'               \cr\cr is a method used to open an indicated folder. This method loads all the DICOM objects within
+#'               the given folder (without recursion) and build and internal model, in memory, storing it into
+#'               private attributes of the object. Information can be retrieved using \code{getAttribute} method or 
+#'               more specific methods.
+#'               \cr
+#'               \item \code{getAttribute(attribute,seriesInstanceUID="",fileName="")} 
+#'               \cr\cr Is a method used to get internal attributes. Allowed values fot \code{attributes} are:
+#'               
+#'               \itemize{
+#'                 \item \code{\emph{dataStorage}} : return a structured list with all the information retrieved from the 
+#'                 DICOM object in the folder. More detailed information about the structur of the returned list
+#'                 are available at <inserire link>
+#'                 \item \code{\emph{ROIPointList}} : return the ROI point List for all the stored ROIs;
+#'                 \item \code{\emph{PatientName}} : return the content of the (0010,0010) DICOM tag(*);
+#'                 \item \code{\emph{PatientID}} : return the content of the (0010,0020) DICOM tag(*);
+#'                 \item \code{\emph{Rows}} : return the content of the (0028,0010) DICOM tag(*);
+#'                 \item \code{\emph{Columns}} : return the content of the (0028,0011) DICOM tag(*);
+#'                 \item \code{\emph{StudyDate}} : return the content of the (0028,0011) DICOM tag(*);
+#'                 \item \code{\emph{Modality}} : return the content of the (0008,0060) DICOM tag(*);
+#'                 \item \code{\emph{PatientSex}} : return the content of the (0010,0040) DICOM tag(*);
+#'                 \item \code{\emph{SeriesInstanceUID}} : return the content of the (0020,000e) DICOM tag(*);
+#'                 \item \code{\emph{SliceThickness}} : return the content of the (0018,0050) DICOM tag(*);
+#'                 \item \code{\emph{ImagePositionPatient}} : return the content of the (0020,0032) DICOM tag(*);
+#'                 \item \code{\emph{ImageOrientationPatient}} : return the content of the (0020,0037) DICOM tag(*);
+#'                 \item \code{\emph{PixelSpacing}} : return the content of the (0028,0030) DICOM tag(*);
+#'               }
+#'               \cr (*) If no \code{seriesInstanceUID} or \code{filename} are provided, it returns the tag found in 
+#'               what seems to be the referencing CT or RMN scan. Pay attention to this point: in case of doubt about the
+#'               content of the folder this can lead to errors.
+#'               \cr\cr
+#'               \item \code{getDICOMTag(fileName="",tag=tag) }
+#'               \cr it allows to retrieve the value of a specific DICOM tag on a specified DICOM filename. If the name is not
+#'               indicated the method gets the first DICOM file he can find. 
+#'               \cr\cr
+#'               \item \code{getROIList() }
+#'               \cr returns the list of the available ROIs
+#'               \cr\cr
+#'               \item \code{getROIPointList(ROINumber) }
+#'               \cr returns the list of the points which define the indicated ROI. 
+#'               \cr\cr
+#'               \item \code{setAttribute(attributeName,attributeValue) }
+#'               \cr it sets the value of the specified attribute. The list of the availeable attributes is the following:
+#'                  \itemize{
+#'                    \item \code{\emph{verbose}} : it define the policy adopted to print warnings and logs during computation. It is handled using an \code{errorHandler} object and works with three different levels. A list indicating the behaviour for each level should be provided.
+#'                  }
+#'               \cr\cr
+#'               \item \code{getFolderContent(pathToOpen="") }
+#'               \cr explores the content of the given folder and returns informarion about the DICOM object stored within
+#'               }
 #' @import stringr XML 
 #' @export
 geoLet<-function() {
@@ -16,6 +70,10 @@ geoLet<-function() {
   # openDICOMFolder
   # Loads a Folder containing one or more DICOM Studies
   # ------------------------------------------------
+  #' Open a folder and load the content
+  #' 
+  #' @description  Instantiate an object of the class \code{geoLet}.  
+  #' @exportMethod  
   openDICOMFolder<-function(pathToOpen) {
     if( attributeList$verbose$lv1 == TRUE ) logObj$sendLog(pathToOpen)
     # get the dcm file type
@@ -82,13 +140,6 @@ geoLet<-function() {
 
     return(listaROI); 
   }  
-  # ------------------------------------------------
-  # getPlanningSeries
-  # Returns the image series used to make the plan (in order: RS, RD, RP)
-  # ------------------------------------------------  
-  getPlanningSeries<-function() {
-    return(list("result"="Not yet implemented"))
-  }
   # ------------------------------------------------
   # associateROIandImageSlices
   # Create the association between ROI and images
@@ -407,7 +458,7 @@ geoLet<-function() {
     objServ<<-services()
   }
   constructor()
-  return(list(openDICOMFolder=openDICOMFolder,getAttribute=getAttribute,getPlanningSeries=getPlanningSeries,
+  return(list(openDICOMFolder=openDICOMFolder,getAttribute=getAttribute,
               getDICOMTag=getDICOMTag,getROIList=getROIList,getROIPointList=getROIPointList,setAttribute=setAttribute,
               getFolderContent=getFolderContent))
 }
