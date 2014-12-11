@@ -1,6 +1,6 @@
-#' class for handling DICOM files (load, etc)
+#' class for handling logs/warnings/errors
 #' 
-#' @description  Instantiate an object of the class \code{geoLet}.
+#' @description  It handles messages from script to a chosen output (screen, file, etc.)
 #' @export
 logHandler<-function() {
   onScreen<-TRUE;

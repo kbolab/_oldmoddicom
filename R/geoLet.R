@@ -152,7 +152,7 @@ geoLet<-function() {
     
     for(i in names(lista)) {
       planes[[i]]<-dataStorage$info[[1]][[i]]$planeEquation
-      dataStorage$info[[1]][[i]][["ROIList"]]<<-matrix("",ncol=2);    # <<
+      dataStorage$info[[1]][[i]][["ROIList"]]<<-matrix("",ncol=2);
 
       for(k in names(dataStorage$structures)) {
         for(t in names(dataStorage$structures[[k]])) {
@@ -161,7 +161,7 @@ geoLet<-function() {
           
           if( abs(distanza)<0.1 ) {
             if(dataStorage$info[[1]][[i]][["ROIList"]][1]==''  ) {
-              dataStorage$info[[1]][[i]][["ROIList"]]<<-matrix(c(k,t),ncol=2)    #   <<
+              dataStorage$info[[1]][[i]][["ROIList"]]<<-matrix(c(k,t),ncol=2)
             }
             else {
               dataStorage$info[[1]][[i]][["ROIList"]]<<-rbind(dataStorage$info[[1]][[i]][["ROIList"]],c(k,t))   #   <<
