@@ -89,7 +89,7 @@ DVH.generate<-function(dvh.number, type=c("random","convex","concave","mix"),
   # creates the dvhmatrix object
   dvh.type<-match.arg(arg = dvh.type)
   vol.distr<-match.arg(arg = vol.distr)
-  result@dvh.type<-dvh.type
+  result@dvh.type<-"differential" # default value, corrected by DVH.diff.to.cum if dvh.type = "cumulative"
   result@vol.distr<-vol.distr
   result@volume<-volume
   #browser()
@@ -119,7 +119,10 @@ DVH.generate<-function(dvh.number, type=c("random","convex","concave","mix"),
 DVH.diff.to.cum <- function(dvh, relative=TRUE) {
   if ((!is.matrix(dvh))&&(class(dvh)!="dvhmatrix")) stop("dvh MUST be either an object of class dvhmatrix or a matrix")
   if (class(dvh)=="dvhmatrix") dvh.matrix<-dvh@dvh else dvh.matrix<-dvh  
-  if (class(dvh)=="dvhmatrix") if (dvh@dvh.type=="cumulative") stop("dvh object is already a cumulative DVH")
+  if (class(dvh)=="dvhmatrix") if (dvh@dvh.type=="cumulative") {
+    warning("dvh object is already a cumulative DVH")
+    return(dvh)
+  }
   dvh.size <- dim(dvh.matrix)
   DVHList <- matrix(nrow=dvh.size[1] + 1, ncol=dvh.size[2])   # create the matrix of cumulative DVHs     
   for (m in 2:dvh.size[2]) {                                  # loop for columns (volumes) 
@@ -159,7 +162,10 @@ DVH.diff.to.cum <- function(dvh, relative=TRUE) {
 DVH.cum.to.diff <- function(dvh, relative=TRUE) {
   if ((!is.matrix(dvh))&&(class(dvh)!="dvhmatrix")) stop("dvh MUST be either an object of class dvhmatrix or a matrix")
   if (class(dvh)=="dvhmatrix") dvh.matrix<-dvh@dvh else dvh.matrix<-dvh
-  if (class(dvh)=="dvhmatrix") if (dvh@dvh.type=="differential") stop("dvh object is already a differential DVH")
+  if (class(dvh)=="dvhmatrix") if (dvh@dvh.type=="differential") {
+    warning("dvh object is already a differential DVH")
+    return(dvh)
+  }
   dvh.size <- dim(dvh.matrix)
   DVHList <- matrix(nrow=dvh.size[1] - 1, ncol=dvh.size[2])   # create the matrix of differential DVHs
   for (m in 2:dvh.size[2]) {                                  # loop for columns (volumes)
@@ -191,7 +197,7 @@ DVH.cum.to.diff <- function(dvh, relative=TRUE) {
 #' @description Function that given a vector of dose bins (either a vector got from sampling a 3D mesh or a vector of
 #' simple values of dose) extracts the DVH that summarizes that vector.
 #' @return Either an object of class \code{dvhmatrix} or a \code{matrix} according the argument \code{dvh} type.
-#' @examples # creates a vector of doses
+#' @examples # simulate a vector of dose bins
 #' doses <- c(rnorm(n = 10000, mean = 45, sd = 3), rnorm(n = 7000, mean = 65, sd = 2.5))
 #' 
 #' # creates a dvhmatrix class object
@@ -215,4 +221,67 @@ DVH.extract<-function(x, max.dose=NULL, dose.bin=.25, dvh.type=c("differential",
   if (createObj==FALSE) return(final.matrix)
   # return matrix within a dvhmatrix object
   if (createObj==TRUE) return(new("dvhmatrix", dvh=final.matrix, dvh.type=dvh.type, vol.distr=vol.distr, volume=TotalVol))  
+}
+
+#' mean of DVHs
+#' @param dvh A \code{dvhmatrix} object
+#' @description Function that gives the value of the mean dose of a \code{dvhmatrix} class object
+#' @return a vector with the means of doses in the \code{dvhmatrix} object
+#' @export
+#' @examples # generate a dataset of DVHs
+#' a<-DVH.generate(dvh.number = 100)
+#' m<-DVH.mean(a)
+DVH.mean<-function(dvh)  {
+  if (class(dvh)!="dvhmatrix") stop("dvh MUST be a dvhmatrix class object")
+  dvh<-DVH.cum.to.diff(dvh, relative = TRUE)
+}
+
+#' Converts absolute \code{dvhmatrix} class objects to relative
+#' @param dvh A \code{dvhmatrix} class object
+#' @description Function that converts an object of \code{dvhmatrix} class where DVH are stored in absoulte mode into
+#' another \code{dvhmatrix} class object where DVH are stored in relative mode.
+#' @return A \code{dvhmatrix} class object.
+#' @export
+#' @examples # generate a dataset of absolute DVHs
+#' a<-DVH.generate(dvh.number = 10, vol.distr = "absolute")
+#' b<-DVH.relative(dvh = a)
+DVH.relative<-function(dvh) {
+  if (dvh@vol.distr=="absolute")
+    for (n in 1:(ncol(dvh@dvh) - 1)) dvh@dvh[,n+1]<-dvh@dvh[,n+1]/dvh@volume[n]
+  dvh@vol.distr<-"relative"
+  return(dvh)
+}
+
+#' Converts relative \code{dvhmatrix} class objects to absolute
+#' @param dvh A \code{dvhmatrix} class object
+#' @description Function that converts an object of \code{dvhmatrix} class where DVH are stored in relative mode into
+#' another \code{dvhmatrix} class object where DVH are stored in absolute mode.
+#' @return A \code{dvhmatrix} class object.
+#' @export
+#' @examples # generate a dataset of relative DVHs
+#' a<-DVH.generate(dvh.number = 10, vol.distr = "relative")
+#' b<-DVH.absolute(dvh = a)
+DVH.absolute<-function(dvh) {
+  if (dvh@vol.distr=="relative")
+    for (n in 1:(ncol(dvh@dvh) - 1)) dvh@dvh[,n+1]<-dvh@dvh[,n+1]*dvh@volume[n]
+  dvh@vol.distr<-"absolute"
+  return(dvh)
+}
+
+#' Calculates Equivalent Uniform Dose for a \code{dvhmatrix} object
+#' @param dvh A \code{dvhmatrix} class object
+#' @param a Factor for parallel-serial correlation in radiobiological response
+#' @description Function that calculates the value of Equivalent Uniform Dose (EUD) for a \code{dvhmatrix} object.
+#' @return A vector containing the values of EUD(s) for the given DVH(s)
+#' @export
+#' @useDynLib moddicom
+DVH.eud<-function(dvh, a = 1) {
+  Ncol<-ncol(dvh@dvh) - 1
+  Nrow<-nrow(dvh@dvh)
+  ceud<-rep.int(x = 0, times = Ncol) 
+  dosebin<-dvh@dvh[,1]
+  volumebin<-dvh@dvh[,2:(Ncol + 1)]
+  result<-.C("cEUD", as.double(dosebin), as.double(volumebin), as.double(a), as.integer(Nrow), 
+             as.integer(Ncol), as.double(ceud))
+  return(result[[6]])
 }
