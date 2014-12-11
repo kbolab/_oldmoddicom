@@ -1,4 +1,7 @@
-
+#' class for handling logs/warnings/errors
+#' 
+#' @description  It handles messages from script to a chosen output (screen, file, etc.)
+#' @export
 services<-function() {
     # ------------------------------------------------
   # SV.getPointPlaneDistance

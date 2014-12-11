@@ -442,9 +442,10 @@ geoLet<-function() {
       for(i in names(value)) {
         attributeList$verbose[[ i ]] <- value[[i]]
       }
+      logObj$setOutput( attributeList$verbose )
       return;  
     }
-    attributeList[[ attribute ]]<<-value
+    attributeList[[ attribute ]]<<-value    
   }
   constructor<-function() {
     dataStorage <<-list();   
@@ -453,14 +454,15 @@ geoLet<-function() {
     attributeList<<-list()
     attributeList$verbose<<-list("lv1"=TRUE,"lv2"=TRUE,"lv3"=FALSE,"onScreen"=TRUE,"onFile"=FALSE)
     logObj<<-logHandler()
-    logObj$setOutput( onScreen = attributeList$verbose$onScreen,   onFile = attributeList$verbose$onFile   )
-    
+    #logObj$setOutput( onScreen = attributeList$verbose$onScreen,   onFile = attributeList$verbose$onFile   )
+    logObj$setOutput( list("onScreen" = attributeList$verbose$onScreen,   "onFile" = attributeList$verbose$onFile )  )
+    logObj$do("clearOutputFile")
     objServ<<-services()
   }
   constructor()
   return(list(openDICOMFolder=openDICOMFolder,getAttribute=getAttribute,
-              getDICOMTag=getDICOMTag,getROIList=getROIList,getROIPointList=getROIPointList,setAttribute=setAttribute,
-              getFolderContent=getFolderContent))
+              getDICOMTag=getDICOMTag,getROIList=getROIList,getROIPointList=getROIPointList,
+              setAttribute=setAttribute,getFolderContent=getFolderContent))
 }
 
 # --------------------------------------------------------------------------------------------------------------------
@@ -502,5 +504,5 @@ GL.plot<-function() {
 # --------------------------------------------------------------------------------------------------------------------
 
 #obj<-geoLet()
-#obj$setAttribute("verbose",list("lv1"=TRUE,"lv2"=TRUE))
+#obj$setAttribute(attribute="verbose",value=list("lv1"=TRUE,"lv2"=TRUE,"onFilePar"=TRUE))
 #obj$openDICOMFolder("/progetti/immagini/Positive/POST/DAgostini")
