@@ -609,3 +609,101 @@ setMethod("plot", signature(x="dvhmatrix", y="missing"),
             }            
           }
 )
+
+#' Function for extracting the V-Dose from cumulative DVH(s)
+#' @description Function for calculating the value of V-Dose of a \code{dvhmatrix} object
+#' @param dvh A \code{dvhmatrix} class object
+#' @param Dose The dose for calculating the V-Dose value(s)
+#' @details V-Dose is, in a given Dose Volume Histogram, the value of the volume of the structure receiving
+#'          \strong{at least} the chosen level of dose.
+#' @return A vector containing the value(s) of V-Dose(s).
+#' @export
+#' @examples # create a dvhmatrix class object
+#' a<-DVH.generate(dvh.number = 100)
+#' DVH.Vdose(dvh = a, Dose = 50)
+DVH.Vdose <- function(dvh, Dose) {
+  dvh<-DVH.diff.to.cum(dvh = dvh, relative = dvh@vol.distr)
+  dvh.matrix<-dvh@dvh
+  # try to find exact correspondence between a value in the dose column and the input Dose
+  index<-which(x=dvh.matrix[,1]==Dose)
+  # check the Dose
+  if (Dose >= max(dvh.matrix[,1])) stop("Dose can not be >= maximum dose in dvh matrix")
+  if (Dose <= 0) stop("Dose can not be <= 0")
+  if (length(x=index)>0) return(as.numeric(dvh.matrix[index,2:ncol(dvh.matrix)])) else {
+    # find the index of the Dose value in DVH closest to the input Dose
+    index<-which.min(abs(dvh.matrix[,1]-Dose))        
+    # store the number of columns in dvh.matrix    
+    c<-ncol(dvh.matrix)
+    if (dvh.matrix[index,1] < Dose) {
+      # calculate the dose bin  
+      Dbin <- dvh.matrix[index + 1,1] - dvh.matrix[index,1]
+      # calculate the volume bin
+      Vbin <- dvh.matrix[index,2:c] - dvh.matrix[index + 1,2:c]
+      # calculate the step dose
+      incD <- dvh.matrix[index + 1,1] - Dose
+      # calucalte the step volume
+      incV <- incD * Vbin / Dbin
+      # calculation of Vdose
+      return(as.numeric(incV + dvh.matrix[index + 1,2:c]))
+    } else {
+      # calculate the dose bin  
+      Dbin <- dvh.matrix[index,1] - dvh.matrix[index - 1,1]
+      # calculate the volume bin
+      Vbin <- dvh.matrix[index - 1,2:c] - dvh.matrix[index,2:c]
+      # calculate the step dose
+      incD <- dvh.matrix[index,1] - Dose
+      # calculation of Vdose
+      incV <- Vbin / Dbin * incD
+      return(as.numeric(incV + dvh.matrix[index,2:c]))
+    }
+  }
+}
+
+#' Function for extracting the D-Volume from cumulative DVH(s)
+#' @description Function for calculating the value of D-Volume of a \code{dvhmatrix} object
+#' @param dvh A \code{dvhmatrix} class object
+#' @param The volume for calculating the D-Volume value(s)
+#' @details D-Volume is, in a given Dose Volume Histogram, the value of the dose received
+#'          by a given volume of the structure(s) of interest.
+#' @return A vector containing the value(s) of D-Volume(s).
+#' @export
+#' @examples # create a dvhmatrix class object
+#' a<-DVH.generate(dvh.number = 100)
+#' DVH.Dvolume(dvh = a, Volume = 0.5)
+DVH.Dvolume <- function(dvh,  Volume=0.001) {
+  dvh.matrix<-DVH.diff.to.cum(dvh = dvh, relative = dvh@vol.distr)@dvh
+  # create the vector wit indeces of Doses corresponding to
+  # minimum difference between Volume threshold and given volume
+  Dv <- c()
+  Dbin <- dvh.matrix[2,1] - dvh.matrix[1,1] # dose bin
+  for (n in 2:ncol(dvh.matrix)) {
+    DvIndex <- which.min(abs(dvh.matrix[,n] - Volume))
+    if (DvIndex==nrow(dvh.matrix)) {      # if Dvolume is lower than the minimum volume in DVH
+      if (Volume < dvh.matrix[DvIndex, n]) {
+        Dv <- c(Dv, NA)
+        warning("One Dvolume is lower than minimum volume in DVH matrix")
+        next
+      }
+    }
+    DvSign <- sign(Volume - dvh.matrix[DvIndex, n])
+    if (DvSign==0) { 
+      Dv<-c(Dv, dvh.matrix[DvIndex, 1]) # the Dvolume is equal to a number in the matrix
+      next
+    }
+    if (DvSign==-1) {   # Dvolume is greater than dose at DvIndex
+      incV <- dvh.matrix[DvIndex, n] - Volume
+      Vbin <- dvh.matrix[DvIndex, n] - dvh.matrix[DvIndex + 1, n]      
+      incD <- Dbin *incV/Vbin
+      Dv   <- c(Dv, incD + dvh.matrix[DvIndex, 1])
+      next
+    }    
+    if (DvSign==1) {    # Dvolume is lower than dose at DvIndex
+      incV <- Volume - dvh.matrix[DvIndex - 1, n]      
+      Vbin <- dvh.matrix[DvIndex, n] - dvh.matrix[DvIndex - 1, n]      
+      incD <- Dbin *incV/Vbin
+      Dv   <- c(Dv, incD + dvh.matrix[DvIndex - 1, 1])
+      next
+    }
+  }
+  return(Dv)
+}
