@@ -71,9 +71,6 @@ geoLet<-function() {
   # Loads a Folder containing one or more DICOM Studies
   # ------------------------------------------------
   #' Open a folder and load the content
-  #' 
-  #' @description  Instantiate an object of the class \code{geoLet}.  
-  #' @exportMethod  
   openDICOMFolder<-function(pathToOpen) {
     if( attributeList$verbose$lv1 == TRUE ) logObj$sendLog(pathToOpen)
     # get the dcm file type
