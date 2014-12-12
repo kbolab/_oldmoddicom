@@ -415,7 +415,8 @@ DVH.merge<-function(receiver=NULL, addendum=NULL) {
 #' @exportMethod plot
 #' @examples # create a dvhmatrix object
 #' b <- DVH.generate(dvh.number = 100, dvh.type = "cumulative", vol.distr = "absolute")
-#' plot(x = b, mean.dvh=T, median.dvh=T, mean.median.alone=T, C.I.dvh=T, C.I.dvh.range=T, C.I.dvh.width=.67, lwd=2)
+#' plot(x = b, mean.dvh = TRUE, median.dvh = TRUE, mean.median.alone = TRUE, 
+#'      C.I.dvh = TRUE, C.I.dvh.range = TRUE, C.I.dvh.width = .67, lwd = 2)
 setMethod("plot", signature(x="dvhmatrix", y="missing"), 
           function(x, y, elements=NULL, enhance=NULL, mean.dvh=FALSE, median.dvh=FALSE, 
                    mean.median.alone=FALSE, el.color="black", en.color="red",  mean.color="blue", median.color="red",
