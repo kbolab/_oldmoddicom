@@ -190,7 +190,7 @@ rel.cum.dvh <- function(dvh.matrix) {
 }
 
 # function for converting a matrix of differential DVH 
-# into matrix of cumulative DVH (relative volume)
+# into matrix of cumulative DVH (relative volume)  alias=DVH.diff.to.cum
 cum.dvh <- function(dvh.matrix, relative=TRUE)
 {
   dvh.size <- dim(dvh.matrix)
@@ -216,6 +216,7 @@ cum.dvh <- function(dvh.matrix, relative=TRUE)
 }
 
 # function for converting a matrix of cumulative DVH into matrix of differential DVH
+# alias DVH.cum.to.diff
 diff.dvh <- function(dvh.matrix, relative=TRUE) {
   dvh.size <- dim(dvh.matrix)
   DVHList <- matrix(nrow=dvh.size[1] - 1, ncol=dvh.size[2])   # create the matrix of differential DVHs
