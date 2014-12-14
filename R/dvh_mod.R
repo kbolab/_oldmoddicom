@@ -707,3 +707,17 @@ DVH.Dvolume <- function(dvh,  Volume=0.001) {
   }
   return(Dv)
 }
+
+#' Function for calculating the mean dvh with confidence interval
+#' @description This function calculates the mean dvh from a \code{dvhmatrix} class object. The mean dvh is
+#'              calculated with its confidence interval that is given by a bootstrapped dvh series from
+#'              the dvh given in the \code{dvh} object.
+#' @param dvh A \code{dvhmatrix} class object
+#' @param C.I.width The width of confidence interval
+#' @param n.boot The number of bootstrapped dvhs for computing the quantile in C.I. calculation
+#' @return A \code{dvhmatrix} object where the column n. 2 is the mean dvh and columns 3 and 4 are low and high 
+#'        boundaries of the confidence interval
+#' @export
+DVH.mean.dvh<-function(dvh, C.I.width = .95, n.boot = 2000) {
+  Vdvh<-as.vector(dvh@dvh[,2:ncol(dvh@dvh)])
+}
