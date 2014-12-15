@@ -287,6 +287,18 @@ DVH.eud<-function(dvh, a = 1) {
   return(result[[6]])
 }
 
+#' Test function for sum
+#' @param a 1st element
+#' @param b 2nd element
+#' @description Test function for sum
+#' @return A vector with sum
+#' @export
+#' @useDynLib moddicom 
+DVH.sum<-function(a, b) {
+  result<-0
+  return(.C("Sum", as.double(a), as.double(b), as.double(result))[[3]])
+}
+
 #' Merge two different \code{dvhmatrix} class objects into one
 #' @param receiver The \code{dvhmatrix} object that will receive the \code{addendum} object.
 #' @param addendum The \code{dvhmatrix} object to be merged with \code{addendum}.
@@ -720,4 +732,5 @@ DVH.Dvolume <- function(dvh,  Volume=0.001) {
 #' @export
 DVH.mean.dvh<-function(dvh, C.I.width = .95, n.boot = 2000) {
   Vdvh<-as.vector(dvh@dvh[,2:ncol(dvh@dvh)])
+  
 }
