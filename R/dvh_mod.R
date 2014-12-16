@@ -288,17 +288,6 @@ DVH.eud<-function(dvh, a = 1) {
   return(result[[6]])
 }
 
-#' Test function for sum
-#' @param a 1st element
-#' @param b 2nd element
-#' @description Test function for sum
-#' @return A vector with sum
-#' @export
-#' @useDynLib moddicom 
-DVH.sum<-function(a, b) {
-  result<-0
-  return(.C("Sum", as.double(a), as.double(b), as.double(result))[[3]])
-}
 
 #' Merge two different \code{dvhmatrix} class objects into one
 #' @param receiver The \code{dvhmatrix} object that will receive the \code{addendum} object.
@@ -734,12 +723,12 @@ DVH.Dvolume <- function(dvh,  Volume=0.001) {
 DVH.mean.dvh<-function(dvh, C.I.width = .95, n.boot = 2000) {
   # calculate mean dvh
   mean.dvh<-apply(X = dvh@dvh[,2:ncol(dvh@dvh)], MARGIN = 1, FUN = mean)
+  # vectorized DVH
   Vdvh<-as.vector(dvh@dvh[,2:ncol(dvh@dvh)])
-<<<<<<< HEAD
+  # vector for sampled dvh
+  sampledvh<-rep.int(x = 0, times = nrow(x = dvh@dvh) * (ncol(x = dvh@dvh) - 1))
   # create the mean dvh vector
   meanV<-rep.int(x = 0, times = nrow(dvh@dvh) * n.boot)
-  return(mean.dvh)
-=======
-  
->>>>>>> f5f358f6bc3d1b24ff1afcdcaa18bdd96fb3068c
+  result<-.C("meandvh", Vdvh, nrow(dvh@dvh), n.boot, meanV, sampledvh)[[4]]
+  return(result)
 }
