@@ -41,7 +41,7 @@ DVH.generate<-function(dvh.number, type=c("random","convex","concave","mix"),
   volbin.num <- round(volumes/((volbin.side/10)^3)) # number of bins for each volume
   # function for generating convex DVHs voxels series
   convex.dvh <- function(n) {
-    mean.dose <- runif(n = 1, min = max.dose - (max.dose/4), max = max.dose - max.dose/8)
+    mean.dose <- runif(n = 1, min = max.dose - (max.dose/3), max = max.dose - max.dose/6)
     sd.dose <- (max.dose - mean.dose)/2.5
     return(rnorm(n = n, mean = mean.dose, sd = sd.dose))
   }
@@ -57,14 +57,14 @@ DVH.generate<-function(dvh.number, type=c("random","convex","concave","mix"),
   }
   # function for creating mix DVHs voxels series
   mix.dvh <- function(n) {
-    contrib<-c(runif(n = 1, min = .2, max = .6), runif(n = 1, min = 0, max = .3))
+    contrib<-c(runif(n = 1, min = .05, max = .4), runif(n = 1, min = .05, max = .4))
     # proportions in contributions to final DVH
     contrib<-c(contrib[1], 1 - sum(contrib), contrib[2])
     part1<-concave.dvh(n = round(contrib[1] * n))
     part3<-convex.dvh(n = round(contrib[3] * n))
     part2<-rnorm(n = n - (length(part1) + length(part3)), 
-                 mean = runif(n = 1, min = max.dose/12, max = max.dose - max.dose/5), 
-                 sd = runif(n = 1, min = max.dose/15, max = max.dose/9))
+                 mean = runif(n = 1, min = max.dose/15, max = max.dose - max.dose/8), 
+                 sd = runif(n = 1, min = max.dose/15, max = max.dose/10))
     result<-c(part1, part2, part3)
     result<-result[which(result>=0)]    
     # compensate the negative values when available
@@ -120,7 +120,7 @@ DVH.diff.to.cum <- function(dvh, relative=TRUE) {
   if ((!is.matrix(dvh))&&(class(dvh)!="dvhmatrix")) stop("dvh MUST be either an object of class dvhmatrix or a matrix")
   if (class(dvh)=="dvhmatrix") dvh.matrix<-dvh@dvh else dvh.matrix<-dvh  
   if (class(dvh)=="dvhmatrix") if (dvh@dvh.type=="cumulative") {
-    warning("dvh object is already a cumulative DVH")
+    if (relative==TRUE) dvh<-DVH.relative(dvh = dvh)
     return(dvh)
   }
   dvh.size <- dim(dvh.matrix)
@@ -163,7 +163,7 @@ DVH.cum.to.diff <- function(dvh, relative=TRUE) {
   if ((!is.matrix(dvh))&&(class(dvh)!="dvhmatrix")) stop("dvh MUST be either an object of class dvhmatrix or a matrix")
   if (class(dvh)=="dvhmatrix") dvh.matrix<-dvh@dvh else dvh.matrix<-dvh
   if (class(dvh)=="dvhmatrix") if (dvh@dvh.type=="differential") {
-    warning("dvh object is already a differential DVH")
+    if (relative==TRUE) dvh<-DVH.relative(dvh)
     return(dvh)
   }
   dvh.size <- dim(dvh.matrix)
@@ -277,6 +277,7 @@ DVH.absolute<-function(dvh) {
 #' @export
 #' @useDynLib moddicom
 DVH.eud<-function(dvh, a = 1) {
+  dvh<-DVH.cum.to.diff(dvh = dvh, relative = TRUE)
   Ncol<-ncol(dvh@dvh) - 1
   Nrow<-nrow(dvh@dvh)
   ceud<-rep.int(x = 0, times = Ncol) 
@@ -719,5 +720,10 @@ DVH.Dvolume <- function(dvh,  Volume=0.001) {
 #'        boundaries of the confidence interval
 #' @export
 DVH.mean.dvh<-function(dvh, C.I.width = .95, n.boot = 2000) {
+  # calculate mean dvh
+  mean.dvh<-apply(X = dvh@dvh[,2:ncol(dvh@dvh)], MARGIN = 1, FUN = mean)
   Vdvh<-as.vector(dvh@dvh[,2:ncol(dvh@dvh)])
+  # create the mean dvh vector
+  meanV<-rep.int(x = 0, times = nrow(dvh@dvh) * n.boot)
+  return(mean.dvh)
 }
