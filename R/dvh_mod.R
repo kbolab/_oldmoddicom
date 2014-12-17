@@ -720,6 +720,7 @@ DVH.Dvolume <- function(dvh,  Volume=0.001) {
 #' @return A \code{dvhmatrix} object where the column n. 2 is the mean dvh and columns 3 and 4 are low and high 
 #'        boundaries of the confidence interval
 #' @export
+#' @useDynLib moddicom
 DVH.mean.dvh<-function(dvh, C.I.width = .95, n.boot = 2000) {
   # calculate mean dvh
   mean.dvh<-apply(X = dvh@dvh[,2:ncol(dvh@dvh)], MARGIN = 1, FUN = mean)
@@ -729,6 +730,12 @@ DVH.mean.dvh<-function(dvh, C.I.width = .95, n.boot = 2000) {
   sampledvh<-rep.int(x = 0, times = nrow(x = dvh@dvh) * (ncol(x = dvh@dvh) - 1))
   # create the mean dvh vector
   meanV<-rep.int(x = 0, times = nrow(dvh@dvh) * n.boot)
-  result<-.C("meandvh", Vdvh, nrow(dvh@dvh), n.boot, meanV, sampledvh)[[4]]
-  return(result)
+  # number of histograms
+  Ndvh <- ncol(dvh@dvh) - 1
+  result<-(.C("meanmediandvh", as.double(Vdvh), as.integer(nrow(dvh@dvh)), as.integer(n.boot), 
+              as.double(meanV), as.double(sampledvh), as.integer(Ndvh)))[[4]]
+  # create dvh matrix
+  result<-matrix(data = result, nrow = nrow(dvh@dvh))
+  return(new("dvhmatrix", dvh = cbind(dvh@dvh[,1], result), dvh.type = dvh@dvh.type,
+             vol.distr = dvh@vol.distr, volume = rep.int(x = mean(dvh@volume), times = n.boot)))
 }
