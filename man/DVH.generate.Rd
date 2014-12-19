@@ -45,11 +45,11 @@ Dose Volume Histograms (DVH) are the basic representation of how the radiation d
          class objects.
 }
 \examples{
-# creates a dvhmatrix object with 200 differential - relative histograms
+## creates a dvhmatrix object with 200 differential - relative histograms
 a<-DVH.generate(dvh.number=200, dvh.type="differential", vol.distr="relative")
 
-# creates a dvhmatrix object containing 150 cumulative - absolute histograms
-# maximum dose in simulated series is 60 Gy
+## creates a dvhmatrix object containing 150 cumulative - absolute histograms
+## maximum dose in simulated series is 60 Gy
 b<-DVH.generate(dvh.number=150, dvh.type="cumulative", vol.distr="absolute", max.dose=60)
 }
 \references{

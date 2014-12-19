@@ -21,11 +21,11 @@
 #'          class objects.
 #' @references Van den Heuvela F. \emph{Decomposition analysis of differential dose volume histograms.} Med Phys. 2006 Feb;33(2):297-307. PubMed PMID: 16532934.
 #' @return An object of \code{dvhmatrix} class.
-#' @examples # creates a dvhmatrix object with 200 differential - relative histograms
+#' @examples ## creates a dvhmatrix object with 200 differential - relative histograms
 #' a<-DVH.generate(dvh.number=200, dvh.type="differential", vol.distr="relative")
 #' 
-#' # creates a dvhmatrix object containing 150 cumulative - absolute histograms
-#' # maximum dose in simulated series is 60 Gy
+#' ## creates a dvhmatrix object containing 150 cumulative - absolute histograms
+#' ## maximum dose in simulated series is 60 Gy
 #' b<-DVH.generate(dvh.number=150, dvh.type="cumulative", vol.distr="absolute", max.dose=60)
 #' @export
 DVH.generate<-function(dvh.number, type=c("random","convex","concave","mix"), 
@@ -197,10 +197,10 @@ DVH.cum.to.diff <- function(dvh, relative=TRUE) {
 #' @description Function that given a vector of dose bins (either a vector got from sampling a 3D mesh or a vector of
 #' simple values of dose) extracts the DVH that summarizes that vector.
 #' @return Either an object of class \code{dvhmatrix} or a \code{matrix} according the argument \code{dvh} type.
-#' @examples # simulate a vector of dose bins
+#' @examples ## simulate a vector of dose bins
 #' doses <- c(rnorm(n = 10000, mean = 45, sd = 3), rnorm(n = 7000, mean = 65, sd = 2.5))
 #' 
-#' # creates a dvhmatrix class object
+#' ## creates a dvhmatrix class object
 #' DVH<-DVH.extract(x = doses)
 #' @export
 DVH.extract<-function(x, max.dose=NULL, dose.bin=.25, dvh.type=c("differential","cumulative"), 
@@ -228,7 +228,7 @@ DVH.extract<-function(x, max.dose=NULL, dose.bin=.25, dvh.type=c("differential",
 #' @description Function that gives the value of the mean dose of a \code{dvhmatrix} class object
 #' @return a vector with the means of doses in the \code{dvhmatrix} object
 #' @export
-#' @examples # generate a dataset of DVHs
+#' @examples ## generate a dataset of DVHs
 #' a<-DVH.generate(dvh.number = 100)
 #' m<-DVH.mean(a)
 DVH.mean<-function(dvh)  {
@@ -243,7 +243,7 @@ DVH.mean<-function(dvh)  {
 #' another \code{dvhmatrix} class object where DVH are stored in relative mode.
 #' @return A \code{dvhmatrix} class object.
 #' @export
-#' @examples # generate a dataset of absolute DVHs
+#' @examples ## generate a dataset of absolute DVHs
 #' a<-DVH.generate(dvh.number = 10, vol.distr = "absolute")
 #' b<-DVH.relative(dvh = a)
 DVH.relative<-function(dvh) {
@@ -259,7 +259,7 @@ DVH.relative<-function(dvh) {
 #' another \code{dvhmatrix} class object where DVH are stored in absolute mode.
 #' @return A \code{dvhmatrix} class object.
 #' @export
-#' @examples # generate a dataset of relative DVHs
+#' @examples ## generate a dataset of relative DVHs
 #' a<-DVH.generate(dvh.number = 10, vol.distr = "relative")
 #' b<-DVH.absolute(dvh = a)
 DVH.absolute<-function(dvh) {
@@ -297,7 +297,7 @@ DVH.eud<-function(dvh, a = 1) {
 #'              so some convertions can be automatically realized to create the homogeneous final result.
 #' @return A \code{dvhmatrix} class object.
 #' @export
-#' @examples # creates two different dvhmatrx objects
+#' @examples ## creates two different dvhmatrx objects
 #' a<-DVH.generate(dvh.number = 100, dvh.type="differential", vol.distr = "relative")
 #' b<-DVH.generate(dvh.number = 100, dvh.type="cumulative", vol.distr = "absolute")
 #' ab<-DVH.merge(receiver = a, addendum = b)
@@ -415,10 +415,203 @@ DVH.merge<-function(receiver=NULL, addendum=NULL) {
 #'          median are calculated by bootstrapping the whole \code{dvhmatrix} and calculating a given number of mean and
 #'          median dvh values that finally are reduced by using a quantile function to create the final plot.
 #' @exportMethod plot
-#' @examples # create a dvhmatrix object
+#' @examples ## create a dvhmatrix object
 #' b <- DVH.generate(dvh.number = 100, dvh.type = "cumulative", vol.distr = "absolute")
 #' plot(x = b, mean.dvh = TRUE, median.dvh = TRUE, mean.median.alone = TRUE, 
 #'      C.I.dvh = TRUE, C.I.dvh.range = TRUE, C.I.dvh.width = .67, lwd = 2)
+# setMethod("plot", signature(x="dvhmatrix", y="missing"), 
+#           function(x, y, elements=NULL, enhance=NULL, mean.dvh=FALSE, median.dvh=FALSE, 
+#                    mean.median.alone=FALSE, el.color="black", en.color="red",  mean.color="blue", median.color="red",
+#                    lwd=1, C.I.dvh=FALSE, C.I.dvh.width=.95, C.I.dvh.range=FALSE, n.boot=2000, ...){
+#             dvh <- slot(x,"dvh")
+#             dvh.type <- slot(x, "dvh.type")
+#             vol.distr <- slot(x, "vol.distr")
+#             # define the lables for the y axis
+#             if ((dvh.type=="cumulative") && (vol.distr=="relative")) ylab<-"Volume [*100%]"
+#             if ((dvh.type=="cumulative") && (vol.distr=="absolute")) ylab<-"Volume [cc]"
+#             if ((dvh.type=="differential") && (vol.distr=="relative")) ylab<-"dVolume/dDose [*100%/Gy]"
+#             if ((dvh.type=="differential") && (vol.distr=="absolute")) ylab<-"dVolume/dDose [cc/Gy]"
+#             # max value of y axes
+#             ymax<-max(dvh[,2:ncol(dvh)])
+#             # direct plot for a single DVH
+#             if (ncol(dvh)==2) plot(x=dvh[,1], y=dvh[,2], type="l", ylab=ylab, xlab="Dose [Gy]", lwd=lwd)
+#             # plot for more than one DVH
+#             if ((ncol(dvh)>2) && (mean.median.alone==FALSE)) {
+#               # creates the vector of elements to be plotted and enhanced
+#               if (is.null(elements)) elements<-c(2:ncol(dvh)) else elements<-elements+1
+#               if (!is.null(enhance)) for (n in 1:length(enhance)) elements<-elements[elements!=(enhance[n]+1)]              
+#               # open the plot panel and raws the 1st plot
+#               if (length(elements)>0) plot(x=dvh[,1], y=dvh[,elements[1]], ylim=c(0, ymax), col=el.color, 
+#                                            lwd=lwd, type="l", xlab="Dose [Gy]", ylab=ylab)
+#               else
+#                 if (length(elements)>0) lines(x=dvh[,1], y=dvh[,elements[1]], ylim=c(0, ymax), col=el.color, 
+#                                               lwd=lwd)              
+#               # plots the remaining DVHs into "elements"
+#               if (length(elements)==0) {
+#                 start.enhance<-2
+#                 plot(x=dvh[,1], y=dvh[,enhance[1]+1], col=en.color, lwd=lwd, type="l")
+#               } else start.enhance<-1
+#               if (length(elements)>1)
+#                 for (n in 2:length(elements)) lines(x=dvh[,1], y=dvh[,elements[n]], col=el.color, lwd=lwd)
+#               # plots DVHs to be enhanced
+#               if (length(enhance)>0)
+#                 for (n in start.enhance:length(enhance)) lines(x=dvh[,1], y=dvh[,enhance[n]+1], col=en.color, lwd=lwd)
+#             }
+#             # plot the mean DVH
+#             if (ncol(dvh)>2) {
+#               mean.DVH<-apply(X=dvh[,2:ncol(dvh)], MARGIN=1, FUN=mean)
+#               median.DVH<-apply(X=dvh[,2:ncol(dvh)], MARGIN=1, FUN=median)
+#             }
+#             if (mean.median.alone==FALSE) { 
+#               if ((mean.dvh==TRUE) && (ncol(dvh)>2)) 
+#                 lines(x=dvh[,1], y=mean.DVH, col=mean.color, lwd=lwd)
+#               if ((median.dvh==TRUE) && (ncol(dvh)>2)) 
+#                 lines(x=dvh[,1], y=median.DVH , col=median.color, lwd=lwd)
+#             }       
+#             
+#             if (mean.median.alone==TRUE) {
+#               # plot both mean and median
+#               if ((mean.dvh==TRUE) && (median.dvh==TRUE)) {
+#                 plot(x=dvh[,1], y=mean.DVH, ylim=c(0, ymax), col=mean.color, 
+#                      lwd=lwd, type="l", xlab="Dose [Gy]", ylab=ylab)
+#                 lines(x=dvh[,1], y=median.DVH , col=median.color, lwd=lwd)
+#               }
+#               # plot only mean
+#               if ((mean.dvh==TRUE) && (median.dvh==FALSE)) {
+#                 plot(x=dvh[,1], y=mean.DVH, ylim=c(0, ymax), col=mean.color, 
+#                      lwd=lwd, type="l", xlab="Dose [Gy]", ylab=ylab)
+#               }
+#               # plot only median
+#               if ((mean.dvh==FALSE) && (median.dvh==TRUE)) {
+#                 plot(x=dvh[,1], y=median.DVH, ylim=c(0, ymax), col=median.color, 
+#                      lwd=lwd, type="l", xlab="Dose [Gy]", ylab=ylab)
+#               }
+#             }
+#             # plot of C.I. area, both 95% C.I. of the mean dose and 95% with quantiles are calculated
+#             if ((C.I.dvh==TRUE) && (ncol(dvh)>2)) {
+#               # load parallel computing packages if system is Linux
+#               if (Sys.info()["sysname"]=="Linux") {                     # check OS for using parallel computing under Linux
+#                 require(foreach)
+#                 require(doMC)
+#                 require(parallel)
+#                 registerDoMC(cores=detectCores())
+#               }
+#               # definition of function for sampling DVHs and calculating mean DVHs matrix
+#               sample.mean.dvh<-function(d) {
+#                 # sample temp index of DVHs
+#                 index<-sample(x=c(2:ncol(d)),size=ncol(d)-1,replace=T)
+#                 # creates temp dvh
+#                 temp.dvh<-cbind(d[,index])
+#                 mean.v  <-apply(X=temp.dvh, MARGIN=1, FUN=mean)
+#                 return (mean.v)
+#               }
+#               # definition of function for sampling DVHs and calculating median DVHs matrix
+#               sample.median.dvh<-function(d) {
+#                 # sample temp index of DVHs
+#                 index<-sample(x=c(2:ncol(d)),size=ncol(d)-1,replace=T)
+#                 # creates temp dvh
+#                 temp.dvh<-cbind(d[,index])
+#                 median.v<-apply(X=temp.dvh, MARGIN=1, FUN=median)
+#                 return (median.v)
+#               }
+#               # definition of function for sampling DVHs and calculating mean median DVHs matrix
+#               sample.mean.median.dvh<-function(d) {
+#                 # sample temp index of DVHs
+#                 index<-sample(x=c(2:ncol(d)),size=ncol(d)-1,replace=T)
+#                 # creates temp dvh
+#                 temp.dvh<-cbind(d[,index])
+#                 median.v<-apply(X=temp.dvh, MARGIN=1, FUN=median)
+#                 mean.v  <-apply(X=temp.dvh, MARGIN=1, FUN=mean)
+#                 return(list(mean.dvh=mean.v, median.dvh=median.v))
+#               }
+#               if ((mean.dvh==TRUE)&&(median.dvh==FALSE)){
+#                 # empty object for temp mean DVHs
+#                 mean.v<-c()
+#                 # create matrix of mean of resampled DVHs
+#                 if (Sys.info()["sysname"]=="Linux") {
+#                   mean.v<-foreach(n=1:n.boot) %dopar% sample.mean.dvh(dvh)
+#                   mean.v<-unlist(mean.v)
+#                   mean.v<-matrix(data=mean.v, nrow=nrow(dvh))
+#                 } else for (n in 1:n.boot)
+#                   mean.v  <-cbind(mean.v, sample.mean.dvh(dvh))             
+#                 lowerCI.mean <- apply(X=mean.v, MARGIN=1, FUN=quantile, probs=(1-C.I.dvh.width)/2)
+#                 higherCI.mean<- apply(X=mean.v, MARGIN=1, FUN=quantile, probs=(1+C.I.dvh.width)/2)
+#                 xpoly.mean<-c(dvh[,1], rev(dvh[,1]))             # vector of x coordinates of polygon of CI
+#                 ypoly.mean<-c(lowerCI.mean, rev(higherCI.mean))  # vector of y coordinates of polygon of CI of mean
+#                 # draws the polygon of mean CI
+#                 polygon(x=xpoly.mean, y=ypoly.mean, col=adjustcolor(col=mean.color, alpha.f=.25))
+#               }
+#               
+#               if ((mean.dvh==FALSE)&&(median.dvh==TRUE)){
+#                 # empty object for temp median DVHs
+#                 median.v<-c()                # create matrix of mean of resampled DVHs
+#                 if (Sys.info()["sysname"]=="Linux") {
+#                   median.v<-foreach(n=1:n.boot) %dopar% sample.median.dvh(dvh)
+#                   median.v<-unlist(median.v)
+#                   median.v<-matrix(data=median.v, nrow=nrow(dvh))
+#                 } else for (n in 1:n.boot)
+#                   median.v<-cbind(median.v, sample.median.dvh(dvh))                
+#                 lowerCI.median <- apply(X=median.v, MARGIN=1, FUN=quantile, probs=(1-C.I.dvh.width)/2)
+#                 higherCI.median<- apply(X=median.v, MARGIN=1, FUN=quantile, probs=(1+C.I.dvh.width)/2)
+#                 xpoly.median<-c(dvh[,1], rev(dvh[,1]))                # vector of x coordinates of polygon of CI
+#                 ypoly.median<-c(lowerCI.median, rev(higherCI.median)) # vector of y coordinates of polygon of CI of median
+#                 # draws the polygon of median CI
+#                 polygon(x=xpoly.median, y=ypoly.median, col=adjustcolor(col=median.color, alpha.f=.25))
+#               }
+#               
+#               if ((median.dvh==TRUE)&&(mean.dvh==TRUE)){
+#                 # empty object for temp median DVHs
+#                 median.v<-c()
+#                 mean.v<-c()                
+#                 # create matrix of mean of resampled DVHs
+#                 if (Sys.info()["sysname"]=="Linux") {
+#                   synth.dvh<-foreach(n=1:n.boot) %dopar% sample.mean.median.dvh(dvh)
+#                   # big vector with all the DVHS for mean and median
+#                   synth.dvh<-unlist(synth.dvh)
+#                   nrow.dvh<-nrow(dvh)-1 # number of rows of dvh decreased by 1
+#                   build.index<-function(x) c(x:(x+nrow.dvh)) # function creating indeces numbers
+#                   start.mean<-which(names(synth.dvh)=="mean.dvh1")     # indeces of start mean dvh values
+#                   start.median<-which(names(synth.dvh)=="median.dvh1") # indeces of start median dvh values
+#                   # build mean dvh matrix
+#                   mean.v<-matrix(data=synth.dvh[sapply(X=start.mean, FUN=build.index, simplify=TRUE)], nrow=nrow(dvh))
+#                   # build median dvh matrix
+#                   median.v<-matrix(data=synth.dvh[sapply(X=start.median, FUN=build.index, simplify=TRUE)], nrow=nrow(dvh))
+#                   
+#                 } else for (n in 1:n.boot){
+#                   median.v  <-cbind(median.v, sample.mean.median.dvh(dvh)$median.dvh)
+#                   mean.v  <-cbind(mean.v, sample.mean.median.dvh(dvh)$mean.dvh)
+#                 }   
+#                 lowerCI.mean <- apply(X=mean.v, MARGIN=1, FUN=quantile, probs=(1-C.I.dvh.width)/2)
+#                 higherCI.mean<- apply(X=mean.v, MARGIN=1, FUN=quantile, probs=(1+C.I.dvh.width)/2)
+#                 xpoly.mean<-c(dvh[,1], rev(dvh[,1]))             # vector of x coordinates of polygon of CI
+#                 ypoly.mean<-c(lowerCI.mean, rev(higherCI.mean))  # vector of y coordinates of polygon of CI of mean
+#                 lowerCI.median <- apply(X=median.v, MARGIN=1, FUN=quantile, probs=(1-C.I.dvh.width)/2)
+#                 higherCI.median<- apply(X=median.v, MARGIN=1, FUN=quantile, probs=(1+C.I.dvh.width)/2)
+#                 xpoly.median<-c(dvh[,1], rev(dvh[,1]))                # vector of x coordinates of polygon of CI
+#                 ypoly.median<-c(lowerCI.median, rev(higherCI.median)) # vector of y coordinates of polygon of CI of median
+#                 # draws the polygon of mean CI
+#                 polygon(x=xpoly.mean, y=ypoly.mean, col=adjustcolor(col=mean.color, alpha.f=.25))
+#                 # draws the polygon of median CI
+#                 polygon(x=xpoly.median, y=ypoly.median, col=adjustcolor(col=median.color, alpha.f=.25))
+#               }
+#             }
+#             
+#             # plot the C.I. of data range of DVHs
+#             if (C.I.dvh.range==TRUE) {
+#               # quantiles for DVHs data range
+#               lowerCI <- c()
+#               higherCI <- c()
+#               for (n in 1:nrow(dvh)) {
+#                 lowerCI <- c(lowerCI,  quantile(x=dvh[n,2:ncol(dvh)], probs=((1-C.I.dvh.width)/2)))
+#                 higherCI<- c(higherCI, quantile(x=dvh[n,2:ncol(dvh)], probs=((1+C.I.dvh.width)/2)))
+#               }
+#               xpoly<-c(dvh[,1], rev(dvh[,1]))      # vector of x coordinates of polygon of CI
+#               ypoly<-c(lowerCI, rev(higherCI))     # vector of y coordinates of polygon of CI              
+#               polygon(x=xpoly, y=ypoly, col=adjustcolor(col="grey", alpha.f=.25))  # draws the polygon
+#             }            
+#           }
+# )
+
 setMethod("plot", signature(x="dvhmatrix", y="missing"), 
           function(x, y, elements=NULL, enhance=NULL, mean.dvh=FALSE, median.dvh=FALSE, 
                    mean.median.alone=FALSE, el.color="black", en.color="red",  mean.color="blue", median.color="red",
@@ -476,7 +669,7 @@ setMethod("plot", signature(x="dvhmatrix", y="missing"),
                      lwd=lwd, type="l", xlab="Dose [Gy]", ylab=ylab)
                 lines(x=dvh[,1], y=median.DVH , col=median.color, lwd=lwd)
               }
-              # plot both only mean
+              # plot only mean
               if ((mean.dvh==TRUE) && (median.dvh==FALSE)) {
                 plot(x=dvh[,1], y=mean.DVH, ylim=c(0, ymax), col=mean.color, 
                      lwd=lwd, type="l", xlab="Dose [Gy]", ylab=ylab)
@@ -489,53 +682,11 @@ setMethod("plot", signature(x="dvhmatrix", y="missing"),
             }
             # plot of C.I. area, both 95% C.I. of the mean dose and 95% with quantiles are calculated
             if ((C.I.dvh==TRUE) && (ncol(dvh)>2)) {
-              # load parallel computing packages if system is Linux
-              if (Sys.info()["sysname"]=="Linux") {                     # check OS for using parallel computing under Linux
-                require(foreach)
-                require(doMC)
-                require(parallel)
-                registerDoMC(cores=detectCores())
-              }
-              # definition of function for sampling DVHs and calculating mean DVHs matrix
-              sample.mean.dvh<-function(d) {
-                # sample temp index of DVHs
-                index<-sample(x=c(2:ncol(d)),size=ncol(d)-1,replace=T)
-                # creates temp dvh
-                temp.dvh<-cbind(d[,index])
-                mean.v  <-apply(X=temp.dvh, MARGIN=1, FUN=mean)
-                return (mean.v)
-              }
-              # definition of function for sampling DVHs and calculating median DVHs matrix
-              sample.median.dvh<-function(d) {
-                # sample temp index of DVHs
-                index<-sample(x=c(2:ncol(d)),size=ncol(d)-1,replace=T)
-                # creates temp dvh
-                temp.dvh<-cbind(d[,index])
-                median.v<-apply(X=temp.dvh, MARGIN=1, FUN=median)
-                return (median.v)
-              }
-              # definition of function for sampling DVHs and calculating mean median DVHs matrix
-              sample.mean.median.dvh<-function(d) {
-                # sample temp index of DVHs
-                index<-sample(x=c(2:ncol(d)),size=ncol(d)-1,replace=T)
-                # creates temp dvh
-                temp.dvh<-cbind(d[,index])
-                median.v<-apply(X=temp.dvh, MARGIN=1, FUN=median)
-                mean.v  <-apply(X=temp.dvh, MARGIN=1, FUN=mean)
-                return(list(mean.dvh=mean.v, median.dvh=median.v))
-              }
-              if ((mean.dvh==TRUE)&&(median.dvh==FALSE)){
-                # empty object for temp mean DVHs
-                mean.v<-c()
-                # create matrix of mean of resampled DVHs
-                if (Sys.info()["sysname"]=="Linux") {
-                  mean.v<-foreach(n=1:n.boot) %dopar% sample.mean.dvh(dvh)
-                  mean.v<-unlist(mean.v)
-                  mean.v<-matrix(data=mean.v, nrow=nrow(dvh))
-                } else for (n in 1:n.boot)
-                  mean.v  <-cbind(mean.v, sample.mean.dvh(dvh))             
-                lowerCI.mean <- apply(X=mean.v, MARGIN=1, FUN=quantile, probs=(1-C.I.dvh.width)/2)
-                higherCI.mean<- apply(X=mean.v, MARGIN=1, FUN=quantile, probs=(1+C.I.dvh.width)/2)
+              message("sampling DVHs for C.I. calculation...")
+              DVH.CI<-DVH.baseStat(dvh = x, C.I.width = C.I.dvh.width, n.boot = n.boot)
+              if ((mean.dvh==TRUE)&&(median.dvh==FALSE)){            
+                lowerCI.mean <- DVH.CI@dvh[,3]
+                higherCI.mean<- DVH.CI@dvh[,4]
                 xpoly.mean<-c(dvh[,1], rev(dvh[,1]))             # vector of x coordinates of polygon of CI
                 ypoly.mean<-c(lowerCI.mean, rev(higherCI.mean))  # vector of y coordinates of polygon of CI of mean
                 # draws the polygon of mean CI
@@ -543,16 +694,8 @@ setMethod("plot", signature(x="dvhmatrix", y="missing"),
               }
               
               if ((mean.dvh==FALSE)&&(median.dvh==TRUE)){
-                # empty object for temp median DVHs
-                median.v<-c()                # create matrix of mean of resampled DVHs
-                if (Sys.info()["sysname"]=="Linux") {
-                  median.v<-foreach(n=1:n.boot) %dopar% sample.median.dvh(dvh)
-                  median.v<-unlist(median.v)
-                  median.v<-matrix(data=median.v, nrow=nrow(dvh))
-                } else for (n in 1:n.boot)
-                  median.v<-cbind(median.v, sample.median.dvh(dvh))                
-                lowerCI.median <- apply(X=median.v, MARGIN=1, FUN=quantile, probs=(1-C.I.dvh.width)/2)
-                higherCI.median<- apply(X=median.v, MARGIN=1, FUN=quantile, probs=(1+C.I.dvh.width)/2)
+                lowerCI.median <- DVH.CI@dvh[,6]
+                higherCI.median<- DVH.CI@dvh[,7]
                 xpoly.median<-c(dvh[,1], rev(dvh[,1]))                # vector of x coordinates of polygon of CI
                 ypoly.median<-c(lowerCI.median, rev(higherCI.median)) # vector of y coordinates of polygon of CI of median
                 # draws the polygon of median CI
@@ -560,33 +703,13 @@ setMethod("plot", signature(x="dvhmatrix", y="missing"),
               }
               
               if ((median.dvh==TRUE)&&(mean.dvh==TRUE)){
-                # empty object for temp median DVHs
-                median.v<-c()
-                mean.v<-c()                
-                # create matrix of mean of resampled DVHs
-                if (Sys.info()["sysname"]=="Linux") {
-                  synth.dvh<-foreach(n=1:n.boot) %dopar% sample.mean.median.dvh(dvh)
-                  # big vector with all the DVHS for mean and median
-                  synth.dvh<-unlist(synth.dvh)
-                  nrow.dvh<-nrow(dvh)-1 # number of rows of dvh decreased by 1
-                  build.index<-function(x) c(x:(x+nrow.dvh)) # function creating indeces numbers
-                  start.mean<-which(names(synth.dvh)=="mean.dvh1")     # indeces of start mean dvh values
-                  start.median<-which(names(synth.dvh)=="median.dvh1") # indeces of start median dvh values
-                  # build mean dvh matrix
-                  mean.v<-matrix(data=synth.dvh[sapply(X=start.mean, FUN=build.index, simplify=TRUE)], nrow=nrow(dvh))
-                  # build median dvh matrix
-                  median.v<-matrix(data=synth.dvh[sapply(X=start.median, FUN=build.index, simplify=TRUE)], nrow=nrow(dvh))
-                  
-                } else for (n in 1:n.boot){
-                  median.v  <-cbind(median.v, sample.mean.median.dvh(dvh)$median.dvh)
-                  mean.v  <-cbind(mean.v, sample.mean.median.dvh(dvh)$mean.dvh)
-                }   
-                lowerCI.mean <- apply(X=mean.v, MARGIN=1, FUN=quantile, probs=(1-C.I.dvh.width)/2)
-                higherCI.mean<- apply(X=mean.v, MARGIN=1, FUN=quantile, probs=(1+C.I.dvh.width)/2)
+                
+                lowerCI.mean <- DVH.CI@dvh[,3]
+                higherCI.mean<- DVH.CI@dvh[,4]
                 xpoly.mean<-c(dvh[,1], rev(dvh[,1]))             # vector of x coordinates of polygon of CI
                 ypoly.mean<-c(lowerCI.mean, rev(higherCI.mean))  # vector of y coordinates of polygon of CI of mean
-                lowerCI.median <- apply(X=median.v, MARGIN=1, FUN=quantile, probs=(1-C.I.dvh.width)/2)
-                higherCI.median<- apply(X=median.v, MARGIN=1, FUN=quantile, probs=(1+C.I.dvh.width)/2)
+                lowerCI.median <- DVH.CI@dvh[,6]
+                higherCI.median<- DVH.CI@dvh[,7]
                 xpoly.median<-c(dvh[,1], rev(dvh[,1]))                # vector of x coordinates of polygon of CI
                 ypoly.median<-c(lowerCI.median, rev(higherCI.median)) # vector of y coordinates of polygon of CI of median
                 # draws the polygon of mean CI
@@ -612,6 +735,8 @@ setMethod("plot", signature(x="dvhmatrix", y="missing"),
           }
 )
 
+
+
 #' Function for extracting the V-Dose from cumulative DVH(s)
 #' @description Function for calculating the value of V-Dose of a \code{dvhmatrix} object
 #' @param dvh A \code{dvhmatrix} class object
@@ -620,7 +745,7 @@ setMethod("plot", signature(x="dvhmatrix", y="missing"),
 #'          \strong{at least} the chosen level of dose.
 #' @return A vector containing the value(s) of V-Dose(s).
 #' @export
-#' @examples # create a dvhmatrix class object
+#' @examples ## create a dvhmatrix class object
 #' a<-DVH.generate(dvh.number = 100)
 #' DVH.Vdose(dvh = a, Dose = 50)
 DVH.Vdose <- function(dvh, Dose) {
@@ -664,12 +789,13 @@ DVH.Vdose <- function(dvh, Dose) {
 #' Function for extracting the D-Volume from cumulative DVH(s)
 #' @description Function for calculating the value of D-Volume of a \code{dvhmatrix} object
 #' @param dvh A \code{dvhmatrix} class object
-#' @param The volume for calculating the D-Volume value(s)
+#' @param Volume Volume for calculating the D-Volume value(s). Default is 0.001, corresponding to about maximum dose
+#'        delivered to the structure.
 #' @details D-Volume is, in a given Dose Volume Histogram, the value of the dose received
 #'          by a given volume of the structure(s) of interest.
 #' @return A vector containing the value(s) of D-Volume(s).
 #' @export
-#' @examples # create a dvhmatrix class object
+#' @examples ## create a dvhmatrix class object
 #' a<-DVH.generate(dvh.number = 100)
 #' DVH.Dvolume(dvh = a, Volume = 0.5)
 DVH.Dvolume <- function(dvh,  Volume=0.001) {
@@ -717,10 +843,16 @@ DVH.Dvolume <- function(dvh,  Volume=0.001) {
 #' @param dvh A \code{dvhmatrix} class object
 #' @param C.I.width The width of confidence interval
 #' @param n.boot The number of bootstrapped dvhs for computing the quantile in C.I. calculation
-#' @return A \code{dvhmatrix} object where the column n. 2 is the mean dvh and columns 3 and 4 are low and high 
-#'        boundaries of the confidence interval
+#' @return A \code{dvhmatrix} object where 7 columns: Dose, mean DVH, low C.I. of mean DVH, high C.I. of mean DVH, 
+#'         median DVH, low C.I. of median DVH, high C.I. of median DVH.
 #' @export
 #' @useDynLib moddicom
+#' @examples ## creates a dvhmatrix class object with 100 DVHs
+#' a<-DVH.generate(dvh.number = 100, dvh.type = "cumulative", vol.distr = "relative")
+#' b<-DVH.baseStat(dvh = a)
+#' ## plot the dvhmatrix object "b", showing both mean, 
+#' ## median DVH and corresponding confidence intarvals
+#' plot(b)
 DVH.baseStat<-function(dvh, C.I.width = .95, n.boot = 2000) {
   # calculate mean dvh
   mean.dvh<-apply(X = dvh@dvh[,2:ncol(dvh@dvh)], MARGIN = 1, FUN = mean)
@@ -739,10 +871,17 @@ DVH.baseStat<-function(dvh, C.I.width = .95, n.boot = 2000) {
               as.double(meanV), as.double(sampledvh), as.integer(Ndvh), as.double(medianV), as.double(stepMedian)))
   # create dvh matrix
   meanDvh<-matrix(data = result[[4]], nrow = nrow(dvh@dvh))
+  # generate the mean CI DVH
   meanCI<-apply(X = meanDvh, MARGIN = 1, FUN = quantile, probs = c((1-C.I.width)/2, (1+C.I.width)/2))
+  # generate the median CI DVH
   medianDvh<-matrix(data = result[[7]], nrow = nrow(dvh@dvh))
   medianCI<-apply(X = medianDvh, MARGIN = 1, FUN = quantile, probs = c((1-C.I.width)/2, (1+C.I.width)/2))
 #  return(new("dvhmatrix", dvh = cbind(dvh@dvh[,1], medianDvh), dvh.type = dvh@dvh.type,
 #             vol.distr = dvh@vol.distr, volume = rep.int(x = mean(dvh@volume), times = n.boot)))
-  return(list(meanCI, medianCI))
+  result.DVH<-new("dvhmatrix", dvh = cbind(dvh@dvh[,1], mean.dvh, meanCI[1,], meanCI[2,], median.dvh, medianCI[1,], medianCI[2,]), dvh.type = dvh@dvh.type,
+                                           vol.distr = dvh@vol.distr, volume = c(rep.int(x = mean(dvh@volume), times = 3),
+                                                                                 rep.int(x = median(dvh@volume), times = 3)))
+  colnames(x = result.DVH@dvh)<-c("Dose [Gy]", "mean", paste((1-C.I.width)/2,"% C.I. of mean"), paste((1+C.I.width)/2,"% C.I. of mean"),
+                                  "median", paste((1-C.I.width)/2,"% C.I. of median"), paste((1+C.I.width)/2,"% C.I. of median"))
+  return(result.DVH)
 }
