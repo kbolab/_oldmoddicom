@@ -710,7 +710,7 @@ DVH.Dvolume <- function(dvh,  Volume=0.001) {
   return(Dv)
 }
 
-#' Function for calculating the mean dvh with confidence interval
+#' Function for calculating the mean and median dvh with related confidence intervals
 #' @description This function calculates the mean dvh from a \code{dvhmatrix} class object. The mean dvh is
 #'              calculated with its confidence interval that is given by a bootstrapped dvh series from
 #'              the dvh given in the \code{dvh} object.
@@ -721,21 +721,28 @@ DVH.Dvolume <- function(dvh,  Volume=0.001) {
 #'        boundaries of the confidence interval
 #' @export
 #' @useDynLib moddicom
-DVH.mean.dvh<-function(dvh, C.I.width = .95, n.boot = 2000) {
+DVH.baseStat<-function(dvh, C.I.width = .95, n.boot = 2000) {
   # calculate mean dvh
   mean.dvh<-apply(X = dvh@dvh[,2:ncol(dvh@dvh)], MARGIN = 1, FUN = mean)
+  median.dvh<-apply(X = dvh@dvh[,2:ncol(dvh@dvh)], MARGIN = 1, FUN = median)
   # vectorized DVH
   Vdvh<-as.vector(dvh@dvh[,2:ncol(dvh@dvh)])
   # vector for sampled dvh
   sampledvh<-rep.int(x = 0, times = nrow(x = dvh@dvh) * (ncol(x = dvh@dvh) - 1))
   # create the mean dvh vector
   meanV<-rep.int(x = 0, times = nrow(dvh@dvh) * n.boot)
+  medianV<-meanV
+  stepMedian<-rep.int(x = 0, times = ncol(dvh@dvh) - 1)
   # number of histograms
   Ndvh <- ncol(dvh@dvh) - 1
   result<-(.C("meanmediandvh", as.double(Vdvh), as.integer(nrow(dvh@dvh)), as.integer(n.boot), 
-              as.double(meanV), as.double(sampledvh), as.integer(Ndvh)))[[4]]
+              as.double(meanV), as.double(sampledvh), as.integer(Ndvh), as.double(medianV), as.double(stepMedian)))
   # create dvh matrix
-  result<-matrix(data = result, nrow = nrow(dvh@dvh))
-  return(new("dvhmatrix", dvh = cbind(dvh@dvh[,1], result), dvh.type = dvh@dvh.type,
-             vol.distr = dvh@vol.distr, volume = rep.int(x = mean(dvh@volume), times = n.boot)))
+  meanDvh<-matrix(data = result[[4]], nrow = nrow(dvh@dvh))
+  meanCI<-apply(X = meanDvh, MARGIN = 1, FUN = quantile, probs = c((1-C.I.width)/2, (1+C.I.width)/2))
+  medianDvh<-matrix(data = result[[7]], nrow = nrow(dvh@dvh))
+  medianCI<-apply(X = medianDvh, MARGIN = 1, FUN = quantile, probs = c((1-C.I.width)/2, (1+C.I.width)/2))
+#  return(new("dvhmatrix", dvh = cbind(dvh@dvh[,1], medianDvh), dvh.type = dvh@dvh.type,
+#             vol.distr = dvh@vol.distr, volume = rep.int(x = mean(dvh@volume), times = n.boot)))
+  return(list(meanCI, medianCI))
 }
