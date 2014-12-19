@@ -38,7 +38,7 @@ Instantiate an object of the class \code{geoLet}.This represents just the classn
                 \item \code{\emph{ImageOrientationPatient}} : return the content of the (0020,0037) DICOM tag(*);
                 \item \code{\emph{PixelSpacing}} : return the content of the (0028,0030) DICOM tag(*);
               }
-              \cr (*) If no \code{seriesInstanceUID} or \code{filename} are provided, it returns the tag found in
+              \cr If no \code{seriesInstanceUID} or \code{filename} are provided, it returns the tag found in
               what seems to be the referencing CT or RMN scan. Pay attention to this point: in case of doubt about the
               content of the folder this can lead to errors.
               \cr\cr

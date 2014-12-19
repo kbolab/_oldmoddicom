@@ -275,6 +275,7 @@ DVH.absolute<-function(dvh) {
 #' @description Function that calculates the value of Equivalent Uniform Dose (EUD) for a \code{dvhmatrix} object.
 #' @return A vector containing the values of EUD(s) for the given DVH(s)
 #' @export
+#' @references Niemierko A. \emph{Reporting and analyzing dose distributions: a concept of equivalent uniform dose.} Med Phys. 1997 Jan;24(1):103-10. PubMed PMID: 9029544.
 #' @useDynLib moddicom
 DVH.eud<-function(dvh, a = 1) {
   dvh<-DVH.cum.to.diff(dvh = dvh, relative = TRUE)
@@ -318,7 +319,7 @@ DVH.merge<-function(receiver=NULL, addendum=NULL) {
     # correct the addendum if receiver has absolute distribution
     if ((rel==FALSE) && (addendum@vol.distr=="relative")) 
       for (n in 2:ncol(addendum@dvh)) addendum@dvh[,n]<-addendum@dvh[,n]*addendum@volume[n-1]
-    addendum@dvh<-conv.funct(dvh=addendum@dvh, relative=rel)    
+    addendum@dvh<-conv.funct(dvh=addendum@dvh, relative=rel)
   }
   
   # STEP (2): check the dose-bin for interpolating addendum or receiver according the lowest dbin
