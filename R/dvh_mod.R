@@ -272,7 +272,14 @@ DVH.absolute<-function(dvh) {
 #' Calculates Equivalent Uniform Dose for a \code{dvhmatrix} object
 #' @param dvh A \code{dvhmatrix} class object
 #' @param a Factor for parallel-serial correlation in radiobiological response
-#' @description Function that calculates the value of Equivalent Uniform Dose (EUD) for a \code{dvhmatrix} object.
+#' @description Function that calculates the value of Equivalent Uniform Dose (EUD) for a \code{dvhmatrix} object. The
+#' formula to compute the equivalent uniform dose
+#' is \deqn{EUD=\left (\sum_{i=1}^{ }D_{i}^{a}\cdot \frac{V_{i}}{V_{tot}}  \right )^{1/a}}{EUD=(Sum(Di^a * Vi/Vtot))^(1/a)}
+#' where \emph{i} is the counter of volume bins in the structure and \emph{a} is the parameter that relates
+#' the organs response to the \emph{serial} or \emph{parallel} physiological function of the organ. Usually \emph{parallel}
+#' structures are organs that can suffer depletion of functional subunits up to a given threshold, as liver, lungs or kidneys.
+#' They are more sentitive to mean dose rather than hot spots and maximum dose levels delivered to the structure. On the other hand
+#' \emph{serial} structures are organs more sensitive to hot-spots delivered in the volume, such as spinal cord.
 #' @return A vector containing the values of EUD(s) for the given DVH(s)
 #' @export
 #' @references Niemierko A. \emph{Reporting and analyzing dose distributions: a concept of equivalent uniform dose.} Med Phys. 1997 Jan;24(1):103-10. PubMed PMID: 9029544.
