@@ -57,7 +57,7 @@ DR.Lyman <- function (doses, TD50 = 45, gamma50 = 1.5, a = 1) {
 #' @param gamma50 The slope of dose/response curve at 50\% of probability
 #' @param a Value for parallel-serial correlation in radiobiological response
 #' @export
-#' @return A vector with NTCP(s) calculated according LKB model.
+#' @return A vector with NTCP(s) calculated according Goitein model.
 #' @references Shipley WU, Tepper JE, Prout GR Jr, Verhey LJ, Mendiondo OA, Goitein M, Koehler AM, Suit HD. \emph{Proton radiation as boost therapy for localized prostatic carcinoma}. JAMA. 1979 May 4;241(18):1912-5. PubMed PMID: 107338.
 #' @references Bentzen SM, Tucker SL. \emph{Quantifying the position and steepness of radiation dose-response curves}. Int J Radiat Biol. 1997 May;71(5):531-42. Review. PubMed PMID: 9191898.
 DR.Goitein <- function (doses, TD50=45, gamma50=1.5, a=1) {
@@ -67,22 +67,45 @@ DR.Goitein <- function (doses, TD50=45, gamma50=1.5, a=1) {
 }
 
 ## Dose/Response according Niemierko 1991 (loglogit) ##
+#' Function that calculates (N)TCP according Niemierko model
+#' @description This function calculates the Normal Tissue Complication Probability according the
+#' Niemierko model. This model can be used to compute Tumor Control Probability (TCP) too.
+#' It is the translation of a \emph{loglogit} generalized linear model as function of \eqn{TD_{50}} and \eqn{\gamma_{50}}.
+#' The model equation is: \deqn{(N)TCP=\frac{1}{1+ ({\frac{TD_{50}}{D}})^{4\gamma_{50}}}}
+#' \eqn{D} can be either the nominal dose or the \eqn{EUD} as calculated by \code{\link{DVH.eud}} function.
+#' @param doses Either a \code{dvhmatrix} class object or a vector with nominal doses
+#' @param TD50 The value of dose that gives the 50\% of probability of outcome
+#' @param gamma50 The slope of dose/response curve at 50\% of probability
+#' @param a Value for parallel-serial correlation in radiobiological response 
+#' @export
+#' @return A vector with NTCP(s) calculated according Niemierko model.
+#' @references Gay HA, Niemierko A. \emph{A free program for calculating EUD-based NTCP and TCP in external beam radiotherapy}. Phys Med. 2007 Dec;23(3-4):115-25. Epub 2007 Sep 7. PubMed PMID: 17825595.
 DR.Niemierko <- function (doses, TD50=45, gamma50=1.5, a=1) {
-  # check the single choice between dvh matrix or dose series
-  if (!is.null(dose) && !is.null(diffdvh)) stop("Select either a DVH or a point dose to calculate NTCP")
-  # check the single choice between dvh matrix or dose series  
-  if (is.vector(dose) && is.null(diffdvh)) p <- 1/(1+(TD50/dose)^(4*gamma50))
-  if (is.null(dose) && is.matrix(diffdvh)) p <- 1/(1+(TD50/EUD(dvh.matrix=diffdvh, a=aa))^(4*gamma50))
+  if (class(doses)=="numeric") p <- 1/(1+(TD50/doses)^(4*gamma50))
+  if (class(doses)=="dvhmatrix") p <- 1/(1+(TD50/DVH.eud(dvh = doses, a=a))^(4*gamma50))
   return(p)
 }
 
 ## Dose/Response according Munro, Gilbert, Kallman 1992 (Poisson approximation) ##
-DR.Munro <- function (TD50=45, gamma50=1.5, aa=1, diffdvh=NULL, dose=NULL) {
-  # check the single choice between dvh matrix or dose series
-  if (!is.null(dose) && !is.null(diffdvh)) stop("Select either a DVH or a point dose to calculate NTCP")
-  # check the single choice between dvh matrix or dose series  
-  if (is.vector(dose) && is.null(diffdvh)) p <- 2^(-(exp(exp(1)*gamma50*(1-dose/TD50))))
-  if (is.null(dose) && is.matrix(diffdvh)) p <- 2^(-(exp(exp(1)*gamma50*(1-EUD(dvh.matrix=diffdvh, a=aa)/TD50))))
+#' Function that calculates TCP according Munro/Gilbert/Kallman model
+#' @description This function calculates the Tumor Control Probability according the
+#' Munro/Gilbert/Kallman model. This model is an empyrical dose/response curve that fits experimental data. In their
+#' paper authors assume this curve to be equivalent to a Poisson model. The original model equation is:
+#' \deqn{TCP=e^{-EN_{0}e^{\frac{-D}{D_{0}}}}}
+#' \eqn{E} is a numerical parameter that is related to tumor radiosensitivity, \eqn{N_{0}} is the total initial number of
+#' tumor clonogenic cells, \eqn{D} is the delivered dose and \eqn{D_{0}} is the increment of dose that lowers survival 
+#' to 37 per cent. In our implementation Munro/Gilbert/Kallman model has been referenced to \eqn{TD_{50}} and \eqn{\gamma_{50}} as follows:
+#' \deqn{TCP=2^{e^{e\gamma_{50}(1-\frac{D}{TD_{50}})}}}
+#' @param doses Either a \code{dvhmatrix} class object or a vector with nominal doses
+#' @param TD50 The value of dose that gives the 50\% of probability of outcome
+#' @param gamma50 The slope of dose/response curve at 50\% of probability
+#' @param a Value for parallel-serial correlation in radiobiological response 
+#' @export
+#' @return A vector with TCP calculated according Munro/Gilbert/Kallman model.
+#' @references Munro TR, Gilbert CW. \emph{The relation between tumour lethal doses and the radiosensitivity of tumour cells}. Br J Radiol. 1961 Apr;34:246-51. PubMed PMID: 13726846.
+DR.Munro <- function (doses, TD50=45, gamma50=1.5, a=1) {
+  if (class(doses)=="numeric") p <- 2^(-(exp(exp(1)*gamma50*(1-doses/TD50))))
+  if (class(doses)=="dvhmatrix") p <- 2^(-(exp(exp(1)*gamma50*(1-DVH.eud(dvh = doses, a=a)/TD50))))
   return(p) 
 }
 
