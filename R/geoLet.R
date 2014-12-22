@@ -31,6 +31,7 @@
 #'                 \item \code{ImageOrientationPatient} : return the content of the (0020,0037) DICOM tag(*);
 #'                 \item \code{PixelSpacing} : return the content of the (0028,0030) DICOM tag(*);
 #'               }
+#'               
 #'               If no \code{seriesInstanceUID} or \code{filename} are provided, it returns the tag found in 
 #'               what seems to be the referencing CT or RMN scan. Pay attention to this point: in case of doubt about the
 #'               content of the folder this can lead to errors.
