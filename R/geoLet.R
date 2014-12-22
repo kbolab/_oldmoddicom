@@ -6,54 +6,49 @@
 #'               Many methods are available for objects built by this class:
 #'               \itemize{
 #'               \item \code{openDICOMFolder(pathToOpen)} 
-#'               \cr\cr is a method used to open an indicated folder. This method loads all the DICOM objects within
+#'               is a method used to open an indicated folder. This method loads all the DICOM objects within
 #'               the given folder (without recursion) and build and internal model, in memory, storing it into
 #'               private attributes of the object. Information can be retrieved using \code{getAttribute} method or 
 #'               more specific methods.
-#'               \cr
 #'               \item \code{getAttribute(attribute,seriesInstanceUID="",fileName="")} 
-#'               \cr\cr Is a method used to get internal attributes. Allowed values fot \code{attributes} are:
+#'               Is a method used to get internal attributes. Allowed values fot \code{attributes} are:
 #'               
 #'               \itemize{
-#'                 \item \code{\emph{dataStorage}} : return a structured list with all the information retrieved from the 
+#'                 \item \code{dataStorage} : return a structured list with all the information retrieved from the 
 #'                 DICOM object in the folder. More detailed information about the structur of the returned list
 #'                 are available at <inserire link>
-#'                 \item \code{\emph{ROIPointList}} : return the ROI point List for all the stored ROIs;
-#'                 \item \code{\emph{PatientName}} : return the content of the (0010,0010) DICOM tag(*);
-#'                 \item \code{\emph{PatientID}} : return the content of the (0010,0020) DICOM tag(*);
-#'                 \item \code{\emph{Rows}} : return the content of the (0028,0010) DICOM tag(*);
-#'                 \item \code{\emph{Columns}} : return the content of the (0028,0011) DICOM tag(*);
-#'                 \item \code{\emph{StudyDate}} : return the content of the (0028,0011) DICOM tag(*);
-#'                 \item \code{\emph{Modality}} : return the content of the (0008,0060) DICOM tag(*);
-#'                 \item \code{\emph{PatientSex}} : return the content of the (0010,0040) DICOM tag(*);
-#'                 \item \code{\emph{SeriesInstanceUID}} : return the content of the (0020,000e) DICOM tag(*);
-#'                 \item \code{\emph{SliceThickness}} : return the content of the (0018,0050) DICOM tag(*);
-#'                 \item \code{\emph{ImagePositionPatient}} : return the content of the (0020,0032) DICOM tag(*);
-#'                 \item \code{\emph{ImageOrientationPatient}} : return the content of the (0020,0037) DICOM tag(*);
-#'                 \item \code{\emph{PixelSpacing}} : return the content of the (0028,0030) DICOM tag(*);
+#'                 \item \code{ROIPointList} : return the ROI point List for all the stored ROIs;
+#'                 \item \code{PatientName} : return the content of the (0010,0010) DICOM tag(*);
+#'                 \item \code{PatientID} : return the content of the (0010,0020) DICOM tag(*);
+#'                 \item \code{Rows} : return the content of the (0028,0010) DICOM tag(*);
+#'                 \item \code{Columns} : return the content of the (0028,0011) DICOM tag(*);
+#'                 \item \code{StudyDate} : return the content of the (0028,0011) DICOM tag(*);
+#'                 \item \code{Modality} : return the content of the (0008,0060) DICOM tag(*);
+#'                 \item \code{PatientSex} : return the content of the (0010,0040) DICOM tag(*);
+#'                 \item \code{SeriesInstanceUID} : return the content of the (0020,000e) DICOM tag(*);
+#'                 \item \code{SliceThickness} : return the content of the (0018,0050) DICOM tag(*);
+#'                 \item \code{ImagePositionPatient} : return the content of the (0020,0032) DICOM tag(*);
+#'                 \item \code{ImageOrientationPatient} : return the content of the (0020,0037) DICOM tag(*);
+#'                 \item \code{PixelSpacing} : return the content of the (0028,0030) DICOM tag(*);
 #'               }
-#'               \cr (*) If no \code{seriesInstanceUID} or \code{filename} are provided, it returns the tag found in 
+#'               
+#'               If no \code{seriesInstanceUID} or \code{filename} are provided, it returns the tag found in 
 #'               what seems to be the referencing CT or RMN scan. Pay attention to this point: in case of doubt about the
 #'               content of the folder this can lead to errors.
-#'               \cr\cr
 #'               \item \code{getDICOMTag(fileName="",tag=tag) }
-#'               \cr it allows to retrieve the value of a specific DICOM tag on a specified DICOM filename. If the name is not
+#'               it allows to retrieve the value of a specific DICOM tag on a specified DICOM filename. If the name is not
 #'               indicated the method gets the first DICOM file he can find. 
-#'               \cr\cr
 #'               \item \code{getROIList() }
-#'               \cr returns the list of the available ROIs
-#'               \cr\cr
+#'               returns the list of the available ROIs
 #'               \item \code{getROIPointList(ROINumber) }
-#'               \cr returns the list of the points which define the indicated ROI. 
-#'               \cr\cr
+#'               returns the list of the points which define the indicated ROI. 
 #'               \item \code{setAttribute(attributeName,attributeValue) }
-#'               \cr it sets the value of the specified attribute. The list of the availeable attributes is the following:
+#'               it sets the value of the specified attribute. The list of the availeable attributes is the following:
 #'                  \itemize{
-#'                    \item \code{\emph{verbose}} : it define the policy adopted to print warnings and logs during computation. It is handled using an \code{errorHandler} object and works with three different levels. A list indicating the behaviour for each level should be provided.
+#'                    \item \code{verbose} : it define the policy adopted to print warnings and logs during computation. It is handled using an \code{errorHandler} object and works with three different levels. A list indicating the behaviour for each level should be provided.
 #'                  }
-#'               \cr\cr
 #'               \item \code{getFolderContent(pathToOpen="") }
-#'               \cr explores the content of the given folder and returns informarion about the DICOM object stored within
+#'               explores the content of the given folder and returns informarion about the DICOM object stored within
 #'               }
 #' @import stringr XML 
 #' @export
