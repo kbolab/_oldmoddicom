@@ -271,7 +271,7 @@ DVH.absolute<-function(dvh) {
 
 #' Calculates Equivalent Uniform Dose for a \code{dvhmatrix} object
 #' @param dvh A \code{dvhmatrix} class object
-#' @param a Factor for parallel-serial correlation in radiobiological response
+#' @param a Value for parallel-serial correlation in radiobiological response
 #' @description Function that calculates the value of Equivalent Uniform Dose (EUD) for a \code{dvhmatrix} object. The
 #' formula to compute the equivalent uniform dose
 #' is \deqn{EUD=\left (\sum_{i=1}^{ }D_{i}^{a}\cdot \frac{V_{i}}{V_{tot}}  \right )^{1/a}}{EUD=(Sum(Di^a * Vi/Vtot))^(1/a)}
