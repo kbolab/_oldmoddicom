@@ -131,6 +131,21 @@ DR.Okunieff <- function (doses, TD50=45, gamma50=1.5, a=1) {
 }
 
 ## Dose/Response according Warkentin 2004 (Poisson) ##
+#' Function that calculates TCP according Warkentin model
+#' @description This function calculates the Tumor Control Probability according the
+#' Warkentin model. This model is the equivalent of the \emph{Poisson} model where the covariates and their coefficients
+#' have been reported as function of \eqn{TD_{50}} and \eqn{\gamma_{50}}. The original Warkentin formula is the following:
+#' \deqn{TCP=e^{-Np_{s}(D)}}
+#' where \eqn{N} is the initial number of clonogens, \eqn{p_{s}D} is the survival fraction after the dose \eqn{D}.
+#' The previous equation can be rewritten as function of \eqn{TD_{50}} and \eqn{\gamma_{50}}:
+#' \deqn{\frac{1}{2}}
+#' @param doses Either a \code{dvhmatrix} class object or a vector with nominal doses
+#' @param TD50 The value of dose that gives the 50\% of probability of outcome
+#' @param gamma50 The slope of dose/response curve at 50\% of probability
+#' @param a Value for parallel-serial correlation in radiobiological response 
+#' @export
+#' @return A vector with TCP calculated according Munro/Gilbert/Kallman model.
+#' @references Okunieff P, Morgan D, Niemierko A, Suit HD. \emph{Radiation dose-response of human tumors}. Int J Radiat Oncol Biol Phys. 1995 Jul 15;32(4):1227-37. PubMed PMID: 7607946.
 DR.Warkentin <- function (TD50=45, gamma50=1.5, aa=1, diffdvh=NULL, dose=NULL) {
   # check the single choice between dvh matrix or dose series
   if (!is.null(dose) && !is.null(diffdvh)) stop("Select either a DVH or a point dose to calculate NTCP")
