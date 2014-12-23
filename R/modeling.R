@@ -131,27 +131,30 @@ DR.Okunieff <- function (doses, TD50=45, gamma50=1.5, a=1) {
 }
 
 ## Dose/Response according Warkentin 2004 (Poisson) ##
-#' Function that calculates TCP according Warkentin model
+#' Function that calculates TCP according Warkentin (Poisson) model
 #' @description This function calculates the Tumor Control Probability according the
 #' Warkentin model. This model is the equivalent of the \emph{Poisson} model where the covariates and their coefficients
-#' have been reported as function of \eqn{TD_{50}} and \eqn{\gamma_{50}}. The original Warkentin formula is the following:
+#' have been reported as function of \eqn{TD_{50}} and \eqn{\gamma_{50}}. In Warkentin paper model computation starts with formula:
 #' \deqn{TCP=e^{-Np_{s}(D)}}
-#' where \eqn{N} is the initial number of clonogens, \eqn{p_{s}D} is the survival fraction after the dose \eqn{D}.
+#' where \eqn{N} is the initial number of clonogens, \eqn{p_{s}(D)} is the survival fraction after the dose \eqn{D}.
 #' The previous equation can be rewritten as function of \eqn{TD_{50}} and \eqn{\gamma_{50}}:
-#' \deqn{\frac{1}{2}}
+#' \deqn{TCP=\left (\frac{1}{2}  \right )^{e^{\left [2\gamma_{50}(1-D/D_{50})/ln2  \right ]}}}
+#' Using the assumption of independent subvolumes, for the case of heterogeneous irradiation, 
+#' the overall probability of tumor control is the product of the probabilities of killing all 
+#' clonogens in each tumor subvolume described by the differential DVH:
+#' \deqn{TCP=\prod_{i}TCP(D_{i},v_{i})}
+#' Thus, for a given differential DVH \eqn{\left \{ D_{i},v_{i} \right \}}, the TCP can be calculated using the following two-parameter TCP formula:
+#' \deqn{TCP=\left (\frac{1}{2}  \right )^{\sum_{i}v_{i}e^{\left [2\gamma_{50}(1-D/D_{50})/ln2  \right ]}}}
 #' @param doses Either a \code{dvhmatrix} class object or a vector with nominal doses
 #' @param TD50 The value of dose that gives the 50\% of probability of outcome
 #' @param gamma50 The slope of dose/response curve at 50\% of probability
 #' @param a Value for parallel-serial correlation in radiobiological response 
 #' @export
-#' @return A vector with TCP calculated according Munro/Gilbert/Kallman model.
-#' @references Okunieff P, Morgan D, Niemierko A, Suit HD. \emph{Radiation dose-response of human tumors}. Int J Radiat Oncol Biol Phys. 1995 Jul 15;32(4):1227-37. PubMed PMID: 7607946.
-DR.Warkentin <- function (TD50=45, gamma50=1.5, aa=1, diffdvh=NULL, dose=NULL) {
-  # check the single choice between dvh matrix or dose series
-  if (!is.null(dose) && !is.null(diffdvh)) stop("Select either a DVH or a point dose to calculate NTCP")
-  # check the single choice between dvh matrix or dose series  
-  if (is.vector(dose) && is.null(diffdvh)) p <- 0.5^(exp(2*gamma50/log(2)*(1-dose/TD50)))
-  if (is.null(dose) && is.matrix(diffdvh)) p <- 0.5^(exp(2*gamma50/log(2)*(1-EUD(dvh.matrix=diffdvh, a=aa)/TD50)))
+#' @return A vector with TCP calculated according Warkentin (Poisson) model.
+#' @references Warkentin B, Stavrev P, Stavreva N, Field C, Fallone BG. \emph{A TCP-NTCP estimation module using DVHs and known radiobiological models and parameter sets}. J Appl Clin Med Phys. 2004 Winter;5(1):50-63. Epub 2004 Jan 1. PubMed PMID: 15753933.
+DR.Warkentin <- function (doses, TD50=45, gamma50=1.5, a=1) {
+  if (class(doses)=="numeric") p <- 0.5^(exp(2*gamma50/log(2)*(1-doses/TD50)))
+  if (class(doses)=="dvhmatrix") p <- 0.5^(exp(2*gamma50/log(2)*(1-DVH.eud(dvh = doses, a=a)/TD50)))
   return(p) 
 }
 
