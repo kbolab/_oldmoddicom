@@ -7,10 +7,21 @@
 #' @param a factor for calculating EUD value according \code{\link{DVH.eud}} function
 #' @param TD50 Dose that gives the 50\% probability of outcome
 #' @param gamma50 Slope of dose-response curve at TD50 of administered dose
+#' @param DR.fun Dose/Response function, a character vector containing the name of one of the function in the package \pkg{moddicom}:
+#' \emph{"Lyman"}, \emph{"Niemierko"}, \emph{"Bentzen"}, \emph{"Goitein"}, \emph{"Munro"}, \emph{"Okunieff"}, \emph{"Warkentin"}.
 #' @export
 #' @return A vector of binary events (1 or 0).
-DR.generate<-function(doses, a = 1, TD50 = 45, gamma50 = 1.5) {
-  
+DR.generate<-function(doses, a = 1, TD50 = 45, gamma50 = 1.5, DR.fun = c("Lyman", "Niemierko", "Bentzen", "Goitein",
+                                                                         "Munro", "Okunieff", "Warkentin")) {
+  DR.fun<-match.arg(arg = DR.fun)
+  FUN<-match.fun(FUN = paste("DR.", DR.fun, sep = ""))
+  p <-FUN(TD50 = TD50, gamma50 = gamma50, a = a, doses = doses)
+  # m is the number of the cases
+  if ((class(doses)=="numeric") || (class(doses)=="integer")) m<-length(doses)
+  if (class(doses)=="dvhmatrix") m<-ncol(doses@dvh) - 1
+  # seed for probability calculation
+  prob<-runif(n = m)
+  return(as.numeric(FUN(doses = doses, TD50 = TD50, gamma50 = gamma50, a = a)>prob))
 }
 
 ## Dose/Response according Lyman 1985, Kutcher and Burman 1989, Deasy 2000 (probit) ##
