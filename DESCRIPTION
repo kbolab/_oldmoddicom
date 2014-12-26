@@ -12,5 +12,6 @@ Description: This package allows to load DICOM CT scans, MRIs, RTStruct, RTDose
 License: GPL-2
 Imports:
     XML (>= 3.98-1.1),
-    stringr (>= 0.6.2)
+    stringr (>= 0.6.2),
+    bbmle (>= 1.0.17)
 NeedsCompilation: yes

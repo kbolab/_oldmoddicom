@@ -212,6 +212,7 @@ DR.Bentzen <- function (doses, TD50=45, gamma50=1.5, a=1) {
 #' @param outcome A numeric vector of cases showing (1) and not showing (0) the outcome
 #' @param DR.fun Dose/Response function, a character vector containing the name of one of the function in the package \pkg{moddicom}:
 #' \code{Lyman}, \code{Niemierko}, \code{Bentzen}, \code{Goitein}, \code{Munro}, \code{Okunieff}, \code{Warkentin}.
+#' @import bbmle
 #' @export
 DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", "Goitein", "Munro", "Okunieff", "Warkentin")) {
   DR.fun<-match.arg(DR.fun)
