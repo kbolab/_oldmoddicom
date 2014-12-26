@@ -8,7 +8,7 @@
 #' @param TD50 Dose that gives the 50\% probability of outcome
 #' @param gamma50 Slope of dose-response curve at TD50 of administered dose
 #' @param DR.fun Dose/Response function, a character vector containing the name of one of the function in the package \pkg{moddicom}:
-#' \emph{"Lyman"}, \emph{"Niemierko"}, \emph{"Bentzen"}, \emph{"Goitein"}, \emph{"Munro"}, \emph{"Okunieff"}, \emph{"Warkentin"}.
+#' \code{Lyman}, \code{Niemierko}, \code{Bentzen}, \code{Goitein}, \code{Munro}, \code{Okunieff}, \code{Warkentin}.
 #' @export
 #' @return A vector of binary events (1 or 0).
 DR.generate<-function(doses, a = 1, TD50 = 45, gamma50 = 1.5, DR.fun = c("Lyman", "Niemierko", "Bentzen", "Goitein",
@@ -173,8 +173,8 @@ DR.Okunieff <- function (doses, TD50=45, gamma50=1.5, a=1) {
 #' @return A vector with TCP calculated according Warkentin (Poisson) model.
 #' @references Warkentin B, Stavrev P, Stavreva N, Field C, Fallone BG. \emph{A TCP-NTCP estimation module using DVHs and known radiobiological models and parameter sets}. J Appl Clin Med Phys. 2004 Winter;5(1):50-63. Epub 2004 Jan 1. PubMed PMID: 15753933.
 DR.Warkentin <- function (doses, TD50=45, gamma50=1.5, a=1) {
-  if ((class(doses)=="numeric") || (class(doses)=="integer")) p <- 0.5^(exp(2*gamma50/log(2)*(1-doses/TD50)))
-  if (class(doses)=="dvhmatrix") p <- 0.5^(exp(2*gamma50/log(2)*(1-DVH.eud(dvh = doses, a=a)/TD50)))
+  if ((class(doses)=="numeric") || (class(doses)=="integer")) p <- 0.5^(exp(2*gamma50/0.693147181*(1-doses/TD50)))
+  if (class(doses)=="dvhmatrix") p <- 0.5^(exp(2*gamma50/0.693147181*(1-DVH.eud(dvh = doses, a=a)/TD50)))
   return(p) 
 }
 
@@ -197,4 +197,41 @@ DR.Bentzen <- function (doses, TD50=45, gamma50=1.5, a=1) {
   if ((class(doses)=="numeric") || (class(doses)=="integer")) p <- 0.5^(TD50/doses)^(2*gamma50/0.693147181)
   if (class(doses)=="dvhmatrix") p <- 0.5^(TD50/DVH.eud(dvh = doses, a=a))^(2*gamma50/0.693147181)
   return(p) 
+}
+
+#' Fit a Dose/Response function
+#' @description This function fits an object of class \code{dvhatrix} or \code{numeric} to a given series of
+#' outcome.
+#' @details This function is a wrapper for fitting dose/response functions to a given set of binary outcomes. Currently
+#' outcomes must be referred as a numeric vector  representing cases "showing the outcome" with the number 1, 
+#' or "not showing the outcome" with the number 0. Model fitting is performed using Maximum Likelihood Estimation method,
+#' implemented by wrapping R MLE functions set for specific Log Likelihood functions related to dose/response formulas.
+#' If \code{doses} is a vector of nominal doses its length must be equal to the length of \code{outcome}, if \code{doses} is
+#' a \code{dvhmatrix} class object the number of histograms must be equal to the length of \code{outcome}.
+#' @param doses Either a \code{dvhmatrix} class object or a vector with nominal doses
+#' @param outcome A numeric vector of cases showing (1) and not showing (0) the outcome
+#' @param DR.fun Dose/Response function, a character vector containing the name of one of the function in the package \pkg{moddicom}:
+#' \code{Lyman}, \code{Niemierko}, \code{Bentzen}, \code{Goitein}, \code{Munro}, \code{Okunieff}, \code{Warkentin}.
+#' @export
+DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", "Goitein", "Munro", "Okunieff", "Warkentin")) {
+  DR.fun<-match.arg(DR.fun)
+  ## fitting two parameters dose/response model
+  if ((class(doses)=="numeric") || (class(doses)=="integer")) {
+    ## define LL functions
+    if (DR.fun=="Lyman")      FUN<-function(doses, TD50, gamma50) return(pnorm(q=((doses - TD50)*gamma50*sqrt(2*pi))/TD50))
+    if (DR.fun=="Niemierko")  FUN<-function(doses, TD50, gamma50) return(1/(1+(TD50/doses)^(4*gamma50)))
+    if (DR.fun=="Bentzen")    FUN<-function(doses, TD50, gamma50) return(0.5^(TD50/doses)^(2*gamma50/0.693147181))
+    if (DR.fun=="Goitein")    FUN<-function(doses, TD50, gamma50) return(pnorm(q=(log(doses/TD50)*gamma50*sqrt(2*pi))))
+    if (DR.fun=="Munro")      FUN<-function(doses, TD50, gamma50) return(2^(-(exp(exp(1)*gamma50*(1-doses/TD50)))))
+    if (DR.fun=="Okunieff")   FUN<-function(doses, TD50, gamma50) return(1/(1+exp(4*gamma50*(1-(doses/TD50)))))
+    if (DR.fun=="Warkentin")  FUN<-function(doses, TD50, gamma50) return(0.5^(exp(2*gamma50/0.693147181*(1-doses/TD50))))
+    ## define the negative LL function
+    nLL<-function(par, doses, outcome){
+      TD50<-par[1]
+      gamma50<-par[2]
+      return(-sum(outcome*log(FUN(doses, TD50, gamma50))+(1 - outcome)*log(1 - FUN(doses, TD50, gamma50))))
+    }
+    fit<-nlm(f = nLL, p = c(45, 1.5), doses = doses, outcome = outcome)
+  }  
+  return(fit)
 }
