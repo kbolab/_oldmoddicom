@@ -214,7 +214,9 @@ DR.Bentzen <- function (doses, TD50=45, gamma50=1.5, a=1) {
 #' \code{Lyman}, \code{Niemierko}, \code{Bentzen}, \code{Goitein}, \code{Munro}, \code{Okunieff}, \code{Warkentin}.
 #' @import bbmle
 #' @export
-DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", "Goitein", "Munro", "Okunieff", "Warkentin")) {
+DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", "Goitein", "Munro", "Okunieff", "Warkentin")
+                    type = c("NTCP", "TCP")) {
+  type<-match.arg(type)
   DR.fun<-match.arg(DR.fun)
   ## fitting two parameters dose/response model
   if ((class(doses)=="numeric") || (class(doses)=="integer")) {
@@ -232,7 +234,62 @@ DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", 
       gamma50<-par[2]
       return(-sum(outcome*log(FUN(doses, TD50, gamma50))+(1 - outcome)*log(1 - FUN(doses, TD50, gamma50))))
     }
-    fit<-nlm(f = nLL, p = c(45, 1.5), doses = doses, outcome = outcome)
-  }  
+    #fit<-nlm(f = nLL, p = c(45, 1.5), doses = doses, outcome = outcome)
+    fit<-nlminb(start = c(45, 1.5), objective = nLL, lower = c(10, .2), upper = c(150, 2.5), doses = doses, outcome = outcome)
+  }
+  
+  ## fitting three parameters dose/response model
+  if (class(doses)=="dvhmatrix") {
+    ## define LL functions
+    if (DR.fun=="Lyman")      FUN<-function(doses, TD50, gamma50, a) return(pnorm(q=((DVH.eud(dvh = doses, a = a) - TD50)*gamma50*sqrt(2*pi))/TD50))
+    if (DR.fun=="Niemierko")  FUN<-function(doses, TD50, gamma50, a) return(1/(1+(TD50/DVH.eud(dvh = doses, a = a))^(4*gamma50)))
+    if (DR.fun=="Bentzen")    FUN<-function(doses, TD50, gamma50, a) return(0.5^(TD50/DVH.eud(dvh = doses, a = a))^(2*gamma50/0.693147181))
+    if (DR.fun=="Goitein")    FUN<-function(doses, TD50, gamma50, a) return(pnorm(q=(log(DVH.eud(dvh = doses, a = a)/TD50)*gamma50*sqrt(2*pi))))
+    if (DR.fun=="Munro")      FUN<-function(doses, TD50, gamma50, a) return(2^(-(exp(exp(1)*gamma50*(1-DVH.eud(dvh = doses, a = a)/TD50)))))
+    if (DR.fun=="Okunieff")   FUN<-function(doses, TD50, gamma50, a) return(1/(1+exp(4*gamma50*(1-(DVH.eud(dvh = doses, a = a)/TD50)))))
+    if (DR.fun=="Warkentin")  FUN<-function(doses, TD50, gamma50, a) return(0.5^(exp(2*gamma50/0.693147181*(1-DVH.eud(dvh = doses, a = a)/TD50))))
+    ## define the negative LL function
+    nLL<-function(par, doses, outcome){
+      TD50<-par[1]
+      gamma50<-par[2]
+      a<-par[3]
+      return(-sum(outcome*log(FUN(doses, TD50, gamma50, a))+(1 - outcome)*log(1 - FUN(doses, TD50, gamma50, a))))
+    }
+    #fit<-nlm(f = nLL, p = c(45, 1.5, 1.5), doses = doses, outcome = outcome)
+    fit<-nlminb(start = c(45, 1.5, 2), objective = nLL, lower = c(10, .2, .5), upper = c(150, 2.5, 40), doses = doses, outcome = outcome)
+  }
+  ## fitting two parameters dose/response model
+#   if ((class(doses)=="numeric") || (class(doses)=="integer")) {
+#     ## define LL functions
+#     if (DR.fun=="Lyman")      FUN<-function(doses, TD50, gamma50) return(pnorm(q=((doses - TD50)*gamma50*sqrt(2*pi))/TD50))
+#     if (DR.fun=="Niemierko")  FUN<-function(doses, TD50, gamma50) return(1/(1+(TD50/doses)^(4*gamma50)))
+#     if (DR.fun=="Bentzen")    FUN<-function(doses, TD50, gamma50) return(0.5^(TD50/doses)^(2*gamma50/0.693147181))
+#     if (DR.fun=="Goitein")    FUN<-function(doses, TD50, gamma50) return(pnorm(q=(log(doses/TD50)*gamma50*sqrt(2*pi))))
+#     if (DR.fun=="Munro")      FUN<-function(doses, TD50, gamma50) return(2^(-(exp(exp(1)*gamma50*(1-doses/TD50)))))
+#     if (DR.fun=="Okunieff")   FUN<-function(doses, TD50, gamma50) return(1/(1+exp(4*gamma50*(1-(doses/TD50)))))
+#     if (DR.fun=="Warkentin")  FUN<-function(doses, TD50, gamma50) return(0.5^(exp(2*gamma50/0.693147181*(1-doses/TD50))))
+#     ## define the negative LL function
+#     nLL<-function(TD50, gamma50, doses, outcome) 
+#       return(-sum(outcome*log(FUN(doses, TD50, gamma50))+(1 - outcome)*log(1 - FUN(doses, TD50, gamma50))))
+#     fit<-mle2(minuslogl = nLL, start = list(TD50=45, gamma50=1.5), data = list(doses=doses, outcome=outcome))
+#   }
+#   
+#   ## fitting three parameters dose/response model
+#   if (class(doses)=="dvhmatrix") {
+#     require(bbmle)
+#     ## define LL functions
+#     if (DR.fun=="Lyman")      FUN<-function(doses, TD50, gamma50, a) return(pnorm(q=((DVH.eud(dvh = doses, a = a) - TD50)*gamma50*sqrt(2*pi))/TD50))
+#     if (DR.fun=="Niemierko")  FUN<-function(doses, TD50, gamma50, a) return(1/(1+(TD50/DVH.eud(dvh = doses, a = a))^(4*gamma50)))
+#     if (DR.fun=="Bentzen")    FUN<-function(doses, TD50, gamma50, a) return(0.5^(TD50/DVH.eud(dvh = doses, a = a))^(2*gamma50/0.693147181))
+#     if (DR.fun=="Goitein")    FUN<-function(doses, TD50, gamma50, a) return(pnorm(q=(log(DVH.eud(dvh = doses, a = a)/TD50)*gamma50*sqrt(2*pi))))
+#     if (DR.fun=="Munro")      FUN<-function(doses, TD50, gamma50, a) return(2^(-(exp(exp(1)*gamma50*(1-DVH.eud(dvh = doses, a = a)/TD50)))))
+#     if (DR.fun=="Okunieff")   FUN<-function(doses, TD50, gamma50, a) return(1/(1+exp(4*gamma50*(1-(DVH.eud(dvh = doses, a = a)/TD50)))))
+#     if (DR.fun=="Warkentin")  FUN<-function(doses, TD50, gamma50, a) return(0.5^(exp(2*gamma50/0.693147181*(1-DVH.eud(dvh = doses, a = a)/TD50))))
+#     ## define the negative LL function
+#     nLL<-function(TD50, gamma50, a, doses, outcome)
+#       return(-sum(outcome*log(FUN(doses, TD50, gamma50, a))+(1 - outcome)*log(1 - FUN(doses, TD50, gamma50, a))))
+#     fit<-mle2(minuslogl = nLL, start = list(TD50=45, gamma50=1.5, a=2), data = list(doses=doses, outcome=outcome), 
+#               optimizer = "nlminb", lower = c(TD50=5, gamma50=.5, a=.2), upper = c(TD50=100, gamma50=3, a=50))
+#   }
   return(fit)
 }
