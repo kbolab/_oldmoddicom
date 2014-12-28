@@ -212,9 +212,8 @@ DR.Bentzen <- function (doses, TD50=45, gamma50=1.5, a=1) {
 #' @param outcome A numeric vector of cases showing (1) and not showing (0) the outcome
 #' @param DR.fun Dose/Response function, a character vector containing the name of one of the function in the package \pkg{moddicom}:
 #' \code{Lyman}, \code{Niemierko}, \code{Bentzen}, \code{Goitein}, \code{Munro}, \code{Okunieff}, \code{Warkentin}.
-#' @import bbmle
 #' @export
-DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", "Goitein", "Munro", "Okunieff", "Warkentin")
+DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", "Goitein", "Munro", "Okunieff", "Warkentin"),
                     type = c("NTCP", "TCP")) {
   type<-match.arg(type)
   DR.fun<-match.arg(DR.fun)
@@ -258,7 +257,7 @@ DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", 
     #fit<-nlm(f = nLL, p = c(45, 1.5, 1.5), doses = doses, outcome = outcome)
     fit<-nlminb(start = c(45, 1.5, 2), objective = nLL, lower = c(10, .2, .5), upper = c(150, 2.5, 40), doses = doses, outcome = outcome)
   }
-  ## fitting two parameters dose/response model
+  ## fitting two parameters dose/response model using bbmle
 #   if ((class(doses)=="numeric") || (class(doses)=="integer")) {
 #     ## define LL functions
 #     if (DR.fun=="Lyman")      FUN<-function(doses, TD50, gamma50) return(pnorm(q=((doses - TD50)*gamma50*sqrt(2*pi))/TD50))
