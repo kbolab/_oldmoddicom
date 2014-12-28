@@ -212,6 +212,7 @@ DR.Bentzen <- function (doses, TD50=45, gamma50=1.5, a=1) {
 #' @param outcome A numeric vector of cases showing (1) and not showing (0) the outcome
 #' @param DR.fun Dose/Response function, a character vector containing the name of one of the function in the package \pkg{moddicom}:
 #' \code{Lyman}, \code{Niemierko}, \code{Bentzen}, \code{Goitein}, \code{Munro}, \code{Okunieff}, \code{Warkentin}.
+#' @param type Function type: \code{NTCP}, Normal Tissue Complication Probability, or \code{TCP}, Tumor Control Probability
 #' @export
 DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", "Goitein", "Munro", "Okunieff", "Warkentin"),
                     type = c("NTCP", "TCP")) {
@@ -233,7 +234,11 @@ DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", 
       gamma50<-par[2]
       return(-sum(outcome*log(FUN(doses, TD50, gamma50))+(1 - outcome)*log(1 - FUN(doses, TD50, gamma50))))
     }
-    #fit<-nlm(f = nLL, p = c(45, 1.5), doses = doses, outcome = outcome)
+    # check the function type
+    if (type=="NTCP")
+      if (any(DR.fun==c("Bentzen", "Munro", "Okunieff", "Warkentin"))) warning(paste("Trying to use", DR.fun, "model as NTCP function!"))
+    if (type=="TCP")
+      if (any(DR.fun==c("Goitein", "Lyman"))) warning(paste("Trying to use", DR.fun, "model as TCP function!"))
     fit<-nlminb(start = c(45, 1.5), objective = nLL, lower = c(10, .2), upper = c(150, 2.5), doses = doses, outcome = outcome)
   }
   
@@ -254,8 +259,19 @@ DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", 
       a<-par[3]
       return(-sum(outcome*log(FUN(doses, TD50, gamma50, a))+(1 - outcome)*log(1 - FUN(doses, TD50, gamma50, a))))
     }
-    #fit<-nlm(f = nLL, p = c(45, 1.5, 1.5), doses = doses, outcome = outcome)
-    fit<-nlminb(start = c(45, 1.5, 2), objective = nLL, lower = c(10, .2, .5), upper = c(150, 2.5, 40), doses = doses, outcome = outcome)
+    # check the function type
+    if (type=="NTCP") {
+      Upper<-c(150, 5, 40)
+      Lower<-c(10, .01, .01)
+      # print warning when fitting a TCP model to NTCP data
+      if (any(DR.fun==c("Bentzen", "Munro", "Okunieff", "Warkwntin"))) warning(paste("Trying to use", DR.fun, "model as NTCP function!"))
+    }
+    if (type=="TCP") {
+      Upper<-c(150, 5, -.01)
+      Lower<-c(10, .01, -40)
+      if (any(DR.fun==c("Goitein", "Lyman"))) warning(paste("Trying to use", DR.fun, "model as TCP function!"))
+    }
+    fit<-nlminb(start = c(45, 1.5, 2), objective = nLL, lower = Lower, upper = Upper, doses = doses, outcome = outcome)
   }
   ## fitting two parameters dose/response model using bbmle
 #   if ((class(doses)=="numeric") || (class(doses)=="integer")) {
