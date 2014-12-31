@@ -279,6 +279,9 @@ DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", 
     fit<-nlminb(start = Start, objective = nLL, lower = Lower, upper = Upper, doses = doses, outcome = outcome)
     #fit<-optimx(par = Start, fn = nLL, lower = Lower, upper = Upper, doses = doses, outcome = outcome)
   }
+  parspace<-expand.grid(TD50 = seq(from = fit$par[1] - 10, to = fit$par[1] + 10, by = 1), gamma50 = seq(from = fit$par[2] - 1.5, to = fit$par[2] + 1.5, by = .15), a = seq(from = 0.01, to = 10.01, by = .5), KEEP.OUT.ATTRS = TRUE)
+  parspacevalue<-apply(X = parspace, MARGIN = 1, FUN = nLL, doses = doses, outcome = outcome)
+  parspacevalue<-array(data = unlist(parspacevalue), dim = c(20,20,20))
   ## fitting two parameters dose/response model using bbmle
 #   if ((class(doses)=="numeric") || (class(doses)=="integer")) {
 #     ## define LL functions
@@ -312,5 +315,5 @@ DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", 
 #     fit<-mle2(minuslogl = nLL, start = list(TD50=45, gamma50=1.5, a=2), data = list(doses=doses, outcome=outcome), 
 #               optimizer = "nlminb", lower = c(TD50=5, gamma50=.5, a=.2), upper = c(TD50=100, gamma50=3, a=50))
 #   }
-  return(fit)
+  return(list(fit=fit, parspacevalue=parspacevalue))
 }

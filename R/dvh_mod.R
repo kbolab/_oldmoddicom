@@ -397,7 +397,6 @@ DVH.merge<-function(receiver=NULL, addendum=NULL) {
 #' @description This method overrides the default method \code{plot} and handles the plots of \code{dvhmatrix}
 #'              class objects.
 #' @param x The \code{dvhmatrix} object to be plotted.
-#' @param y missing argument.
 #' @param elements A vector containing the indeces of the DVHs to be plotted.
 #' @param enhance A vector containing the indeces of the DVHs curves to be enhanced in the plot by changing de default color.
 #' @param mean.dvh A \code{logical} value, if \code{TRUE} the mean dvh is plotted.
@@ -427,8 +426,8 @@ DVH.merge<-function(receiver=NULL, addendum=NULL) {
 #' b <- DVH.generate(dvh.number = 100, dvh.type = "cumulative", vol.distr = "absolute")
 #' plot(x = b, mean.dvh = TRUE, median.dvh = TRUE, mean.median.alone = TRUE, 
 #'      C.I.dvh = TRUE, C.I.dvh.range = TRUE, C.I.dvh.width = .67, lwd = 2)
-setMethod("plot", signature(x="dvhmatrix", y="missing"), 
-          function(x, y, elements=NULL, enhance=NULL, mean.dvh=FALSE, median.dvh=FALSE, 
+setMethod("plot", signature(x="dvhmatrix"), 
+          function(x, elements=NULL, enhance=NULL, mean.dvh=FALSE, median.dvh=FALSE, 
                    mean.median.alone=FALSE, el.color="black", en.color="red",  mean.color="blue", median.color="red",
                    lwd=1, C.I.dvh=FALSE, C.I.dvh.width=.95, C.I.dvh.range=FALSE, n.boot=2000, ...){
             dvh <- slot(x,"dvh")
