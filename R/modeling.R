@@ -222,6 +222,10 @@ DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", 
   DR.fun<-match.arg(DR.fun)
   ## fitting two parameters dose/response model
   if ((class(doses)=="numeric") || (class(doses)=="integer")) {
+    ## Akaike Information Criterion function
+    DR.AIC  <-function(LL) return(4 - 2 * LL)
+    ## Akaike Information Criterion corrected by the cases number
+    DR.AICc <-function() return(aic + 12/(length(doses) - 3))
     ## define LL functions
     if (DR.fun=="Lyman")      FUN<-function(doses, TD50, gamma50) return(pnorm(q=((doses - TD50)*gamma50*sqrt(2*pi))/TD50))
     if (DR.fun=="Niemierko")  FUN<-function(doses, TD50, gamma50) return(1/(1+(TD50/doses)^(4*gamma50)))
@@ -246,6 +250,10 @@ DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", 
   
   ## fitting three parameters dose/response model
   if (class(doses)=="dvhmatrix") {
+    # Akaike Information Criterion function
+    DR.AIC <-function(LL) return(6 - 2 * LL)
+    ## Akaike Information Criterion corrected by the cases number
+    DR.AICc <-function() return(aic + 24/(ncol(doses@dvh) - 5))
     ## define LL functions
     if (DR.fun=="Lyman")      FUN<-function(doses, TD50, gamma50, a) return(pnorm(q=((DVH.eud(dvh = doses, a = a) - TD50)*gamma50*sqrt(2*pi))/TD50))
     if (DR.fun=="Niemierko")  FUN<-function(doses, TD50, gamma50, a) return(1/(1+(TD50/DVH.eud(dvh = doses, a = a))^(4*gamma50)))
@@ -279,41 +287,13 @@ DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", 
     fit<-nlminb(start = Start, objective = nLL, lower = Lower, upper = Upper, doses = doses, outcome = outcome)
     #fit<-optimx(par = Start, fn = nLL, lower = Lower, upper = Upper, doses = doses, outcome = outcome)
   }
-  parspace<-expand.grid(TD50 = seq(from = fit$par[1] - 10, to = fit$par[1] + 10, by = 1), gamma50 = seq(from = fit$par[2] - 1.5, to = fit$par[2] + 1.5, by = .15), a = seq(from = 0.01, to = 10.01, by = .5), KEEP.OUT.ATTRS = TRUE)
-  parspacevalue<-apply(X = parspace, MARGIN = 1, FUN = nLL, doses = doses, outcome = outcome)
-  parspacevalue<-array(data = unlist(parspacevalue), dim = c(20,20,20))
-  ## fitting two parameters dose/response model using bbmle
-#   if ((class(doses)=="numeric") || (class(doses)=="integer")) {
-#     ## define LL functions
-#     if (DR.fun=="Lyman")      FUN<-function(doses, TD50, gamma50) return(pnorm(q=((doses - TD50)*gamma50*sqrt(2*pi))/TD50))
-#     if (DR.fun=="Niemierko")  FUN<-function(doses, TD50, gamma50) return(1/(1+(TD50/doses)^(4*gamma50)))
-#     if (DR.fun=="Bentzen")    FUN<-function(doses, TD50, gamma50) return(0.5^(TD50/doses)^(2*gamma50/0.693147181))
-#     if (DR.fun=="Goitein")    FUN<-function(doses, TD50, gamma50) return(pnorm(q=(log(doses/TD50)*gamma50*sqrt(2*pi))))
-#     if (DR.fun=="Munro")      FUN<-function(doses, TD50, gamma50) return(2^(-(exp(exp(1)*gamma50*(1-doses/TD50)))))
-#     if (DR.fun=="Okunieff")   FUN<-function(doses, TD50, gamma50) return(1/(1+exp(4*gamma50*(1-(doses/TD50)))))
-#     if (DR.fun=="Warkentin")  FUN<-function(doses, TD50, gamma50) return(0.5^(exp(2*gamma50/0.693147181*(1-doses/TD50))))
-#     ## define the negative LL function
-#     nLL<-function(TD50, gamma50, doses, outcome) 
-#       return(-sum(outcome*log(FUN(doses, TD50, gamma50))+(1 - outcome)*log(1 - FUN(doses, TD50, gamma50))))
-#     fit<-mle2(minuslogl = nLL, start = list(TD50=45, gamma50=1.5), data = list(doses=doses, outcome=outcome))
-#   }
-#   
-#   ## fitting three parameters dose/response model
-#   if (class(doses)=="dvhmatrix") {
-#     require(bbmle)
-#     ## define LL functions
-#     if (DR.fun=="Lyman")      FUN<-function(doses, TD50, gamma50, a) return(pnorm(q=((DVH.eud(dvh = doses, a = a) - TD50)*gamma50*sqrt(2*pi))/TD50))
-#     if (DR.fun=="Niemierko")  FUN<-function(doses, TD50, gamma50, a) return(1/(1+(TD50/DVH.eud(dvh = doses, a = a))^(4*gamma50)))
-#     if (DR.fun=="Bentzen")    FUN<-function(doses, TD50, gamma50, a) return(0.5^(TD50/DVH.eud(dvh = doses, a = a))^(2*gamma50/0.693147181))
-#     if (DR.fun=="Goitein")    FUN<-function(doses, TD50, gamma50, a) return(pnorm(q=(log(DVH.eud(dvh = doses, a = a)/TD50)*gamma50*sqrt(2*pi))))
-#     if (DR.fun=="Munro")      FUN<-function(doses, TD50, gamma50, a) return(2^(-(exp(exp(1)*gamma50*(1-DVH.eud(dvh = doses, a = a)/TD50)))))
-#     if (DR.fun=="Okunieff")   FUN<-function(doses, TD50, gamma50, a) return(1/(1+exp(4*gamma50*(1-(DVH.eud(dvh = doses, a = a)/TD50)))))
-#     if (DR.fun=="Warkentin")  FUN<-function(doses, TD50, gamma50, a) return(0.5^(exp(2*gamma50/0.693147181*(1-DVH.eud(dvh = doses, a = a)/TD50))))
-#     ## define the negative LL function
-#     nLL<-function(TD50, gamma50, a, doses, outcome)
-#       return(-sum(outcome*log(FUN(doses, TD50, gamma50, a))+(1 - outcome)*log(1 - FUN(doses, TD50, gamma50, a))))
-#     fit<-mle2(minuslogl = nLL, start = list(TD50=45, gamma50=1.5, a=2), data = list(doses=doses, outcome=outcome), 
-#               optimizer = "nlminb", lower = c(TD50=5, gamma50=.5, a=.2), upper = c(TD50=100, gamma50=3, a=50))
-#   }
-  return(list(fit=fit, parspacevalue=parspacevalue))
+#   parspace<-expand.grid(TD50 = seq(from = fit$par[1] - 10, to = fit$par[1] + 10, by = 1), gamma50 = seq(from = fit$par[2] - 1.5, to = fit$par[2] + 1.5, by = .15), a = seq(from = 0.01, to = 10.01, by = .5), KEEP.OUT.ATTRS = TRUE)
+#   parspacevalue<-apply(X = parspace, MARGIN = 1, FUN = nLL, doses = doses, outcome = outcome)
+#   parspacevalue<-array(data = unlist(parspacevalue), dim = c(20,20,20))
+  MLE<- -fit$objective
+  aic <- DR.AIC(LL = MLE)
+  aicc <- DR.AICc()
+  ##  start calculation of confidence intervals by using Profile Likelihood method
+  
+  return(list(fit = fit, AIC = aic, AICc = aicc, MLE = MLE))
 }
