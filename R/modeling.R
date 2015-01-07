@@ -217,7 +217,7 @@ DR.Bentzen <- function (doses, TD50=45, gamma50=1.5, a=1) {
 #' @param CI.width The value of width of confidence interval to be returned if \code{CI = TRUE}
 #' @export
 DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", "Goitein", "Munro", "Okunieff", "Warkentin"),
-                    type = c("NTCP", "TCP"), CI = TRUE, CI.width = .95) {
+                    type = c("NTCP", "TCP"), CI = TRUE, CI.width = .95, epsilon = 1e-4) {
   type<-match.arg(type)
   DR.fun<-match.arg(DR.fun)
   ## fitting two parameters dose/response model
@@ -238,6 +238,15 @@ DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", 
     nLL<-function(par, doses, outcome){
       TD50<-par[1]
       gamma50<-par[2]
+      return(-sum(outcome*log(FUN(doses, TD50, gamma50))+(1 - outcome)*log(1 - FUN(doses, TD50, gamma50))))
+    }
+    ## LL functions for Profile Likelihood
+    nLL.TD50<-function(par, doses, outcome, TD50){
+      gamma50<-par[1]
+      return(-sum(outcome*log(FUN(doses, TD50, gamma50))+(1 - outcome)*log(1 - FUN(doses, TD50, gamma50))))
+    }
+    nLL.gamma50<-function(par, doses, outcome, gamma50){
+      TD50<-par[1]
       return(-sum(outcome*log(FUN(doses, TD50, gamma50))+(1 - outcome)*log(1 - FUN(doses, TD50, gamma50))))
     }
     # check the function type
@@ -269,6 +278,22 @@ DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", 
       a<-par[3]
       return(-sum(outcome*log(FUN(doses, TD50, gamma50, a))+(1 - outcome)*log(1 - FUN(doses, TD50, gamma50, a))))
     }
+    ## LL functions for Profile Likelihood
+    nLL.TD50<-function(par, doses, outcome, TD50){
+      gamma50<-par[1]
+      a<-par[2]
+      return(-sum(outcome*log(FUN(doses, TD50, gamma50, a))+(1 - outcome)*log(1 - FUN(doses, TD50, gamma50, a))))
+    }
+    nLL.gamma50<-function(par, doses, outcome, gamma50){
+      TD50<-par[1]
+      a<-par[2]
+      return(-sum(outcome*log(FUN(doses, TD50, gamma50, a))+(1 - outcome)*log(1 - FUN(doses, TD50, gamma50, a))))
+    }
+    nLL.a<-function(par, doses, outcome, a){
+      TD50<-par[1]
+      gamma50<-par[2]
+      return(-sum(outcome*log(FUN(doses, TD50, gamma50, a))+(1 - outcome)*log(1 - FUN(doses, TD50, gamma50, a))))
+    }
     # check the function type
     if (type=="NTCP") {
       Upper<-c(150, 5, 40)
@@ -293,7 +318,19 @@ DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", 
   MLE<- -fit$objective
   aic <- DR.AIC(LL = MLE)
   aicc <- DR.AICc()
-  ##  start calculation of confidence intervals by using Profile Likelihood method
-  
-  return(list(fit = fit, AIC = aic, AICc = aicc, MLE = MLE))
+  # set the limit of C.I. with 1/2*chisquare for 1 degree of freedom
+  MLE.bound <- MLE - qchisq(C.I.width,1)/2  
+  TD50.step <- 1
+  TD50.CI <- function(start.TD50) {
+    temp.fit<-nlminb(start = c(fit$par[2], fit$par[3]), objective = nLL.TD50, lower = Lower[2:3], upper = Upper[2:3], doses = doses, outcome = outcome, TD50 = start.TD50)
+    return(list(MLE=-temp.fit$objective, gamma50 = temp.fit$par[1], a = temp.fit$par[2]))
+  }
+#   while (TD50.step>espilon) {
+#     while (TD50.CI)
+#     
+#   }
+#   for (n in 1:length(TD50v)) {
+#     pr.Lik.TD50[[n]] <- nlminb(start = Start[2:3], objective = nLL.TD50, lower = Lower[2:3], upper = Upper[2:3], doses = doses, outcome = outcome, TD50 = TD50v[n])
+#   }
+  return(list(fit = fit, AIC = aic, AICc = aicc, MLE = MLE, pr.Lik.TD50 = pr.Lik.TD50))
 }
