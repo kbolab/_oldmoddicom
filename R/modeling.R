@@ -215,6 +215,7 @@ DR.Bentzen <- function (doses, TD50=45, gamma50=1.5, a=1) {
 #' @param type Function type: \code{NTCP}, Normal Tissue Complication Probability, or \code{TCP}, Tumor Control Probability
 #' @param CI If \code{TRUE} it returns the value of confidence interval calulated by profile likelihood method
 #' @param CI.width The value of width of confidence interval to be returned if \code{CI = TRUE}
+#' @param epsilon Lower interval for bisecting the MLE
 #' @export
 DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", "Goitein", "Munro", "Okunieff", "Warkentin"),
                     type = c("NTCP", "TCP"), CI = TRUE, C.I.width = .95, epsilon = 1e-6) {
@@ -319,99 +320,106 @@ DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", 
   # set the limit of C.I. with 1/2*chisquare for 1 degree of freedom
   bound <- qchisq(C.I.width,1)/2  
   
-  TD50.CI <- function(start.TD50) {
-    temp.fit<-nlminb(start = c(fit$par[2], fit$par[3]), objective = nLL.TD50, lower = Lower[2:3], upper = Upper[2:3], doses = doses, outcome = outcome, TD50 = start.TD50)
-    return(list(MLE=-temp.fit$objective, gamma50 = temp.fit$par[1], a = temp.fit$par[2]))
-  }
-  
-  message("Profiling TD50 low C.I. limit...")
-  start.TD50<-fit$par[1]
-  TD50.step <- 1
-   while (TD50.step>epsilon) {
-     start.TD50<- start.TD50 - TD50.step
-     while ((TD50.CI(start.TD50)$MLE + fit$objective + bound)>0) {       
-       start.TD50 <- start.TD50 - TD50.step       
-     }
-     start.TD50<- start.TD50 + TD50.step
-     TD50.step<-TD50.step/2
-  }
-  TD50low<-start.TD50-TD50.step/2
-  
-  message("Profiling TD50 high C.I. limit...")
-  start.TD50<-fit$par[1]
-  TD50.step<- 1
-  while (TD50.step>epsilon) {
-    start.TD50<- start.TD50 + TD50.step
-    while ((TD50.CI(start.TD50)$MLE + fit$objective + bound)>0) {
-      start.TD50 <- start.TD50 + TD50.step       
+  # check the kind of doses and start Profile Likelihood sequence
+  if (class(doses)=="dvhmatrix") {
+    TD50.CI <- function(start.TD50) {
+      temp.fit<-nlminb(start = c(fit$par[2], fit$par[3]), objective = nLL.TD50, lower = Lower[2:3], upper = Upper[2:3], doses = doses, outcome = outcome, TD50 = start.TD50)
+      return(list(MLE=-temp.fit$objective, gamma50 = temp.fit$par[1], a = temp.fit$par[2]))
     }
-    start.TD50<- start.TD50 - TD50.step
-    TD50.step<-TD50.step/2
-  }
-  TD50high<-start.TD50+TD50.step/2
-  
-  gamma50.CI <- function(start.gamma50) {
-    temp.fit<-nlminb(start = c(fit$par[1], fit$par[3]), objective = nLL.gamma50, lower = Lower[1:3], upper = Upper[1:3], doses = doses, outcome = outcome, gamma50 = start.gamma50)
-    return(list(MLE=-temp.fit$objective, TD50 = temp.fit$par[1], a = temp.fit$par[2]))
-  }
-  
-  message("Profiling gamma50 low C.I. limit...")
-  start.gamma50<-fit$par[2]
-  gamma50.step <- .1
-  while (gamma50.step>epsilon) {
-    start.gamma50<- start.gamma50 - gamma50.step
-    while ((gamma50.CI(start.gamma50)$MLE + fit$objective + bound)>0) {       
-      start.gamma50 <- start.gamma50 - gamma50.step       
+    
+    message("Profiling TD50 low C.I. limit...")
+    start.TD50<-fit$par[1]
+    TD50.step <- 1
+    while (TD50.step>epsilon) {
+      start.TD50<- start.TD50 - TD50.step
+      while ((TD50.CI(start.TD50)$MLE + fit$objective + bound)>0) {       
+        start.TD50 <- start.TD50 - TD50.step       
+      }
+      start.TD50<- start.TD50 + TD50.step
+      TD50.step<-TD50.step/2
     }
-    start.gamma50<- start.gamma50 + gamma50.step
-    gamma50.step<-gamma50.step/2
-  }
-  gamma50low<-start.gamma50-gamma50.step/2
-  
-  message("Profiling gamma50 high C.I. limit...")
-  start.gamma50<-fit$par[2]
-  gamma50.step<- .1
-  while (gamma50.step>epsilon) {
-    start.gamma50<- start.gamma50 + gamma50.step
-    while ((gamma50.CI(start.gamma50)$MLE + fit$objective + bound)>0) {
-      start.gamma50 <- start.gamma50 + gamma50.step       
+    TD50low<-start.TD50-TD50.step/2
+    
+    message("Profiling TD50 high C.I. limit...")
+    start.TD50<-fit$par[1]
+    TD50.step<- 1
+    while (TD50.step>epsilon) {
+      start.TD50<- start.TD50 + TD50.step
+      while ((TD50.CI(start.TD50)$MLE + fit$objective + bound)>0) {
+        start.TD50 <- start.TD50 + TD50.step       
+      }
+      start.TD50<- start.TD50 - TD50.step
+      TD50.step<-TD50.step/2
     }
-    start.gamma50<- start.gamma50 - gamma50.step
-    gamma50.step<-gamma50.step/2
-  }
-  gamma50high<-start.gamma50+gamma50.step/2
-  
-  a.CI <- function(start.a) {
-    temp.fit<-nlminb(start = c(fit$par[1], fit$par[2]), objective = nLL.a, lower = Lower[1:3], upper = Upper[1:3], doses = doses, outcome = outcome, a = start.a)
-    return(list(MLE=-temp.fit$objective, TD50 = temp.fit$par[1], gamma50 = temp.fit$par[2]))
-  }
-  
-  message("Profiling a low C.I. limit...")
-  start.a<-fit$par[3]
-  a.step <- .2
-  while (a.step>epsilon) {
-    start.a<- start.a - a.step
-    while ((a.CI(start.a)$MLE + fit$objective + bound)>0) {   
-      start.a <- start.a - a.step       
+    TD50high<-start.TD50+TD50.step/2
+    
+    gamma50.CI <- function(start.gamma50) {
+      temp.fit<-nlminb(start = c(fit$par[1], fit$par[3]), objective = nLL.gamma50, lower = Lower[1:3], upper = Upper[1:3], doses = doses, outcome = outcome, gamma50 = start.gamma50)
+      return(list(MLE=-temp.fit$objective, TD50 = temp.fit$par[1], a = temp.fit$par[2]))
     }
-    start.a<- start.a + a.step
-    a.step<-a.step/2
-  }
-  alow <- start.a - a.step/2
-  
-  message("Profiling a high C.I. limit...")
-  start.a<-fit$par[3]
-  a.step<- 1
-  while (a.step>epsilon) {
-    start.a<- start.a + a.step
-    while ((a.CI(start.a)$MLE + fit$objective + bound)>0) {
-      start.a <- start.a + a.step       
+    
+    message("Profiling gamma50 low C.I. limit...")
+    start.gamma50<-fit$par[2]
+    gamma50.step <- .1
+    while (gamma50.step>epsilon) {
+      start.gamma50<- start.gamma50 - gamma50.step
+      while ((gamma50.CI(start.gamma50)$MLE + fit$objective + bound)>0) {       
+        start.gamma50 <- start.gamma50 - gamma50.step       
+      }
+      start.gamma50<- start.gamma50 + gamma50.step
+      gamma50.step<-gamma50.step/2
     }
-    start.a <- start.a - a.step
-    a.step <- a.step/2
+    gamma50low<-start.gamma50-gamma50.step/2
+    
+    message("Profiling gamma50 high C.I. limit...")
+    start.gamma50<-fit$par[2]
+    gamma50.step<- .1
+    while (gamma50.step>epsilon) {
+      start.gamma50<- start.gamma50 + gamma50.step
+      while ((gamma50.CI(start.gamma50)$MLE + fit$objective + bound)>0) {
+        start.gamma50 <- start.gamma50 + gamma50.step       
+      }
+      start.gamma50<- start.gamma50 - gamma50.step
+      gamma50.step<-gamma50.step/2
+    }
+    gamma50high<-start.gamma50+gamma50.step/2
+    
+    a.CI <- function(start.a) {
+      temp.fit<-nlminb(start = c(fit$par[1], fit$par[2]), objective = nLL.a, lower = Lower[1:3], upper = Upper[1:3], doses = doses, outcome = outcome, a = start.a)
+      return(list(MLE=-temp.fit$objective, TD50 = temp.fit$par[1], gamma50 = temp.fit$par[2]))
+    }
+    
+    message("Profiling a low C.I. limit...")
+    start.a<-fit$par[3]
+    a.step <- .2
+    while (a.step>epsilon) {
+      start.a<- start.a - a.step
+      while ((a.CI(start.a)$MLE + fit$objective + bound)>0) {   
+        start.a <- start.a - a.step       
+      }
+      start.a<- start.a + a.step
+      a.step<-a.step/2
+    }
+    alow <- start.a - a.step/2
+    
+    message("Profiling a high C.I. limit...")
+    start.a<-fit$par[3]
+    a.step<- 1
+    while (a.step>epsilon) {
+      start.a<- start.a + a.step
+      while ((a.CI(start.a)$MLE + fit$objective + bound)>0) {
+        start.a <- start.a + a.step       
+      }
+      start.a <- start.a - a.step
+      a.step <- a.step/2
+    }
+    ahigh <- start.a + a.step/2
   }
-  ahigh <- start.a + a.step/2
   
+  if ((class(doses)=="numeric") || (class(doses)=="integer")) {
+    
+  }    
+    
   return(list(fit = fit, AIC = aic, AICc = aicc, MLE = MLE, TD50low = TD50low, TD50high = TD50high, 
-              gamma50low = gamma50low, gamma50high = gamma50high, alow = alow, ahigh = ahigh))
+              gamma50low = gamma50low, gamma50high = gamma50high, alow = alow, ahigh = ahigh, model = DR.fun))
 }
