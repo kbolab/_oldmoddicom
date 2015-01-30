@@ -215,13 +215,18 @@ DR.Bentzen <- function (doses, TD50=45, gamma50=1.5, a=1) {
 #' @param type Function type: \code{NTCP}, Normal Tissue Complication Probability, or \code{TCP}, Tumor Control Probability
 #' @param CI If \code{TRUE} it returns the value of confidence interval calulated by profile likelihood method
 #' @param CI.width The value of width of confidence interval to be returned if \code{CI = TRUE}
+#' @param epsilon Lower interval for bisecting the MLE
 #' @export
 DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", "Goitein", "Munro", "Okunieff", "Warkentin"),
-                    type = c("NTCP", "TCP"), CI = TRUE, CI.width = .95) {
+                    type = c("NTCP", "TCP"), CI = TRUE, C.I.width = .95, epsilon = 1e-6) {
   type<-match.arg(type)
   DR.fun<-match.arg(DR.fun)
   ## fitting two parameters dose/response model
   if ((class(doses)=="numeric") || (class(doses)=="integer")) {
+    ## Akaike Information Criterion function
+    DR.AIC  <-function(LL) return(4 - 2 * LL)
+    ## Akaike Information Criterion corrected by the cases number
+    DR.AICc <-function() return(aic + 12/(length(doses) - 3))
     ## define LL functions
     if (DR.fun=="Lyman")      FUN<-function(doses, TD50, gamma50) return(pnorm(q=((doses - TD50)*gamma50*sqrt(2*pi))/TD50))
     if (DR.fun=="Niemierko")  FUN<-function(doses, TD50, gamma50) return(1/(1+(TD50/doses)^(4*gamma50)))
@@ -236,6 +241,15 @@ DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", 
       gamma50<-par[2]
       return(-sum(outcome*log(FUN(doses, TD50, gamma50))+(1 - outcome)*log(1 - FUN(doses, TD50, gamma50))))
     }
+    ## LL functions for Profile Likelihood
+    nLL.TD50<-function(par, doses, outcome, TD50){
+      gamma50<-par[1]
+      return(-sum(outcome*log(FUN(doses, TD50, gamma50))+(1 - outcome)*log(1 - FUN(doses, TD50, gamma50))))
+    }
+    nLL.gamma50<-function(par, doses, outcome, gamma50){
+      TD50<-par[1]
+      return(-sum(outcome*log(FUN(doses, TD50, gamma50))+(1 - outcome)*log(1 - FUN(doses, TD50, gamma50))))
+    }
     # check the function type
     if (type=="NTCP")
       if (any(DR.fun==c("Bentzen", "Munro", "Okunieff", "Warkentin"))) warning(paste("Trying to use", DR.fun, "model as NTCP function!"))
@@ -246,6 +260,10 @@ DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", 
   
   ## fitting three parameters dose/response model
   if (class(doses)=="dvhmatrix") {
+    # Akaike Information Criterion function
+    DR.AIC <-function(LL) return(6 - 2 * LL)
+    ## Akaike Information Criterion corrected by the cases number
+    DR.AICc <-function() return(aic + 24/(ncol(doses@dvh) - 5))
     ## define LL functions
     if (DR.fun=="Lyman")      FUN<-function(doses, TD50, gamma50, a) return(pnorm(q=((DVH.eud(dvh = doses, a = a) - TD50)*gamma50*sqrt(2*pi))/TD50))
     if (DR.fun=="Niemierko")  FUN<-function(doses, TD50, gamma50, a) return(1/(1+(TD50/DVH.eud(dvh = doses, a = a))^(4*gamma50)))
@@ -259,6 +277,22 @@ DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", 
       TD50<-par[1]
       gamma50<-par[2]
       a<-par[3]
+      return(-sum(outcome*log(FUN(doses, TD50, gamma50, a))+(1 - outcome)*log(1 - FUN(doses, TD50, gamma50, a))))
+    }
+    ## LL functions for Profile Likelihood
+    nLL.TD50<-function(par, doses, outcome, TD50){
+      gamma50<-par[1]
+      a<-par[2]
+      return(-sum(outcome*log(FUN(doses, TD50, gamma50, a))+(1 - outcome)*log(1 - FUN(doses, TD50, gamma50, a))))
+    }
+    nLL.gamma50<-function(par, doses, outcome, gamma50){
+      TD50<-par[1]
+      a<-par[2]
+      return(-sum(outcome*log(FUN(doses, TD50, gamma50, a))+(1 - outcome)*log(1 - FUN(doses, TD50, gamma50, a))))
+    }
+    nLL.a<-function(par, doses, outcome, a){
+      TD50<-par[1]
+      gamma50<-par[2]
       return(-sum(outcome*log(FUN(doses, TD50, gamma50, a))+(1 - outcome)*log(1 - FUN(doses, TD50, gamma50, a))))
     }
     # check the function type
@@ -279,38 +313,113 @@ DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", 
     fit<-nlminb(start = Start, objective = nLL, lower = Lower, upper = Upper, doses = doses, outcome = outcome)
     #fit<-optimx(par = Start, fn = nLL, lower = Lower, upper = Upper, doses = doses, outcome = outcome)
   }
-  ## fitting two parameters dose/response model using bbmle
-#   if ((class(doses)=="numeric") || (class(doses)=="integer")) {
-#     ## define LL functions
-#     if (DR.fun=="Lyman")      FUN<-function(doses, TD50, gamma50) return(pnorm(q=((doses - TD50)*gamma50*sqrt(2*pi))/TD50))
-#     if (DR.fun=="Niemierko")  FUN<-function(doses, TD50, gamma50) return(1/(1+(TD50/doses)^(4*gamma50)))
-#     if (DR.fun=="Bentzen")    FUN<-function(doses, TD50, gamma50) return(0.5^(TD50/doses)^(2*gamma50/0.693147181))
-#     if (DR.fun=="Goitein")    FUN<-function(doses, TD50, gamma50) return(pnorm(q=(log(doses/TD50)*gamma50*sqrt(2*pi))))
-#     if (DR.fun=="Munro")      FUN<-function(doses, TD50, gamma50) return(2^(-(exp(exp(1)*gamma50*(1-doses/TD50)))))
-#     if (DR.fun=="Okunieff")   FUN<-function(doses, TD50, gamma50) return(1/(1+exp(4*gamma50*(1-(doses/TD50)))))
-#     if (DR.fun=="Warkentin")  FUN<-function(doses, TD50, gamma50) return(0.5^(exp(2*gamma50/0.693147181*(1-doses/TD50))))
-#     ## define the negative LL function
-#     nLL<-function(TD50, gamma50, doses, outcome) 
-#       return(-sum(outcome*log(FUN(doses, TD50, gamma50))+(1 - outcome)*log(1 - FUN(doses, TD50, gamma50))))
-#     fit<-mle2(minuslogl = nLL, start = list(TD50=45, gamma50=1.5), data = list(doses=doses, outcome=outcome))
-#   }
-#   
-#   ## fitting three parameters dose/response model
-#   if (class(doses)=="dvhmatrix") {
-#     require(bbmle)
-#     ## define LL functions
-#     if (DR.fun=="Lyman")      FUN<-function(doses, TD50, gamma50, a) return(pnorm(q=((DVH.eud(dvh = doses, a = a) - TD50)*gamma50*sqrt(2*pi))/TD50))
-#     if (DR.fun=="Niemierko")  FUN<-function(doses, TD50, gamma50, a) return(1/(1+(TD50/DVH.eud(dvh = doses, a = a))^(4*gamma50)))
-#     if (DR.fun=="Bentzen")    FUN<-function(doses, TD50, gamma50, a) return(0.5^(TD50/DVH.eud(dvh = doses, a = a))^(2*gamma50/0.693147181))
-#     if (DR.fun=="Goitein")    FUN<-function(doses, TD50, gamma50, a) return(pnorm(q=(log(DVH.eud(dvh = doses, a = a)/TD50)*gamma50*sqrt(2*pi))))
-#     if (DR.fun=="Munro")      FUN<-function(doses, TD50, gamma50, a) return(2^(-(exp(exp(1)*gamma50*(1-DVH.eud(dvh = doses, a = a)/TD50)))))
-#     if (DR.fun=="Okunieff")   FUN<-function(doses, TD50, gamma50, a) return(1/(1+exp(4*gamma50*(1-(DVH.eud(dvh = doses, a = a)/TD50)))))
-#     if (DR.fun=="Warkentin")  FUN<-function(doses, TD50, gamma50, a) return(0.5^(exp(2*gamma50/0.693147181*(1-DVH.eud(dvh = doses, a = a)/TD50))))
-#     ## define the negative LL function
-#     nLL<-function(TD50, gamma50, a, doses, outcome)
-#       return(-sum(outcome*log(FUN(doses, TD50, gamma50, a))+(1 - outcome)*log(1 - FUN(doses, TD50, gamma50, a))))
-#     fit<-mle2(minuslogl = nLL, start = list(TD50=45, gamma50=1.5, a=2), data = list(doses=doses, outcome=outcome), 
-#               optimizer = "nlminb", lower = c(TD50=5, gamma50=.5, a=.2), upper = c(TD50=100, gamma50=3, a=50))
-#   }
-  return(fit)
+
+  MLE<- -fit$objective
+  aic <- DR.AIC(LL = MLE)
+  aicc <- DR.AICc()
+  # set the limit of C.I. with 1/2*chisquare for 1 degree of freedom
+  bound <- qchisq(C.I.width,1)/2  
+  
+  # check the kind of doses and start Profile Likelihood sequence
+  if (class(doses)=="dvhmatrix") {
+    TD50.CI <- function(start.TD50) {
+      temp.fit<-nlminb(start = c(fit$par[2], fit$par[3]), objective = nLL.TD50, lower = Lower[2:3], upper = Upper[2:3], doses = doses, outcome = outcome, TD50 = start.TD50)
+      return(list(MLE=-temp.fit$objective, gamma50 = temp.fit$par[1], a = temp.fit$par[2]))
+    }
+    
+    message("Profiling TD50 low C.I. limit...")
+    start.TD50<-fit$par[1]
+    TD50.step <- 1
+    while (TD50.step>epsilon) {
+      start.TD50<- start.TD50 - TD50.step
+      while ((TD50.CI(start.TD50)$MLE + fit$objective + bound)>0) {       
+        start.TD50 <- start.TD50 - TD50.step       
+      }
+      start.TD50<- start.TD50 + TD50.step
+      TD50.step<-TD50.step/2
+    }
+    TD50low<-start.TD50-TD50.step/2
+    
+    message("Profiling TD50 high C.I. limit...")
+    start.TD50<-fit$par[1]
+    TD50.step<- 1
+    while (TD50.step>epsilon) {
+      start.TD50<- start.TD50 + TD50.step
+      while ((TD50.CI(start.TD50)$MLE + fit$objective + bound)>0) {
+        start.TD50 <- start.TD50 + TD50.step       
+      }
+      start.TD50<- start.TD50 - TD50.step
+      TD50.step<-TD50.step/2
+    }
+    TD50high<-start.TD50+TD50.step/2
+    
+    gamma50.CI <- function(start.gamma50) {
+      temp.fit<-nlminb(start = c(fit$par[1], fit$par[3]), objective = nLL.gamma50, lower = Lower[1:3], upper = Upper[1:3], doses = doses, outcome = outcome, gamma50 = start.gamma50)
+      return(list(MLE=-temp.fit$objective, TD50 = temp.fit$par[1], a = temp.fit$par[2]))
+    }
+    
+    message("Profiling gamma50 low C.I. limit...")
+    start.gamma50<-fit$par[2]
+    gamma50.step <- .1
+    while (gamma50.step>epsilon) {
+      start.gamma50<- start.gamma50 - gamma50.step
+      while ((gamma50.CI(start.gamma50)$MLE + fit$objective + bound)>0) {       
+        start.gamma50 <- start.gamma50 - gamma50.step       
+      }
+      start.gamma50<- start.gamma50 + gamma50.step
+      gamma50.step<-gamma50.step/2
+    }
+    gamma50low<-start.gamma50-gamma50.step/2
+    
+    message("Profiling gamma50 high C.I. limit...")
+    start.gamma50<-fit$par[2]
+    gamma50.step<- .1
+    while (gamma50.step>epsilon) {
+      start.gamma50<- start.gamma50 + gamma50.step
+      while ((gamma50.CI(start.gamma50)$MLE + fit$objective + bound)>0) {
+        start.gamma50 <- start.gamma50 + gamma50.step       
+      }
+      start.gamma50<- start.gamma50 - gamma50.step
+      gamma50.step<-gamma50.step/2
+    }
+    gamma50high<-start.gamma50+gamma50.step/2
+    
+    a.CI <- function(start.a) {
+      temp.fit<-nlminb(start = c(fit$par[1], fit$par[2]), objective = nLL.a, lower = Lower[1:3], upper = Upper[1:3], doses = doses, outcome = outcome, a = start.a)
+      return(list(MLE=-temp.fit$objective, TD50 = temp.fit$par[1], gamma50 = temp.fit$par[2]))
+    }
+    
+    message("Profiling a low C.I. limit...")
+    start.a<-fit$par[3]
+    a.step <- .2
+    while (a.step>epsilon) {
+      start.a<- start.a - a.step
+      while ((a.CI(start.a)$MLE + fit$objective + bound)>0) {   
+        start.a <- start.a - a.step       
+      }
+      start.a<- start.a + a.step
+      a.step<-a.step/2
+    }
+    alow <- start.a - a.step/2
+    
+    message("Profiling a high C.I. limit...")
+    start.a<-fit$par[3]
+    a.step<- 1
+    while (a.step>epsilon) {
+      start.a<- start.a + a.step
+      while ((a.CI(start.a)$MLE + fit$objective + bound)>0) {
+        start.a <- start.a + a.step       
+      }
+      start.a <- start.a - a.step
+      a.step <- a.step/2
+    }
+    ahigh <- start.a + a.step/2
+  }
+  
+  if ((class(doses)=="numeric") || (class(doses)=="integer")) {
+    
+  }    
+    
+  return(list(fit = fit, AIC = aic, AICc = aicc, MLE = MLE, TD50low = TD50low, TD50high = TD50high, 
+              gamma50low = gamma50low, gamma50high = gamma50high, alow = alow, ahigh = ahigh, model = DR.fun))
 }
