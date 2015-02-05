@@ -567,7 +567,7 @@ DVH.Vdose <- function(dvh, Dose) {
   dvh<-DVH.diff.to.cum(dvh = dvh, relative = dvh@vol.distr)
   dv<-dvh@dvh[,1]  # vector of doses
   apf <- apply(X = dvh@dvh[,2:ncol(D@dvh)], MARGIN = 2, FUN = approxfun, x = dv)  # generate list of approxfun
-  return(sapply(X = apf, FUN = function(x) return(x(Dose))))
+  return( sapply(X = apf, FUN = function(x) return(x(Dose))) )
 }
 
 #' Function for extracting the D-Volume from cumulative DVH(s)
@@ -586,7 +586,7 @@ DVH.Dvolume <- function(dvh,  Volume=0.001) {
   dvh<-DVH.diff.to.cum(dvh = dvh, relative = dvh@vol.distr)
   dv<-dvh@dvh[,1]  # vector of doses
   apf <- apply(X = dvh@dvh[,2:ncol(D@dvh)], MARGIN = 2, FUN = approxfun, y = dv)  # generate list of approxfun
-  return(sapply(X = apf, FUN = function(x) return(x(Volume))))
+  return( sapply(X = apf, FUN = function(x) return(x(Volume))) )
 }
 
 #' Function for calculating the mean and median dvh with related confidence intervals
