@@ -333,6 +333,7 @@ DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", 
     while (TD50.step>epsilon) {
       start.TD50<- start.TD50 - TD50.step
       while ((TD50.CI(start.TD50)$MLE + fit$objective + bound)>0) {       
+        #message("TD50=",start.TD50, "   dMLE=" ,TD50.CI(start.TD50)$MLE + fit$objective + bound )
         start.TD50 <- start.TD50 - TD50.step       
       }
       start.TD50<- start.TD50 + TD50.step

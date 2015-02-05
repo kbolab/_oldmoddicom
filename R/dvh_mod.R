@@ -699,3 +699,18 @@ DVH.baseStat<-function(dvh, C.I.width = .95, n.boot = 2000) {
                                   "median", paste((1-C.I.width)/2,"% C.I. of median"), paste((1+C.I.width)/2,"% C.I. of median"))
   return(result.DVH)
 }
+
+#' Function that returns the linear quadratic correction of dose bins in a \code{dvhmatrix} object
+#' @description This function appies the linear-quadratic correction for the dose in a \code{dvmatrix} object by 
+#' converting each dose bins as function of a given \eqn{\alpha\beta} ratio (default value is 3, valid for late outcome).
+#' @param dvh A \code{dvhmatrix} object
+#' @param d1 Fraction dose for input dvh
+#' @param d2 Fraction dose for output dvh
+#' @param nf Fractions number for the input dvh
+#' @param alphabeta \eqn{\alpha\beta} ratio for computing LQ cvonversion
+#' @return A \code{dvhmatrix} object with converted dose bins
+#' @export
+DVH.lq.correct<-function(dvh, d1, d2, nf, alphabeta = 3) {
+  dvh@dvh[,1] <- dvh@dvh[,1] * (alphabeta + dvh@dvh[,1]/nf) / (alphabeta + d1)
+  return(dvh)
+}
