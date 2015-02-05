@@ -312,7 +312,7 @@ DVH.eud<-function(dvh, a = 1) {
 DVH.merge<-function(receiver=NULL, addendum=NULL) {
   # check dvhmatrix class
   if ((class(receiver)!="dvhmatrix") || (class(addendum)!="dvhmatrix")) 
-    stop("BOTH dvh.to.add AND destination MUST be dvhmatrix class objects")
+    stop("BOTH receiver AND addendum MUST be dvhmatrix class objects")
   # creates list of dose bins
   dbin<-list(receiver=receiver@dvh[3,1]-receiver@dvh[2,1], addendum=addendum@dvh[3,1]-addendum@dvh[2,1])
   # detect the volume distribution  
@@ -562,42 +562,12 @@ setMethod("plot", signature(x="dvhmatrix"),
 #' @examples ## create a dvhmatrix class object
 #' a<-DVH.generate(dvh.number = 100)
 #' DVH.Vdose(dvh = a, Dose = 50)
+
 DVH.Vdose <- function(dvh, Dose) {
   dvh<-DVH.diff.to.cum(dvh = dvh, relative = dvh@vol.distr)
-  dvh.matrix<-dvh@dvh
-  # try to find exact correspondence between a value in the dose column and the input Dose
-  index<-which(x=dvh.matrix[,1]==Dose)
-  # check the Dose
-  if (Dose >= max(dvh.matrix[,1])) stop("Dose can not be >= maximum dose in dvh matrix")
-  if (Dose <= 0) stop("Dose can not be <= 0")
-  if (length(x=index)>0) return(as.numeric(dvh.matrix[index,2:ncol(dvh.matrix)])) else {
-    # find the index of the Dose value in DVH closest to the input Dose
-    index<-which.min(abs(dvh.matrix[,1]-Dose))        
-    # store the number of columns in dvh.matrix    
-    c<-ncol(dvh.matrix)
-    if (dvh.matrix[index,1] < Dose) {
-      # calculate the dose bin  
-      Dbin <- dvh.matrix[index + 1,1] - dvh.matrix[index,1]
-      # calculate the volume bin
-      Vbin <- dvh.matrix[index,2:c] - dvh.matrix[index + 1,2:c]
-      # calculate the step dose
-      incD <- dvh.matrix[index + 1,1] - Dose
-      # calucalte the step volume
-      incV <- incD * Vbin / Dbin
-      # calculation of Vdose
-      return(as.numeric(incV + dvh.matrix[index + 1,2:c]))
-    } else {
-      # calculate the dose bin  
-      Dbin <- dvh.matrix[index,1] - dvh.matrix[index - 1,1]
-      # calculate the volume bin
-      Vbin <- dvh.matrix[index - 1,2:c] - dvh.matrix[index,2:c]
-      # calculate the step dose
-      incD <- dvh.matrix[index,1] - Dose
-      # calculation of Vdose
-      incV <- Vbin / Dbin * incD
-      return(as.numeric(incV + dvh.matrix[index,2:c]))
-    }
-  }
+  dv<-dvh@dvh[,1]  # vector of doses
+  apf <- apply(X = dvh@dvh[,2:ncol(D@dvh)], MARGIN = 2, FUN = approxfun, x = dv)  # generate list of approxfun
+  return(sapply(X = apf, FUN = function(x) return(x(Dose))))
 }
 
 #' Function for extracting the D-Volume from cumulative DVH(s)
@@ -613,41 +583,10 @@ DVH.Vdose <- function(dvh, Dose) {
 #' a<-DVH.generate(dvh.number = 100)
 #' DVH.Dvolume(dvh = a, Volume = 0.5)
 DVH.Dvolume <- function(dvh,  Volume=0.001) {
-  dvh.matrix<-DVH.diff.to.cum(dvh = dvh, relative = dvh@vol.distr)@dvh
-  # create the vector wit indeces of Doses corresponding to
-  # minimum difference between Volume threshold and given volume
-  Dv <- c()
-  Dbin <- dvh.matrix[2,1] - dvh.matrix[1,1] # dose bin
-  for (n in 2:ncol(dvh.matrix)) {
-    DvIndex <- which.min(abs(dvh.matrix[,n] - Volume))
-    if (DvIndex==nrow(dvh.matrix)) {      # if Dvolume is lower than the minimum volume in DVH
-      if (Volume < dvh.matrix[DvIndex, n]) {
-        Dv <- c(Dv, NA)
-        warning("One Dvolume is lower than minimum volume in DVH matrix")
-        next
-      }
-    }
-    DvSign <- sign(Volume - dvh.matrix[DvIndex, n])
-    if (DvSign==0) { 
-      Dv<-c(Dv, dvh.matrix[DvIndex, 1]) # the Dvolume is equal to a number in the matrix
-      next
-    }
-    if (DvSign==-1) {   # Dvolume is greater than dose at DvIndex
-      incV <- dvh.matrix[DvIndex, n] - Volume
-      Vbin <- dvh.matrix[DvIndex, n] - dvh.matrix[DvIndex + 1, n]      
-      incD <- Dbin *incV/Vbin
-      Dv   <- c(Dv, incD + dvh.matrix[DvIndex, 1])
-      next
-    }    
-    if (DvSign==1) {    # Dvolume is lower than dose at DvIndex
-      incV <- Volume - dvh.matrix[DvIndex - 1, n]      
-      Vbin <- dvh.matrix[DvIndex, n] - dvh.matrix[DvIndex - 1, n]      
-      incD <- Dbin *incV/Vbin
-      Dv   <- c(Dv, incD + dvh.matrix[DvIndex - 1, 1])
-      next
-    }
-  }
-  return(Dv)
+  dvh<-DVH.diff.to.cum(dvh = dvh, relative = dvh@vol.distr)
+  dv<-dvh@dvh[,1]  # vector of doses
+  apf <- apply(X = dvh@dvh[,2:ncol(D@dvh)], MARGIN = 2, FUN = approxfun, y = dv)  # generate list of approxfun
+  return(sapply(X = apf, FUN = function(x) return(x(Volume))))
 }
 
 #' Function for calculating the mean and median dvh with related confidence intervals
