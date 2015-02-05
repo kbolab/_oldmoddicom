@@ -25,7 +25,15 @@ services<-function() {
     dc<--(ac*Pa[1]+bc*Pa[2]+cc*Pa[3])
     return(c(ac,bc,cc,dc))
   }
-  return(list(SV.getPointPlaneDistance=SV.getPointPlaneDistance,
-              SV.get3DPosFromNxNy=SV.get3DPosFromNxNy,
-              SV.getPlaneEquationBetween3Points=SV.getPlaneEquationBetween3Points))  
+  SV.rotateMatrix<-function( m , rotations = 1) {
+    if(rotations == 1 ) m<-t(m[nrow(m):1,])
+    if(rotations == 2 ) m<-m[nrow(m):1,ncol(m):1]
+    if(rotations == 3 ) m<-t(m)[ncol(m):1,]
+    return( m )
+  }
+  return(list(SV.getPointPlaneDistance = SV.getPointPlaneDistance,
+              SV.get3DPosFromNxNy = SV.get3DPosFromNxNy,
+              SV.getPlaneEquationBetween3Points = SV.getPlaneEquationBetween3Points,
+              SV.rotateMatrix = SV.rotateMatrix
+              ))  
 }
