@@ -84,7 +84,7 @@ DVH.generate<-function(dvh.number, type=c("random","convex","concave","mix"),
   if (type=="random") dose.voxels<-sapply(X = volbin.num, FUN = random.dvh)
   VolBin<-volbin.side^3/1000 # Volume Bin in cc
   # creates the vector of structures volumes
-  volume<-unlist(lapply(X = dose.voxels, FUN = function(x) VolBin * length(x))) 
+  if (dvh.number > 1) volume<-unlist(lapply(X = dose.voxels, FUN = function(x) VolBin * length(x))) else volume <- VolBin * length(dose.voxels)
   result<-new("dvhmatrix")
   # creates the dvhmatrix object
   dvh.type<-match.arg(arg = dvh.type)
@@ -92,18 +92,28 @@ DVH.generate<-function(dvh.number, type=c("random","convex","concave","mix"),
   result@dvh.type<-"differential" # default value, corrected by DVH.diff.to.cum if dvh.type = "cumulative"
   result@vol.distr<-vol.distr
   result@volume<-volume
-  #browser()
   # creates the list of differential histograms
-  hlist<-lapply(X = dose.voxels, FUN = hist, 
-                breaks = seq(from = 0, to = max(c(unlist(lapply(X = dose.voxels, FUN = max))) + dose.bin * 4, 
-                             max.dose), by = dose.bin), plot = FALSE)
-  if (dvh.type=="differential") {
-    result@dvh<-cbind(hlist[[1]]$mids, sapply(X = hlist, FUN = function(x) cbind(x$counts * VolBin), simplify = TRUE, USE.NAMES = FALSE))
-    if (vol.distr=="relative") for (n in 2:ncol(result@dvh)) result@dvh[,n]<-result@dvh[,n]/result@volume[n-1]
-  }
-  if (dvh.type=="cumulative") {
-    result@dvh<-cbind(hlist[[1]]$mids, sapply(X = hlist, FUN = function(x) cbind(x$counts * VolBin), simplify = TRUE, USE.NAMES = FALSE))
-    if (vol.distr=="relative") result<-DVH.diff.to.cum(dvh = result, relative = TRUE) else result<-DVH.diff.to.cum(dvh = result, relative = FALSE)
+  if (dvh.number > 1) {
+    hlist<-lapply(X = dose.voxels, FUN = hist, 
+                  breaks = seq(from = 0, to = max(c(unlist(lapply(X = dose.voxels, FUN = max))) + dose.bin * 4, max.dose), by = dose.bin), plot = FALSE)
+    if (dvh.type=="differential") {
+      result@dvh<-cbind(hlist[[1]]$mids, sapply(X = hlist, FUN = function(x) cbind(x$counts * VolBin), simplify = TRUE, USE.NAMES = FALSE))
+      if (vol.distr=="relative") for (n in 2:ncol(result@dvh)) result@dvh[,n]<-result@dvh[,n]/result@volume[n-1]
+    }
+    if (dvh.type=="cumulative") {
+      result@dvh<-cbind(hlist[[1]]$mids, sapply(X = hlist, FUN = function(x) cbind(x$counts * VolBin), simplify = TRUE, USE.NAMES = FALSE))
+      if (vol.distr=="relative") result<-DVH.diff.to.cum(dvh = result, relative = TRUE) else result<-DVH.diff.to.cum(dvh = result, relative = FALSE)
+    }    
+  } else {    
+    hlist<-hist(x = dose.voxels, breaks = seq(from = 0, to = max(max(dose.voxels) + dose.bin * 4, max.dose), by = dose.bin), plot = FALSE)
+    if (dvh.type=="differential") {
+      result@dvh <- cbind(hlist$mids, hlist$counts * VolBin)
+      if (vol.distr=="relative") result@dvh[,2] <- result@dvh[,2]/result@volume
+    }
+    if (dvh.type=="cumulative") {
+      result@dvh <- cbind(hlist$mids, hlist$counts * VolBin)
+      if (vol.distr=="relative") result<-DVH.diff.to.cum(dvh = result, relative = TRUE) else result<-DVH.diff.to.cum(dvh = result, relative = FALSE)
+    }
   }
   return(result)
 }
