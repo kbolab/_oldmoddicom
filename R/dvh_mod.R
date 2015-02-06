@@ -436,33 +436,11 @@ DVH.merge<-function(receiver=NULL, addendum=NULL) {
     } else {
       temp.receiver<-receiver@dvh
       temp.addendum<-addendum@dvh
-    }    
-    if (dbin$receiver<dbin$addendum) {
-      # if receiver's dbin is smaller then interpolates the addendum according the Dose column of receiver
-      Dout<-seq(from=0, to=max(temp.receiver[,1], temp.addendum[,1]), by=dbin$receiver)
-      # temp matrix
-      temp.out<-matrix(nrow=length(Dout), ncol=ncol(temp.addendum))
-      temp.out[,1]<-Dout
-      for (n in 2:ncol(temp.addendum)) temp.out[,n]<-approx(x=temp.addendum[,1], y=temp.addendum[,n], xout=Dout, yright=0)$y
-      if (receiver@dvh.type=="differential") {
-        temp.addendum<-DVH.cum.to.diff(dvh=temp.out, relative=rel)
-        temp.receiver<-receiver@dvh
-      }
-      else temp.addendum<-temp.out
-    }  
-    if (dbin$receiver>dbin$addendum) {
-      # if addendum's dbin is smaller then interpolates the receiver according the Dose column of addendum
-      Dout<-seq(from=0, to=max(temp.receiver[,1], temp.addendum[,1]), by=dbin$addendum)
-      # temp matrix
-      temp.out<-matrix(nrow=length(Dout), ncol=ncol(temp.receiver))
-      temp.out[,1]<-Dout
-      for (n in 2:ncol(temp.receiver)) temp.out[,n]<-approx(x=temp.receiver[,1], y=temp.receiver[,n], xout=Dout, yright=0)$y
-      if (receiver@dvh.type=="differential") {
-        temp.receiver<-DVH.cum.to.diff(dvh=temp.out, relative=rel)
-        temp.addendum<-addendum@dvh
-      }
-      else temp.receiver<-temp.out
-    } 
+    }
+    
+    if (max(receiver@dvh[,1]) > max(addendum@dvh[,1])) { # set highest point in the DVH equal to 0
+      addendum@dvh <- rbind
+    }
   } else {
     temp.receiver<-receiver@dvh
     temp.addendum<-addendum@dvh
