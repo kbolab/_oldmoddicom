@@ -771,18 +771,39 @@ DR.fit.DoseVolume<-function(dvh, outcome, model, type = c("Vdose", "Dvolume")) {
   if (dvh@dvh.type == "differential") dvh<-DVH.diff.to.cum(dvh = dvh, relative = dvh@vol.distr) # transform in cumulative if differential
   if (type == "Vdose")   { # create the approxfun and the fitting Vdose function (FUN)
     value<-c(1:max(floor(dvh@dvh[,1]))) # create the dose vector
-    apf <- apply(X = dvh@dvh[, 2:ncol(dvh@dvh)], MARGIN = 2, FUN = approxfun, x = dvh@dvh[, 1])    
+    apf <- apply(X = dvh@dvh[, 2:ncol(dvh@dvh)], MARGIN = 2, FUN = approxfun, x = dvh@dvh[, 1])
+    update.model<-function(model, Vdose) {
+      Vdose <- paste(". ~ . + ", deparse(substitute(Vdose)), sep = "")
+      new.model<-update(object = model, formula. = Vdose)
+      return(new.model)    
+    }     
+    f <- function(val)   return(sapply(X = apf, FUN = function(x) return(x(val))))  
+    model.list<-list()
+    output.matrix<-c()
+    for (n in 1:length(value)) { 
+      Vdose<<-f(value[n])      
+      model.list[[n]]<-update.model(model = model, Vdose = Vdose)
+      output.matrix<-rbind(output.matrix, c(value[n], AIC(model.list[[n]])))
+    }
+    rm(Vdose, envir = .GlobalEnv)
   }
   if (type == "Dvolume") { # create the approxfun and the fitting Dvolume function (FUN)
     value <-seq(from = 0, to = 1, by = .025)  # create volume vector
     apf <- apply(X = dvh@dvh[, 2:ncol(dvh@dvh)], MARGIN = 2, FUN = approxfun, y = dvh@dvh[, 1])    
-  }
-  f <- function(val)   return(sapply(X = apf, FUN = function(x) return(x(val))))  
-  model.list<-list()
-  for (n in 1:length(value)) {
-    val<<-f(value[n])
-    model.list[[n]]<-update(object = model, formula. = ". ~ . + val")     
-  }  
-  rm(val, envir = .GlobalEnv)
-  return(model.list)
+    update.model<-function(model, Dvolume) {
+      Dvolume <- paste(". ~ . + ", deparse(substitute(Dvolume)), sep = "")
+      new.model<-update(object = model, formula. = Dvolume)
+      return(new.model)
+    }
+    f <- function(val)   return(sapply(X = apf, FUN = function(x) return(x(val))))  
+    model.list<-list()
+    output.matrix<-c()
+    for (n in 1:length(value)) {
+      Dvolume<<-f(value[n])
+      model.list[[n]]<-update.model(model = model, Dvolume = Dvolume)
+      output.matrix<-rbind(output.matrix, c(value[n], AIC(model.list[[n]])))
+    }
+    rm(Dvolume, envir = .GlobalEnv)
+  }    
+  return(list(model.list=model.list, output.matrix = output.matrix))
 }
