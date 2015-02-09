@@ -425,44 +425,29 @@ DVH.merge<-function(receiver=NULL, addendum=NULL) {
     # correct the addendum if receiver has absolute distribution
     addendum@dvh<-conv.funct(dvh=addendum@dvh, relative=rel)
   }
-  
+  #browser()
   # STEP (2): check the dose-bin for interpolating addendum or receiver according the lowest dbin
   if (dbin$receiver!=dbin$addendum) {
     warning("Different dose bins between receiver and addendum: linear interpolation performed.")
-    # create temp cumulative dvh, needed for avoiding interpolation artifacts
-    if (receiver@dvh.type=="differential") {
-      temp.receiver<-DVH.diff.to.cum(dvh=receiver@dvh, relative=rel)
-      temp.addendum<-DVH.diff.to.cum(dvh=addendum@dvh, relative=rel)
-    } else {
-      temp.receiver<-receiver@dvh
-      temp.addendum<-addendum@dvh
-    }    
-    if (dbin$receiver<dbin$addendum) {
-      # if receiver's dbin is smaller then interpolates the addendum according the Dose column of receiver
-      Dout<-seq(from=0, to=max(temp.receiver[,1], temp.addendum[,1]), by=dbin$receiver)
-      # temp matrix
-      temp.out<-matrix(nrow=length(Dout), ncol=ncol(temp.addendum))
-      temp.out[,1]<-Dout
-      for (n in 2:ncol(temp.addendum)) temp.out[,n]<-approx(x=temp.addendum[,1], y=temp.addendum[,n], xout=Dout, yright=0)$y
-      if (receiver@dvh.type=="differential") {
-        temp.addendum<-DVH.cum.to.diff(dvh=temp.out, relative=rel)
-        temp.receiver<-receiver@dvh
-      }
-      else temp.addendum<-temp.out
-    }  
-    if (dbin$receiver>dbin$addendum) {
-      # if addendum's dbin is smaller then interpolates the receiver according the Dose column of addendum
-      Dout<-seq(from=0, to=max(temp.receiver[,1], temp.addendum[,1]), by=dbin$addendum)
-      # temp matrix
-      temp.out<-matrix(nrow=length(Dout), ncol=ncol(temp.receiver))
-      temp.out[,1]<-Dout
-      for (n in 2:ncol(temp.receiver)) temp.out[,n]<-approx(x=temp.receiver[,1], y=temp.receiver[,n], xout=Dout, yright=0)$y
-      if (receiver@dvh.type=="differential") {
-        temp.receiver<-DVH.cum.to.diff(dvh=temp.out, relative=rel)
-        temp.addendum<-addendum@dvh
-      }
-      else temp.receiver<-temp.out
-    } 
+    dose.seq<-seq(from = min(receiver@dvh[,1], addendum@dvh[,1]),
+                  to   = max(receiver@dvh[,1], addendum@dvh[,1]),
+                  by   = min(diff(x = receiver@dvh[,1]), diff(x = addendum@dvh[,1])))
+    if (ncol(receiver@dvh) == 2) { # single DVH receiver
+      apf.receiver  <- approxfun(x = receiver@dvh[,1], y = receiver@dvh[,2])
+      temp.receiver <- cbind(dose.seq, apf.receiver(dose.seq))
+    } else {  # multiple DVH receiver
+      apf.receiver  <- apply(X = receiver@dvh[,2:ncol(receiver@dvh)], MARGIN = 2, FUN = approxfun, x = receiver@dvh[,1])  # generate list of approxfun
+      temp.receiver <- cbind(dose.seq, sapply(X = apf.receiver, FUN = function(x) return(x(dose.seq)), USE.NAMES = FALSE) )  # generate new dvh matrix
+    }
+    if (ncol(receiver@dvh) == 2) { # single DVH addendum
+      apf.addendum  <- approxfun(x = addendum@dvh[,1], y = addendum@dvh[,2])
+      temp.addendum <- cbind(dose.seq, apf.addendum(dose.seq))
+    } else {  # multiple DVH addendum
+      apf.addendum  <- apply(X = addendum@dvh[,2:ncol(addendum@dvh)], MARGIN = 2, FUN = approxfun, x = addendum@dvh[,1])  # generate list of approxfun
+      temp.addendum <- cbind(dose.seq, sapply(X = apf.addendum, FUN = function(x) return(x(dose.seq)), USE.NAMES = FALSE) )  # generate new dvh matrix
+    }
+    temp.receiver[which(is.na(temp.receiver))]<-0
+    temp.addendum[which(is.na(temp.addendum))]<-0
   } else {
     temp.receiver<-receiver@dvh
     temp.addendum<-addendum@dvh
@@ -479,7 +464,7 @@ DVH.merge<-function(receiver=NULL, addendum=NULL) {
   }  
   
   # STEP (4): joins the two dvhs
-  result.DVH<-cbind(temp.receiver, temp.addendum[,2:ncol(temp.addendum)])
+  result.DVH<-unname(cbind(temp.receiver, temp.addendum[,2:ncol(temp.addendum)]))
   return(new("dvhmatrix", dvh=result.DVH, dvh.type=receiver@dvh.type, vol.distr=receiver@vol.distr, 
              volume=c(receiver@volume, addendum@volume)))
 }
@@ -663,8 +648,13 @@ setMethod("plot", signature(x="dvhmatrix"),
 DVH.Vdose <- function(dvh, Dose) {
   dvh<-DVH.diff.to.cum(dvh = dvh, relative = dvh@vol.distr)
   dv<-dvh@dvh[,1]  # vector of doses
-  apf <- apply(X = dvh@dvh[,2:ncol(D@dvh)], MARGIN = 2, FUN = approxfun, x = dv)  # generate list of approxfun
-  return( sapply(X = apf, FUN = function(x) return(x(Dose))) )
+  if (ncol(dvh@dvh) > 2) {
+    apf <- apply(X = dvh@dvh[,2:ncol(dvh@dvh)], MARGIN = 2, FUN = approxfun, x = dv)  # generate list of approxfun
+    return( sapply(X = apf, FUN = function(x) return(x(Dose))) )
+  } else { # option with 1 single DVH
+    apf <- approxfun(x = dv, y = dvh@dvh[,2])
+    return(apf(Dose))
+  }
 }
 
 #' Function for extracting the D-Volume from cumulative DVH(s)
@@ -682,8 +672,13 @@ DVH.Vdose <- function(dvh, Dose) {
 DVH.Dvolume <- function(dvh,  Volume=0.001) {
   dvh<-DVH.diff.to.cum(dvh = dvh, relative = dvh@vol.distr)
   dv<-dvh@dvh[,1]  # vector of doses
-  apf <- apply(X = dvh@dvh[,2:ncol(D@dvh)], MARGIN = 2, FUN = approxfun, y = dv)  # generate list of approxfun
-  return( sapply(X = apf, FUN = function(x) return(x(Volume))) )
+  if (ncol(dvh@dvh) > 2) {
+    apf <- apply(X = dvh@dvh[,2:ncol(dvh@dvh)], MARGIN = 2, FUN = approxfun, y = dv)  # generate list of approxfun
+    return( sapply(X = apf, FUN = function(x) return(x(Volume))) )
+  } else { # option with 1 single DVH
+    apf <- approxfun(x = dvh@dvh[,2], y = dv)
+    return(apf(Volume))
+  }
 }
 
 #' Function for calculating the mean and median dvh with related confidence intervals
@@ -736,17 +731,58 @@ DVH.baseStat<-function(dvh, C.I.width = .95, n.boot = 2000) {
   return(result.DVH)
 }
 
-#' Function that returns the linear quadratic correction of dose bins in a \code{dvhmatrix} object
+#' Function that returns the linear quadratic correction of dose bin in a \code{dvhmatrix} object
 #' @description This function appies the linear-quadratic correction for the dose in a \code{dvmatrix} object by 
 #' converting each dose bins as function of a given \eqn{\alpha\beta} ratio (default value is 3, valid for late outcome).
 #' @param dvh A \code{dvhmatrix} object
-#' @param d1 Fraction dose for input dvh
-#' @param d2 Fraction dose for output dvh
+#' @param ref.frac Reference fractionation, default value 2
 #' @param nf Fractions number for the input dvh
-#' @param alphabeta \eqn{\alpha\beta} ratio for computing LQ cvonversion
+#' @param alphabeta \eqn{\alpha\beta} ratio for computing LQ cvonversion, default value 3
 #' @return A \code{dvhmatrix} object with converted dose bins
 #' @export
-DVH.lq.correct<-function(dvh, d1, d2, nf, alphabeta = 3) {
-  dvh@dvh[,1] <- dvh@dvh[,1] * (alphabeta + dvh@dvh[,1]/nf) / (alphabeta + d1)
+DVH.lq.correct<-function(dvh, ref.frac = 2, nf, alphabeta = 3) {
+  dvh@dvh[,1] <- dvh@dvh[,1] * (alphabeta + dvh@dvh[,1]/nf) / (alphabeta + ref.frac)
   return(dvh)
+}
+
+#' Function for fitting Vdose and Dvolume to a given \code{dvhmatrix} object and outcome vector
+#' @description This function can be used to find the best \emph{Vdose} or \emph{Dvolume} values that describe
+#' a given clinically observed outcome 
+#' @details The \emph{Vdose} is the value of the volume of a structure in a dose volume histogram that receives
+#' a given level of dose. It is a widely used indicator and predictor of possible outcome when DVHs
+#' have to be clinically evaluated. There are many papers that exploit the correct use of \emph{Vdose} for
+#' clinical evaluation of treatment plans. The \code{DR.fit.DoseVolume} function used inside the \pkg{moddicom} package
+#' allows to fit clinical data with \code{dvhmatrix} objects in order to detect the dose-volume relationship achievable
+#' by dosimetric data. The dose-volume-outcome fitting is performed by iterative search, so, as far as the author know,
+#' this is the first example of dose-volume-outcome fitting function that allows to find out \emph{the best fitting value}
+#' of \emph{Vdose} or \emph{Dvolume}, rather than using an empyrical search from pre-fetermined values as usually reported in literature.
+#' When setting the \code{model} parameter the users have to chose between a \code{\link[stats]{glm}} model and a \code{\link[survival]{coxph}} model
+#' by writing the formula of the model \emph{without} the \code{dvhmatrix} object
+#' @param dvh A \code{dvhmatrix} object
+#' @param outcome A vector of binary values (if not it will coerced to binary values) showing the observed outcome
+#' @param model The model that will be used to fit the dose-volume-response data (see examples). Any model with available 
+#' the \code{\link[stats]{AIC}} method can be used
+#' @param type A character value representing the two type of dose-volume fitting as \code{Vdose} or \code{Dvolume}
+#' @references \emph{Special Considerations Regarding Absorbed-Dose and Dose-Volume Prescribing and Reporting in IMRT}. J ICRU. 2010 Apr;10(1):27-40. doi: 10.1093/jicru/ndq008. PubMed PMID: 24173325.
+#' @references Graham MV, Purdy JA, Emami B, Harms W, Bosch W, Lockett MA, Perez CA. \emph{Clinical dose-volume histogram analysis for pneumonitis after 3D treatment for non-small cell lung cancer (NSCLC)}. Int J Radiat Oncol Biol Phys. 1999 Sep 1;45(2):323-9. PubMed PMID: 10487552.
+#' @export
+DR.fit.DoseVolume<-function(dvh, outcome, model, type = c("Vdose", "Dvolume")) {
+  type <- match.arg(arg = type)
+  if (dvh@dvh.type == "differential") dvh<-DVH.diff.to.cum(dvh = dvh, relative = dvh@vol.distr) # transform in cumulative if differential
+  if (type == "Vdose")   { # create the approxfun and the fitting Vdose function (FUN)
+    value<-c(1:max(floor(dvh@dvh[,1]))) # create the dose vector
+    apf <- apply(X = dvh@dvh[, 2:ncol(dvh@dvh)], MARGIN = 2, FUN = approxfun, x = dvh@dvh[, 1])    
+  }
+  if (type == "Dvolume") { # create the approxfun and the fitting Dvolume function (FUN)
+    value <-seq(from = 0, to = 1, by = .025)  # create volume vector
+    apf <- apply(X = dvh@dvh[, 2:ncol(dvh@dvh)], MARGIN = 2, FUN = approxfun, y = dvh@dvh[, 1])    
+  }
+  f <- function(val)   return(sapply(X = apf, FUN = function(x) return(x(val))))  
+  model.list<-list()
+  for (n in 1:length(value)) {
+    val<<-f(value[n])
+    model.list[[n]]<-update(object = model, formula. = ". ~ . + val")     
+  }  
+  rm(val, envir = .GlobalEnv)
+  return(model.list)
 }
