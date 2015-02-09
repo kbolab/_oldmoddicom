@@ -777,11 +777,12 @@ DR.fit.DoseVolume<-function(dvh, outcome, model, type = c("Vdose", "Dvolume")) {
     value <-seq(from = 0, to = 1, by = .025)  # create volume vector
     apf <- apply(X = dvh@dvh[, 2:ncol(dvh@dvh)], MARGIN = 2, FUN = approxfun, y = dvh@dvh[, 1])    
   }
-  f <- function(val)   return(sapply(X = apf, FUN = function(x) return(x(val))))
+  f <- function(val)   return(sapply(X = apf, FUN = function(x) return(x(val))))  
   model.list<-list()
   for (n in 1:length(value)) {
     val<<-f(value[n])
-    model.list[[n]]<-update(object = model, formula. = update(model$formula, ~ . + val))
+    model.list[[n]]<-update(object = model, formula. = ". ~ . + val")     
   }  
+  rm(val, envir = .GlobalEnv)
   return(model.list)
 }
