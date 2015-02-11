@@ -136,8 +136,12 @@ DVH.diff.to.cum <- function(dvh, relative=TRUE) {
   dvh.size <- dim(dvh.matrix)
   DVHList <- matrix(nrow=dvh.size[1] + 1, ncol=dvh.size[2])   # create the matrix of cumulative DVHs     
   for (m in 2:dvh.size[2]) {                                  # loop for columns (volumes) 
-    total.volume <- sum(dvh.matrix[,m])                       # calculate the total volume
-    if (relative==TRUE) {
+    if (is.matrix(dvh)) total.volume <- sum(dvh.matrix[,m]) else
+      if (dvh@vol.distr == "relative") {
+        dvh.matrix[, m] <- dvh.matrix[, m] * dvh@volume[m - 1]
+        total.volume <- dvh@volume[m - 1]  
+      }        
+    if (relative==TRUE) {      
       for (n in 1:dvh.size[1]) {                                    # loop for rows
         DVHList[n+1, m] <- (total.volume - sum(dvh.matrix[c(1:n),m]))/total.volume # elements of the matrix as relative volume
       }
@@ -788,7 +792,9 @@ DR.fit.DoseVolume<-function(dvh, outcome, model, type = c("Vdose", "Dvolume")) {
     rm(Vdose, envir = .GlobalEnv)
   }
   if (type == "Dvolume") { # create the approxfun and the fitting Dvolume function (FUN)
-    value <-seq(from = 0, to = 1, by = .025)  # create volume vector
+    maxVol<-min(apply(X = dvh@dvh[,2:ncol(dvh@dvh)], FUN = max, MARGIN = 2)) # the minimum of max Volume
+    dVol<-maxVol/100  # delta Volume
+    value <-seq(from = dVol, to = maxVol - dVol, by = dVol)  # create volume vector
     apf <- apply(X = dvh@dvh[, 2:ncol(dvh@dvh)], MARGIN = 2, FUN = approxfun, y = dvh@dvh[, 1])    
     update.model<-function(model, Dvolume) {
       Dvolume <- paste(". ~ . + ", deparse(substitute(Dvolume)), sep = "")
