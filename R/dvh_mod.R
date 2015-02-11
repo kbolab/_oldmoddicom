@@ -775,41 +775,59 @@ DR.fit.DoseVolume<-function(dvh, outcome, model, type = c("Vdose", "Dvolume")) {
   if (dvh@dvh.type == "differential") dvh<-DVH.diff.to.cum(dvh = dvh, relative = dvh@vol.distr) # transform in cumulative if differential
   if (type == "Vdose")   { # create the approxfun and the fitting Vdose function (FUN)
     value<-c(1:max(floor(dvh@dvh[,1]))) # create the dose vector
-    apf <- apply(X = dvh@dvh[, 2:ncol(dvh@dvh)], MARGIN = 2, FUN = approxfun, x = dvh@dvh[, 1])
-    update.model<-function(model, Vdose) {
-      Vdose <- paste(". ~ . + ", deparse(substitute(Vdose)), sep = "")
-      new.model<-update(object = model, formula. = Vdose)
+    apf <- apply(X = dvh@dvh[, 2:ncol(dvh@dvh)], MARGIN = 2, FUN = approxfun, x = dvh@dvh[, 1]) # approxfun list
+    update.model<-function(model, Vdose) {  # function for interactively update the model
+      Vdose <<- Vdose                       # .GlobalEnv needed for scoping of variable
+      new.model<-update(object = model, formula. = ". ~ . + Vdose")
       return(new.model)    
     }     
-    f <- function(val)   return(sapply(X = apf, FUN = function(x) return(x(val))))  
+    f <- function(val)   return(sapply(X = apf, FUN = function(x) return(x(val))))  # function that calculates the Vdoses
     model.list<-list()
     output.matrix<-c()
     for (n in 1:length(value)) { 
-      Vdose<<-f(value[n])      
-      model.list[[n]]<-update.model(model = model, Vdose = Vdose)
+      Vd<-f(value[n])      
+      model.list[[n]]<-update.model(model = model, Vdose = Vd)
       output.matrix<-rbind(output.matrix, c(value[n], AIC(model.list[[n]])))
     }
+    obj.FUN<-function(x) {   # objective function for optimizing the best model
+      Vdose<<-f(x[1])
+      new.model<-update(object = model, formula. = ". ~ . + Vdose")
+      return(AIC(new.model))
+    }
+    opt.model<-nlminb(start = output.matrix[which(output.matrix[,2] == min(output.matrix[,2])), 1], objective = obj.FUN)
+    optimized.model<-update.model(model = model, Vdose = f(opt.model$par[1]))
     rm(Vdose, envir = .GlobalEnv)
   }
   if (type == "Dvolume") { # create the approxfun and the fitting Dvolume function (FUN)
     maxVol<-min(apply(X = dvh@dvh[,2:ncol(dvh@dvh)], FUN = max, MARGIN = 2)) # the minimum of max Volume
-    dVol<-maxVol/100  # delta Volume
+    dVol<-maxVol/200  # delta Volume
     value <-seq(from = dVol, to = maxVol - dVol, by = dVol)  # create volume vector
     apf <- apply(X = dvh@dvh[, 2:ncol(dvh@dvh)], MARGIN = 2, FUN = approxfun, y = dvh@dvh[, 1])    
     update.model<-function(model, Dvolume) {
-      Dvolume <- paste(". ~ . + ", deparse(substitute(Dvolume)), sep = "")
-      new.model<-update(object = model, formula. = Dvolume)
+      Dvolume <<- Dvolume
+      new.model<-update(object = model, formula. = ". ~ . + Dvolume")
       return(new.model)
     }
     f <- function(val)   return(sapply(X = apf, FUN = function(x) return(x(val))))  
     model.list<-list()
     output.matrix<-c()
     for (n in 1:length(value)) {
-      Dvolume<<-f(value[n])
-      model.list[[n]]<-update.model(model = model, Dvolume = Dvolume)
+      Dv<-f(value[n])
+      model.list[[n]]<-update.model(model = model, Dvolume = Dv)
       output.matrix<-rbind(output.matrix, c(value[n], AIC(model.list[[n]])))
     }
+    obj.FUN<-function(x) {   # objective function for optimizing the best model
+      Dvolume<<-f(x[1])
+      new.model<-update(object = model, formula. = ". ~ . + Dvolume")
+      return(AIC(new.model))
+    }
+    opt.model<-nlminb(start = output.matrix[which(output.matrix[,2] == min(output.matrix[,2])), 1], objective = obj.FUN)
+    optimized.model<-update.model(model = model, Dvolume = f(opt.model$par[1]))
+    output.matrix<-rbind(output.matrix, c(opt.model$par[1], AIC(optimized.model)))
+    output.matrix<-order(output.matrix)
     rm(Dvolume, envir = .GlobalEnv)
-  }    
-  return(list(model.list=model.list, output.matrix = output.matrix))
+  }
+  fit.par<-opt.model$par[1]
+  names(fit.par)<-type
+  return(list(model.list=model.list, output.matrix = output.matrix, optimized.model = optimized.model, fit.par = fit.par))
 }
