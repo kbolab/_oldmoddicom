@@ -757,7 +757,7 @@ DVH.lq.correct<-function(dvh, ref.frac = 2, nf, alphabeta = 3) {
 #' @param model The model that will be used to fit the dose-volume-response data (see examples). Any model with available 
 #' the \code{\link[stats]{logLik}} method can be used
 #' @param type A character value representing the two type of dose-volume fitting as \code{Vdose} or \code{Dvolume}
-#' @param modLQ A logical value (default \code{FALSE}) for modeling the \eqn{\alpha\beta} ratio
+#' @param modLQ A logical value (default = \code{FALSE}) for modeling the \eqn{\alpha\beta} ratio
 #' @param nf Number of fractions in the \code{dvhmatrix} object
 #' @references \emph{Special Considerations Regarding Absorbed-Dose and Dose-Volume Prescribing and Reporting in IMRT}. J ICRU. 2010 Apr;10(1):27-40. doi: 10.1093/jicru/ndq008. PubMed PMID: 24173325.
 #' @references Graham MV, Purdy JA, Emami B, Harms W, Bosch W, Lockett MA, Perez CA. \emph{Clinical dose-volume histogram analysis for pneumonitis after 3D treatment for non-small cell lung cancer (NSCLC)}. Int J Radiat Oncol Biol Phys. 1999 Sep 1;45(2):323-9. PubMed PMID: 10487552.
