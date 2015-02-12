@@ -140,18 +140,15 @@ DVH.diff.to.cum <- function(dvh) {
 
   dvh.size <- dim(dvh.matrix)
   DVHList <- matrix(nrow=dvh.size[1] + 1, ncol=dvh.size[2])   # create the matrix of cumulative DVHs     
-  for (m in 2:dvh.size[2]) {                                  # loop for columns (volumes) 
-    if (is.matrix(dvh)) total.volume <- sum(dvh.matrix[,m]) else {
-      total.volume <- dvh@volume[m - 1]
-      if (dvh@vol.distr == "relative") dvh.matrix[, m] <- dvh.matrix[, m] * dvh@volume[m - 1]            
-    }
+  for (m in 2:dvh.size[2]) {                                  
+    total.volume <- sum(dvh.matrix[,m])    
     for (n in 1:dvh.size[1])                                     # loop for rows
         DVHList[n+1, m] <- total.volume - sum(dvh.matrix[c(1:n),m]) # elements of the matrix as relative volume
-    DVHList[1,m] <- total.volume  # first element is total volume by default
+    DVHList[1,m] <- total.volume  # first element is total volume by default    
   }
   DVHList[1,1]<-0
-  #  DVHList[2:nrow(DVHList),1]<-dvh.matrix[,1]
-  for (n in 2:nrow(DVHList)) DVHList[n,1]<-2*dvh.matrix[n-1,1]-DVHList[n-1,1]
+  
+  for (n in 2:nrow(DVHList)) DVHList[n,1]<-2*dvh.matrix[n-1,1]-DVHList[n-1,1] # set doses
   if (class(dvh)=="dvhmatrix") {
     dvh@dvh<-DVHList
     dvh@dvh.type<-"cumulative"    
@@ -757,12 +754,13 @@ DVH.lq.correct<-function(dvh, ref.frac = 2, nf, alphabeta = 3) {
 #' @param model The model that will be used to fit the dose-volume-response data (see examples). Any model with available 
 #' the \code{\link[stats]{logLik}} method can be used
 #' @param type A character value representing the two type of dose-volume fitting as \code{Vdose} or \code{Dvolume}
-#' @param modLQ A logical value (default = \code{FALSE}) for modeling the \eqn{\alpha\beta} ratio
-#' @param nf Number of fractions in the \code{dvhmatrix} object
+#' @param CI Logcal Value for calculating the confidence interval of the dose-volume fitting parameter and for the \eqn{\alpha\beta} if modLQ is optioned \code{TRUE}
+#' @param CI.width Width of confidence interval
+#' @param epsilon Error limit for calculating the Log Likelihood function in determining the confidence interval of dose-volume parameter
 #' @references \emph{Special Considerations Regarding Absorbed-Dose and Dose-Volume Prescribing and Reporting in IMRT}. J ICRU. 2010 Apr;10(1):27-40. doi: 10.1093/jicru/ndq008. PubMed PMID: 24173325.
 #' @references Graham MV, Purdy JA, Emami B, Harms W, Bosch W, Lockett MA, Perez CA. \emph{Clinical dose-volume histogram analysis for pneumonitis after 3D treatment for non-small cell lung cancer (NSCLC)}. Int J Radiat Oncol Biol Phys. 1999 Sep 1;45(2):323-9. PubMed PMID: 10487552.
 #' @export
-DR.fit.DoseVolume<-function(dvh, outcome, model, type = c("Vdose", "Dvolume"), modLQ = FALSE, nf) {
+DR.fit.DoseVolume<-function(dvh, outcome, model, type = c("Vdose", "Dvolume"), CI = FALSE, CI.width = 0.95, epsilon = 1e-6) {
   type <- match.arg(arg = type)
   if (dvh@dvh.type == "differential") dvh<-DVH.diff.to.cum(dvh = dvh) # transform in cumulative if differential
   
@@ -824,8 +822,14 @@ DR.fit.DoseVolume<-function(dvh, outcome, model, type = c("Vdose", "Dvolume"), m
     output.matrix<-output.matrix[order(output.matrix[,1]),]
     rm(Dvolume, envir = .GlobalEnv)
     fit.par<-opt.model$par[1]
-  }  
-  
+  }    
   names(fit.par)<-type
+  
+  # calculating confidence interval for Vdose and Dvolume
+  if (CI == TRUE) {
+    bound <- qchisq(CI.width,1)/2
+    
+  }
+  
   return(list(model.list=model.list, output.matrix = output.matrix, optimized.model = optimized.model, fit.par = fit.par))
 }
