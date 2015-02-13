@@ -815,7 +815,8 @@ DR.fit.DoseVolume<-function(dvh, outcome, model, type = c("Vdose", "Dvolume"), C
       Dvolume<<-f(x[1])
       new.model<-update(object = model, formula. = ". ~ . + Dvolume")
       return(-logLik(new.model))
-    }    
+    }
+    
     opt.model<-nlminb(start = output.matrix[which(output.matrix[,2] == min(output.matrix[,2])), 1], objective = obj.FUN)
     optimized.model<-update.model(model = model, Dvolume = f(opt.model$par[1]))  
     output.matrix<-rbind(output.matrix, c(opt.model$par[1], -logLik(optimized.model)))
@@ -828,6 +829,9 @@ DR.fit.DoseVolume<-function(dvh, outcome, model, type = c("Vdose", "Dvolume"), C
   # calculating confidence interval for Vdose and Dvolume
   if (CI == TRUE) {
     bound <- qchisq(CI.width,1)/2
+    start.value<-fit.par  # start with optimal parameter value
+    delta.value<-(fit.par - value[1])/20  # delta for steps going down in the CI boundary
+    while ( -nlminb(start = output.matrix[which(output.matrix[,2] == min(output.matrix[,2])), 1], objective = obj.FUN)  )
     
   }
   
