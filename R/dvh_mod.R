@@ -763,7 +763,7 @@ DVH.lq.correct<-function(dvh, ref.frac = 2, nf, alphabeta = 3) {
 DR.fit.DoseVolume<-function(dvh, outcome, model, type = c("Vdose", "Dvolume"), CI = FALSE, CI.width = 0.95, epsilon = 1e-6) {
   type <- match.arg(arg = type)
   if (dvh@dvh.type == "differential") dvh<-DVH.diff.to.cum(dvh = dvh) # transform in cumulative if differential
-  
+
   if (type == "Vdose")   { # create the approxfun and the fitting Vdose function (FUN)
     value<-seq(from = 1, to = max(floor(dvh@dvh[,1])), by = .5) # create the dose vector
     apf <- apply(X = dvh@dvh[, 2:ncol(dvh@dvh)], MARGIN = 2, FUN = approxfun, x = dvh@dvh[, 1]) # approxfun list
@@ -773,24 +773,30 @@ DR.fit.DoseVolume<-function(dvh, outcome, model, type = c("Vdose", "Dvolume"), C
       return(new.model)    
     }     
     f <- function(val)   return(sapply(X = apf, FUN = function(x) return(x(val))))  # function that calculates the Vdoses
-    model.list<-list()
     output.matrix<-c()
     for (n in 1:length(value)) { 
       Vd<-f(value[n])      
-      model.list[[n]]<-update.model(model = model, Vdose = Vd)
-      output.matrix<-rbind(output.matrix, c(value[n], -logLik(model.list[[n]])))
-    }
+      temp.model<-update.model(model = model, Vdose = Vd)
+      coeff<-summary(temp.model)$coefficients[,4]      
+      if ( length(coeff) == length(temp.model$coefficients) ) # check length to prevent joining models with only one covariate
+        output.matrix<-rbind(output.matrix, c(value[n], -logLik(temp.model), coeff)) else 
+          warning(paste("Vdose =", value[n], "Gy doesn't fit a model"))
+    }     
+    
     obj.FUN<-function(x) {   # objective function for optimizing the best model
       Vdose<<-f(x[1])
       new.model<-update(object = model, formula. = ". ~ . + Vdose")
       return(-logLik(new.model))
     }    
+    
     opt.model<-nlminb(start = output.matrix[which(output.matrix[,2] == min(output.matrix[,2])), 1], objective = obj.FUN)
     optimized.model<-update.model(model = model, Vdose = f(opt.model$par[1]))  
-    output.matrix<-rbind(output.matrix, c(opt.model$par[1], -logLik(optimized.model)))
+    coeff<-summary(optimized.model)$coefficients[,4]
+    
+    output.matrix<-rbind(output.matrix, c(opt.model$par[1], -logLik(optimized.model), coeff))
     output.matrix<-output.matrix[order(output.matrix[,1]),]
     rm(Vdose, envir = .GlobalEnv)
-    fit.par<-opt.model$par[1]
+    fit.par<-opt.model$par[1]    
   }
   
   if (type == "Dvolume") { # create the approxfun and the fitting Dvolume function (FUN)
@@ -804,12 +810,14 @@ DR.fit.DoseVolume<-function(dvh, outcome, model, type = c("Vdose", "Dvolume"), C
       return(new.model)
     }
     f <- function(val)   return(sapply(X = apf, FUN = function(x) return(x(val))))  
-    model.list<-list()
     output.matrix<-c()
     for (n in 1:length(value)) {
       Dv<-f(value[n])
-      model.list[[n]]<-update.model(model = model, Dvolume = Dv)
-      output.matrix<-rbind(output.matrix, c(value[n], -logLik(model.list[[n]])))
+      temp.model<-update.model(model = model, Dvolume = Dv)
+      coeff<-summary(temp.model)$coefficients[,4]      
+      if ( length(coeff) == length(temp.model$coefficients) ) # check length to prevent joining models with only one covariate
+        output.matrix<-rbind(output.matrix, c(value[n], -logLik(temp.model), coeff)) else 
+          warning(paste("Dvolume =", value[n], "doesn't fit a model"))      
     }
     obj.FUN<-function(x) {   # objective function for optimizing the best model
       Dvolume<<-f(x[1])
@@ -819,21 +827,75 @@ DR.fit.DoseVolume<-function(dvh, outcome, model, type = c("Vdose", "Dvolume"), C
     
     opt.model<-nlminb(start = output.matrix[which(output.matrix[,2] == min(output.matrix[,2])), 1], objective = obj.FUN)
     optimized.model<-update.model(model = model, Dvolume = f(opt.model$par[1]))  
-    output.matrix<-rbind(output.matrix, c(opt.model$par[1], -logLik(optimized.model)))
+    output.matrix<-rbind(output.matrix, c(opt.model$par[1], -logLik(optimized.model), summary(optimized.model)$coefficients[,4]))
     output.matrix<-output.matrix[order(output.matrix[,1]),]
     rm(Dvolume, envir = .GlobalEnv)
     fit.par<-opt.model$par[1]
   }    
   names(fit.par)<-type
-  
-  # calculating confidence interval for Vdose and Dvolume
-  if (CI == TRUE) {
+  colnames(output.matrix)<-c("Dose", "-LL", names(summary(optimized.model)$coefficients[,4]))
+  # calculating confidence interval for Dvolume and Vdose
+  CI.val <- NULL
+  if (CI == TRUE) { 
     bound <- qchisq(CI.width,1)/2
-    start.value<-fit.par  # start with optimal parameter value
-    delta.value<-(fit.par - value[1])/20  # delta for steps going down in the CI boundary
-    while ( -nlminb(start = output.matrix[which(output.matrix[,2] == min(output.matrix[,2])), 1], objective = obj.FUN)  )
-    
+    ### confidence interval for Vdose
+    if (type == "Vdose") {
+      #### start caluclation for low bound of CI ####
+      start.value<-fit.par  # start with optimal parameter value
+      delta.value<-(fit.par - value[1])/2  # delta for steps going down in the CI boundary
+      while ( delta.value > epsilon ) {
+        start.value <- start.value - delta.value  # create step for the value to be fitted
+        while ((logLik(object = update.model(model = model, Vdose = f(start.value))) -logLik(optimized.model) + bound) > 0 ) 
+          start.value <- start.value - delta.value
+        start.value <- start.value + delta.value
+        delta.value <- delta.value / 2
+      }
+      low.bound.CI <- start.value - delta.value / 2
+      
+      #### start calculation for highbound of CI ####
+      start.value<-fit.par  # start with optimal parameter value
+      delta.value<-(value[length(value)] - fit.par)/2  # delta for steps going up in the CI boundary
+      while ( delta.value > epsilon ) {
+        start.value <- start.value + delta.value  # create step for the value to be fitted
+        while ((logLik(object = update.model(model = model, Vdose = f(start.value))) -logLik(optimized.model) + bound) > 0 ) 
+          start.value <- start.value + delta.value
+        start.value <- start.value - delta.value
+        delta.value <- delta.value / 2
+      }
+      high.bound.CI <- start.value + delta.value / 2
+    }
+    browser()
+    ### confidence interval for Dvolume
+    if (type == "Dvolume") {
+      #### start caluclation for low bound of CI ####
+      start.value<-fit.par  # start with optimal parameter value
+      delta.value<-(fit.par - value[1])/2  # delta for steps going down in the CI boundary
+      while ( delta.value > epsilon ) {
+        start.value <- start.value - delta.value  # create step for the value to be fitted
+        while (( start.value >= 0 ) && ((logLik(object = update.model(model = model, Dvolume = f(start.value))) -logLik(optimized.model) + bound) > 0))
+          start.value <- start.value - delta.value
+        start.value <- start.value + delta.value
+        delta.value <- delta.value / 2
+      }
+      low.bound.CI <- start.value - delta.value / 2
+      
+      #### start calculation for highbound of CI ####
+      start.value<-fit.par  # start with optimal parameter value
+      delta.value<-(value[length(value)] - fit.par)/2  # delta for steps going up in the CI boundary
+      while ( delta.value > epsilon ) {
+        start.value <- start.value + delta.value  # create step for the value to be fitted
+        while ((logLik(object = update.model(model = model, Dvolume = f(start.value))) -logLik(optimized.model) + bound) > 0 ) 
+          start.value <- start.value + delta.value
+        start.value <- start.value - delta.value
+        delta.value <- delta.value / 2
+      }
+      high.bound.CI <- start.value + delta.value / 2
+    }
+    CI.val <- c(low.bound.CI, high.bound.CI)
+    names(CI.val) <- c(paste((1-CI.width)/2, "%"), paste((1+CI.width)/2, "%"))
   }
   
-  return(list(model.list=model.list, output.matrix = output.matrix, optimized.model = optimized.model, fit.par = fit.par))
+
+  
+  return(list(output.matrix = output.matrix, optimized.model = optimized.model, fit.par = fit.par, CI = CI.val))
 }
