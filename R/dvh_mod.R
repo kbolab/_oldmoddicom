@@ -845,7 +845,7 @@ DR.fit.DoseVolume<-function(dvh, outcome, model, type = c("Vdose", "Dvolume"), C
       delta.value<-(fit.par - value[1])/2  # delta for steps going down in the CI boundary
       while ( delta.value > epsilon ) {
         start.value <- start.value - delta.value  # create step for the value to be fitted
-        while ((logLik(object = update.model(model = model, Vdose = f(start.value))) -logLik(optimized.model) + bound) > 0 ) 
+        while (( start.value >= 0 ) && ((logLik(object = update.model(model = model, Vdose = f(start.value))) -logLik(optimized.model) + bound) > 0 )) 
           start.value <- start.value - delta.value
         start.value <- start.value + delta.value
         delta.value <- delta.value / 2
@@ -857,14 +857,14 @@ DR.fit.DoseVolume<-function(dvh, outcome, model, type = c("Vdose", "Dvolume"), C
       delta.value<-(value[length(value)] - fit.par)/2  # delta for steps going up in the CI boundary
       while ( delta.value > epsilon ) {
         start.value <- start.value + delta.value  # create step for the value to be fitted
-        while ((logLik(object = update.model(model = model, Vdose = f(start.value))) -logLik(optimized.model) + bound) > 0 ) 
+        while (( start.value <= value[length(value)]) && ((logLik(object = update.model(model = model, Vdose = f(start.value))) -logLik(optimized.model) + bound) > 0 )) 
           start.value <- start.value + delta.value
         start.value <- start.value - delta.value
         delta.value <- delta.value / 2
       }
       high.bound.CI <- start.value + delta.value / 2
     }
-    browser()
+    
     ### confidence interval for Dvolume
     if (type == "Dvolume") {
       #### start caluclation for low bound of CI ####
@@ -884,7 +884,7 @@ DR.fit.DoseVolume<-function(dvh, outcome, model, type = c("Vdose", "Dvolume"), C
       delta.value<-(value[length(value)] - fit.par)/2  # delta for steps going up in the CI boundary
       while ( delta.value > epsilon ) {
         start.value <- start.value + delta.value  # create step for the value to be fitted
-        while ((logLik(object = update.model(model = model, Dvolume = f(start.value))) -logLik(optimized.model) + bound) > 0 ) 
+        while (( start.value <= value[length(value)]) && ((logLik(object = update.model(model = model, Dvolume = f(start.value))) -logLik(optimized.model) + bound) > 0 )) 
           start.value <- start.value + delta.value
         start.value <- start.value - delta.value
         delta.value <- delta.value / 2
