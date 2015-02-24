@@ -3,12 +3,12 @@
 #' @description  Instantiate an object of the class \code{geoLet}.This represents just the classname, 
 #'               for each instantiated object many methods are available, not in canonical S3 or S4.
 #'               
-#'               Many methods are available for objects built by this class:
+#'               The available methods are:
 #'               \itemize{
 #'               \item \code{openDICOMFolder(pathToOpen)} 
-#'               is a method used to open an indicated folder. This method loads all the DICOM objects within
-#'               the given folder (without recursion) and build and internal model, in memory, storing it into
-#'               private attributes of the object. Information can be retrieved using \code{getAttribute} method or 
+#'               is a method used to open a chosen folder. This method loads all the DICOM objects into
+#'               the indicated folder (without recursion) as attribute of the object.
+#'               Information can be retrieved using \code{getAttribute} method or 
 #'               more specific methods.
 #'               \item \code{getAttribute(attribute,seriesInstanceUID="",fileName="")} 
 #'               Is a method used to get internal attributes. Allowed values fot \code{attributes} are:
@@ -48,7 +48,7 @@
 #'                    \item \code{verbose} : it define the policy adopted to print warnings and logs during computation. It is handled using an \code{errorHandler} object and works with three different levels. A list indicating the behaviour for each level should be provided.
 #'                  }
 #'               \item \code{getFolderContent(pathToOpen="") }
-#'               explores the content of the given folder and returns informarion about the DICOM object stored within
+#'               explores the content of the given folder and returns informarion about the stored DICOM objects
 #'               }
 #' @import stringr XML 
 #' @export
@@ -102,7 +102,7 @@ geoLet<-function() {
         if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog(i) 
         TMP<-getStructuresFromXML( i );
       }
-    } 
+    }
 
     # now let me use some more easy to handle variable names
     matrice2<-TMP$IDROINameAssociation;
