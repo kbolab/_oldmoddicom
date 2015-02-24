@@ -243,7 +243,7 @@ geoLet<-function() {
       stringa1<-"dcm2xml";
       stringa2<-paste(" +M  ",fileName,fileNameXML,collapse='')
       options(warn=-1)
-      cat(stringa1,stringa2);
+#      cat(stringa1,stringa2);
       system2(stringa1,stringa2,stdout=NULL)
       options(warn=0)
     }
