@@ -47,7 +47,7 @@ DVH.generate<-function(dvh.number, type=c("random","convex","concave","mix"),
   }
   # function for generating concave DVHs voxels series
   concave.dvh <- function(n) {
-    mean.dose <- runif(n = 1, min = 2, max = max(10, max.dose/4))
+    mean.dose <- runif(n = 1, min = 2, max = max(10, max.dose/2.5))
     sd.dose <- mean.dose/3
     result<-rnorm(n = n, mean = mean.dose, sd = sd.dose)
     # takes only the voxels with dose>=0
@@ -57,14 +57,16 @@ DVH.generate<-function(dvh.number, type=c("random","convex","concave","mix"),
   }
   # function for creating mix DVHs voxels series
   mix.dvh <- function(n) {
-    contrib<-c(runif(n = 1, min = .05, max = .4), runif(n = 1, min = .05, max = .4))
+    contrib<-c(runif(n = 1, min = .05, max = .3), runif(n = 1, min = .05, max = .3))
     # proportions in contributions to final DVH
     contrib<-c(contrib[1], 1 - sum(contrib), contrib[2])
     part1<-concave.dvh(n = round(contrib[1] * n))
     part3<-convex.dvh(n = round(contrib[3] * n))
+    part2.mean<-runif(n = 1, min = max.dose/20, max = max.dose - max.dose/5)
+    part2.sd  <-(max.dose - part2.mean)/(8 * 1/runif(n = 1, min = 1.5, max = 3.5))
     part2<-rnorm(n = n - (length(part1) + length(part3)), 
-                 mean = runif(n = 1, min = max.dose/15, max = max.dose - max.dose/8), 
-                 sd = runif(n = 1, min = max.dose/15, max = max.dose/10))
+                 mean = part2.mean, 
+                 sd = part2.sd)
     result<-c(part1, part2, part3)
     result<-result[which(result>=0)]    
     # compensate the negative values when available
@@ -72,7 +74,7 @@ DVH.generate<-function(dvh.number, type=c("random","convex","concave","mix"),
   }
   # function that creates random DVHs according the previous three given functions
   random.dvh <- function(n) {
-    FUN <- sample(x = c(convex.dvh, concave.dvh, mix.dvh), size = 1, replace = T)
+    FUN <- sample(x = c(convex.dvh, concave.dvh, mix.dvh), size = 1, replace = T, prob = c(.25,.25,.5))
     return(FUN[[1]](n))
   }
   
@@ -83,83 +85,73 @@ DVH.generate<-function(dvh.number, type=c("random","convex","concave","mix"),
   if (type=="mix") dose.voxels<-sapply(X = volbin.num, FUN = mix.dvh)
   if (type=="random") dose.voxels<-sapply(X = volbin.num, FUN = random.dvh)
   VolBin<-volbin.side^3/1000 # Volume Bin in cc
+  # delete dose.voxels with exceeding value over 15% max
+  dose.voxels<-sapply(X = dose.voxels, FUN = function(x) return(x[which(x<(max.dose+max.dose*.15))]), USE.NAMES = FALSE)
   # creates the vector of structures volumes
-  if (dvh.number > 1) volume<-unlist(lapply(X = dose.voxels, FUN = function(x) VolBin * length(x))) else volume <- VolBin * length(dose.voxels)
+  if (dvh.number > 1) volume<-sapply(X = dose.voxels, FUN = function(x) VolBin * length(x), simplify = TRUE, USE.NAMES = FALSE) else volume <- VolBin * length(dose.voxels)
   result<-new("dvhmatrix")
   # creates the dvhmatrix object
   dvh.type<-match.arg(arg = dvh.type)
   vol.distr<-match.arg(arg = vol.distr)
   result@dvh.type<-"differential" # default value, corrected by DVH.diff.to.cum if dvh.type = "cumulative"
-  result@vol.distr<-vol.distr
+  result@vol.distr<-"absolute"    # default DVH vol.distr type
   result@volume<-volume
   # creates the list of differential histograms
+  
   if (dvh.number > 1) {
     hlist<-lapply(X = dose.voxels, FUN = hist, 
                   breaks = seq(from = 0, to = max(c(unlist(lapply(X = dose.voxels, FUN = max))) + dose.bin * 4, max.dose), by = dose.bin), plot = FALSE)
     if (dvh.type=="differential") {
       result@dvh<-cbind(hlist[[1]]$mids, sapply(X = hlist, FUN = function(x) cbind(x$counts * VolBin), simplify = TRUE, USE.NAMES = FALSE))
-      if (vol.distr=="relative") for (n in 2:ncol(result@dvh)) result@dvh[,n]<-result@dvh[,n]/result@volume[n-1]
+      #if (vol.distr=="relative") for (n in 2:ncol(result@dvh)) result@dvh[,n]<-result@dvh[,n]/result@volume[n-1]
     }
     if (dvh.type=="cumulative") {
       result@dvh<-cbind(hlist[[1]]$mids, sapply(X = hlist, FUN = function(x) cbind(x$counts * VolBin), simplify = TRUE, USE.NAMES = FALSE))
-      if (vol.distr=="relative") result<-DVH.diff.to.cum(dvh = result, relative = TRUE) else result<-DVH.diff.to.cum(dvh = result, relative = FALSE)
+      result<-DVH.diff.to.cum(dvh = result)
+      #if (vol.distr=="relative") result<-DVH.diff.to.cum(dvh = result, relative = TRUE) else result<-DVH.diff.to.cum(dvh = result, relative = FALSE)
     }    
   } else {    
     hlist<-hist(x = dose.voxels, breaks = seq(from = 0, to = max(max(dose.voxels) + dose.bin * 4, max.dose), by = dose.bin), plot = FALSE)
     if (dvh.type=="differential") {
       result@dvh <- cbind(hlist$mids, hlist$counts * VolBin)
-      if (vol.distr=="relative") result@dvh[,2] <- result@dvh[,2]/result@volume
+      #if (vol.distr=="relative") result@dvh[,2] <- result@dvh[,2]/result@volume
     }
     if (dvh.type=="cumulative") {
       result@dvh <- cbind(hlist$mids, hlist$counts * VolBin)
-      if (vol.distr=="relative") result<-DVH.diff.to.cum(dvh = result, relative = TRUE) else result<-DVH.diff.to.cum(dvh = result, relative = FALSE)
+      result<-DVH.diff.to.cum(dvh = result)
+      #if (vol.distr=="relative") result<-DVH.diff.to.cum(dvh = result, relative = TRUE) else result<-DVH.diff.to.cum(dvh = result, relative = FALSE)
     }
   }
+  if (vol.distr == "relative") result<-DVH.relative(dvh = result)
   return(result)
 }
 
 #' Function that converts differential DVHs into cumulative ones
 #' 
 #' @param dvh Either an object of class \code{dvhmatrix} or \code{matrix} type.
-#' @param relative If \code{TRUE} the structure volume bins are divided by the total volume.
 #' @description Function that converts an object of class \code{dvhmatrix} or a simple \code{matrix} that 
 #'              represents a differential DVH into a cumulative one.
 #' @return Either an object of class \code{dvhmatrix} or a \code{matrix} according the argument \code{dvh}.
 #' @export
-DVH.diff.to.cum <- function(dvh, relative=TRUE) {
+DVH.diff.to.cum <- function(dvh) {
   if ((!is.matrix(dvh))&&(class(dvh)!="dvhmatrix")) stop("dvh MUST be either an object of class dvhmatrix or a matrix")
   if (class(dvh)=="dvhmatrix") dvh.matrix<-dvh@dvh else dvh.matrix<-dvh  
-  if (class(dvh)=="dvhmatrix") if (dvh@dvh.type=="cumulative") {
-    if (relative==TRUE) dvh<-DVH.relative(dvh = dvh)
-    return(dvh)
-  }
+  if (class(dvh)=="dvhmatrix") if (dvh@dvh.type=="cumulative") return(dvh)
+
   dvh.size <- dim(dvh.matrix)
   DVHList <- matrix(nrow=dvh.size[1] + 1, ncol=dvh.size[2])   # create the matrix of cumulative DVHs     
-  for (m in 2:dvh.size[2]) {                                  # loop for columns (volumes) 
-    if (is.matrix(dvh)) total.volume <- sum(dvh.matrix[,m]) else
-      if (dvh@vol.distr == "relative") {
-        dvh.matrix[, m] <- dvh.matrix[, m] * dvh@volume[m - 1]
-        total.volume <- dvh@volume[m - 1]  
-      }        
-    if (relative==TRUE) {      
-      for (n in 1:dvh.size[1]) {                                    # loop for rows
-        DVHList[n+1, m] <- (total.volume - sum(dvh.matrix[c(1:n),m]))/total.volume # elements of the matrix as relative volume
-      }
-      DVHList[1,m] <- 1 # first element is 1 by default if relative==TRUE
-    } else {
-      for (n in 1:dvh.size[1]) {                                    # loop for rows
+  for (m in 2:dvh.size[2]) {                                  
+    total.volume <- sum(dvh.matrix[,m])    
+    for (n in 1:dvh.size[1])                                     # loop for rows
         DVHList[n+1, m] <- total.volume - sum(dvh.matrix[c(1:n),m]) # elements of the matrix as relative volume
-      }
-      DVHList[1,m] <- total.volume  # first element is total volume by default
-    }                                       
+    DVHList[1,m] <- total.volume  # first element is total volume by default    
   }
   DVHList[1,1]<-0
-  #  DVHList[2:nrow(DVHList),1]<-dvh.matrix[,1]
-  for (n in 2:nrow(DVHList)) DVHList[n,1]<-2*dvh.matrix[n-1,1]-DVHList[n-1,1]
+  
+  for (n in 2:nrow(DVHList)) DVHList[n,1]<-2*dvh.matrix[n-1,1]-DVHList[n-1,1] # set doses
   if (class(dvh)=="dvhmatrix") {
     dvh@dvh<-DVHList
-    dvh@dvh.type<-"cumulative"
-    if (relative==TRUE) dvh@vol.distr<-"relative" else dvh@vol.distr<-"absolute"
+    dvh@dvh.type<-"cumulative"    
     return(dvh)
   } else return(DVHList)
 }
@@ -168,26 +160,21 @@ DVH.diff.to.cum <- function(dvh, relative=TRUE) {
 #' Function that converts cumulative DVHs into differential ones
 #' 
 #' @param dvh Either an object of class \code{dvhmatrix} or \code{matrix} type.
-#' @param relative If \code{TRUE} the structure volume bins are divided by the total volume.
 #' @description Function that converts an object of class \code{dvhmatrix} or a simple \code{matrix} that 
 #'              represents a cumulative DVH into a differential one.
 #' @return Either an object of class \code{dvhmatrix} or a \code{matrix} according the argument \code{dvh}.
 #' @export
-DVH.cum.to.diff <- function(dvh, relative=TRUE) {
+DVH.cum.to.diff <- function(dvh) {
   if ((!is.matrix(dvh))&&(class(dvh)!="dvhmatrix")) stop("dvh MUST be either an object of class dvhmatrix or a matrix")
   if (class(dvh)=="dvhmatrix") dvh.matrix<-dvh@dvh else dvh.matrix<-dvh
-  if (class(dvh)=="dvhmatrix") if (dvh@dvh.type=="differential") {
-    if (relative==TRUE) dvh<-DVH.relative(dvh)
-    return(dvh)
-  }
+  if (class(dvh)=="dvhmatrix") if (dvh@dvh.type=="differential") return(dvh)
+  
   dvh.size <- dim(dvh.matrix)
   DVHList <- matrix(nrow=dvh.size[1] - 1, ncol=dvh.size[2])   # create the matrix of differential DVHs
   for (m in 2:dvh.size[2]) {                                  # loop for columns (volumes)
     total.volume<-dvh.matrix[1,m]                             # set total volume to 1st element of the cumulative DVH
-    for (n in 2:dvh.size[1]) {                                # loop for rows
-      if (relative==TRUE) DVHList[n-1,m] <- (dvh.matrix[n-1,m]-dvh.matrix[n,m])/total.volume # calculate differential volume
-      else DVHList[n-1,m] <- (dvh.matrix[n-1,m]-dvh.matrix[n,m])   # differential volume for absolute distribution
-    }    
+    for (n in 2:dvh.size[1])                                  # loop for rows
+      DVHList[n-1,m] <- (dvh.matrix[n-1,m]-dvh.matrix[n,m])   # differential volume for absolute distribution
   }       
   for (m in 2:dvh.size[1]) {                                   # loop for column of dose values
     DVHList[m-1,1]<-dvh.matrix[m-1,1]+(dvh.matrix[m,1]-dvh.matrix[m-1,1])/2 # sets the dose values
@@ -195,7 +182,6 @@ DVH.cum.to.diff <- function(dvh, relative=TRUE) {
   if (class(dvh)=="dvhmatrix") {
     dvh@dvh<-DVHList
     dvh@dvh.type<-"differential"
-    if (relative==TRUE) dvh@vol.distr<-"relative" else dvh@vol.distr<-"absolute"
     return(dvh)
   } else return(DVHList)
 }
@@ -299,7 +285,8 @@ DVH.absolute<-function(dvh) {
 #' @references Niemierko A. \emph{Reporting and analyzing dose distributions: a concept of equivalent uniform dose.} Med Phys. 1997 Jan;24(1):103-10. PubMed PMID: 9029544.
 #' @useDynLib moddicom
 DVH.eud<-function(dvh, a = 1) {
-  dvh<-DVH.cum.to.diff(dvh = dvh, relative = TRUE)
+  dvh<-DVH.cum.to.diff(dvh = dvh)
+  dvh<-DVH.relative(dvh = dvh)
   Ncol<-ncol(dvh@dvh) - 1
   Nrow<-nrow(dvh@dvh)
   ceud<-rep.int(x = 0, times = Ncol) 
@@ -427,9 +414,9 @@ DVH.merge<-function(receiver=NULL, addendum=NULL) {
     if (receiver@dvh.type=="differential") conv.funct.name<-"DVH.cum.to.diff"
     conv.funct<-match.fun(FUN=conv.funct.name)  
     # correct the addendum if receiver has absolute distribution
-    addendum@dvh<-conv.funct(dvh=addendum@dvh, relative=rel)
+    addendum@dvh<-conv.funct(dvh=addendum@dvh)
   }
-  #browser()
+  
   # STEP (2): check the dose-bin for interpolating addendum or receiver according the lowest dbin
   if (dbin$receiver!=dbin$addendum) {
     warning("Different dose bins between receiver and addendum: linear interpolation performed.")
@@ -650,7 +637,7 @@ setMethod("plot", signature(x="dvhmatrix"),
 #' DVH.Vdose(dvh = a, Dose = 50)
 
 DVH.Vdose <- function(dvh, Dose) {
-  dvh<-DVH.diff.to.cum(dvh = dvh, relative = dvh@vol.distr)
+  dvh<-DVH.diff.to.cum(dvh = dvh)
   dv<-dvh@dvh[,1]  # vector of doses
   if (ncol(dvh@dvh) > 2) {
     apf <- apply(X = dvh@dvh[,2:ncol(dvh@dvh)], MARGIN = 2, FUN = approxfun, x = dv)  # generate list of approxfun
@@ -674,7 +661,7 @@ DVH.Vdose <- function(dvh, Dose) {
 #' a<-DVH.generate(dvh.number = 100)
 #' DVH.Dvolume(dvh = a, Volume = 0.5)
 DVH.Dvolume <- function(dvh,  Volume=0.001) {
-  dvh<-DVH.diff.to.cum(dvh = dvh, relative = dvh@vol.distr)
+  dvh<-DVH.diff.to.cum(dvh = dvh)
   dv<-dvh@dvh[,1]  # vector of doses
   if (ncol(dvh@dvh) > 2) {
     apf <- apply(X = dvh@dvh[,2:ncol(dvh@dvh)], MARGIN = 2, FUN = approxfun, y = dv)  # generate list of approxfun
@@ -765,51 +752,150 @@ DVH.lq.correct<-function(dvh, ref.frac = 2, nf, alphabeta = 3) {
 #' @param dvh A \code{dvhmatrix} object
 #' @param outcome A vector of binary values (if not it will coerced to binary values) showing the observed outcome
 #' @param model The model that will be used to fit the dose-volume-response data (see examples). Any model with available 
-#' the \code{\link[stats]{AIC}} method can be used
+#' the \code{\link[stats]{logLik}} method can be used
 #' @param type A character value representing the two type of dose-volume fitting as \code{Vdose} or \code{Dvolume}
+#' @param CI Logcal Value for calculating the confidence interval of the dose-volume fitting parameter and for the \eqn{\alpha\beta} if modLQ is optioned \code{TRUE}
+#' @param CI.width Width of confidence interval
+#' @param epsilon Error limit for calculating the Log Likelihood function in determining the confidence interval of dose-volume parameter
 #' @references \emph{Special Considerations Regarding Absorbed-Dose and Dose-Volume Prescribing and Reporting in IMRT}. J ICRU. 2010 Apr;10(1):27-40. doi: 10.1093/jicru/ndq008. PubMed PMID: 24173325.
 #' @references Graham MV, Purdy JA, Emami B, Harms W, Bosch W, Lockett MA, Perez CA. \emph{Clinical dose-volume histogram analysis for pneumonitis after 3D treatment for non-small cell lung cancer (NSCLC)}. Int J Radiat Oncol Biol Phys. 1999 Sep 1;45(2):323-9. PubMed PMID: 10487552.
 #' @export
-DR.fit.DoseVolume<-function(dvh, outcome, model, type = c("Vdose", "Dvolume")) {
+DR.fit.DoseVolume<-function(dvh, outcome, model, type = c("Vdose", "Dvolume"), CI = FALSE, CI.width = 0.95, epsilon = 1e-6) {
   type <- match.arg(arg = type)
-  if (dvh@dvh.type == "differential") dvh<-DVH.diff.to.cum(dvh = dvh, relative = dvh@vol.distr) # transform in cumulative if differential
+  if (dvh@dvh.type == "differential") dvh<-DVH.diff.to.cum(dvh = dvh) # transform in cumulative if differential
+
   if (type == "Vdose")   { # create the approxfun and the fitting Vdose function (FUN)
-    value<-c(1:max(floor(dvh@dvh[,1]))) # create the dose vector
-    apf <- apply(X = dvh@dvh[, 2:ncol(dvh@dvh)], MARGIN = 2, FUN = approxfun, x = dvh@dvh[, 1])
-    update.model<-function(model, Vdose) {
-      Vdose <- paste(". ~ . + ", deparse(substitute(Vdose)), sep = "")
-      new.model<-update(object = model, formula. = Vdose)
+    value<-seq(from = 1, to = max(floor(dvh@dvh[,1])), by = .5) # create the dose vector
+    apf <- apply(X = dvh@dvh[, 2:ncol(dvh@dvh)], MARGIN = 2, FUN = approxfun, x = dvh@dvh[, 1]) # approxfun list
+    update.model<-function(model, Vdose) {  # function for interactively update the model
+      Vdose <<- Vdose                       # .GlobalEnv needed for scoping of variable
+      new.model<-update(object = model, formula. = ". ~ . + Vdose")
       return(new.model)    
     }     
-    f <- function(val)   return(sapply(X = apf, FUN = function(x) return(x(val))))  
-    model.list<-list()
+    f <- function(val)   return(sapply(X = apf, FUN = function(x) return(x(val))))  # function that calculates the Vdoses
     output.matrix<-c()
     for (n in 1:length(value)) { 
-      Vdose<<-f(value[n])      
-      model.list[[n]]<-update.model(model = model, Vdose = Vdose)
-      output.matrix<-rbind(output.matrix, c(value[n], AIC(model.list[[n]])))
-    }
+      Vd<-f(value[n])      
+      temp.model<-update.model(model = model, Vdose = Vd)
+      coeff<-summary(temp.model)$coefficients[,4]      
+      if ( length(coeff) == length(temp.model$coefficients) ) # check length to prevent joining models with only one covariate
+        output.matrix<-rbind(output.matrix, c(value[n], -logLik(temp.model), coeff)) else 
+          warning(paste("Vdose =", value[n], "Gy doesn't fit a model"))
+    }     
+    
+    obj.FUN<-function(x) {   # objective function for optimizing the best model
+      Vdose<<-f(x[1])
+      new.model<-update(object = model, formula. = ". ~ . + Vdose")
+      return(-logLik(new.model))
+    }    
+    
+    opt.model<-nlminb(start = output.matrix[which(output.matrix[,2] == min(output.matrix[,2])), 1], objective = obj.FUN)
+    optimized.model<-update.model(model = model, Vdose = f(opt.model$par[1]))  
+    coeff<-summary(optimized.model)$coefficients[,4]
+    
+    output.matrix<-rbind(output.matrix, c(opt.model$par[1], -logLik(optimized.model), coeff))
+    output.matrix<-output.matrix[order(output.matrix[,1]),]
     rm(Vdose, envir = .GlobalEnv)
+    fit.par<-opt.model$par[1]    
   }
+  
   if (type == "Dvolume") { # create the approxfun and the fitting Dvolume function (FUN)
     maxVol<-min(apply(X = dvh@dvh[,2:ncol(dvh@dvh)], FUN = max, MARGIN = 2)) # the minimum of max Volume
-    dVol<-maxVol/100  # delta Volume
+    dVol<-maxVol/200  # delta Volume
     value <-seq(from = dVol, to = maxVol - dVol, by = dVol)  # create volume vector
     apf <- apply(X = dvh@dvh[, 2:ncol(dvh@dvh)], MARGIN = 2, FUN = approxfun, y = dvh@dvh[, 1])    
     update.model<-function(model, Dvolume) {
-      Dvolume <- paste(". ~ . + ", deparse(substitute(Dvolume)), sep = "")
-      new.model<-update(object = model, formula. = Dvolume)
+      Dvolume <<- Dvolume
+      new.model<-update(object = model, formula. = ". ~ . + Dvolume")
       return(new.model)
     }
     f <- function(val)   return(sapply(X = apf, FUN = function(x) return(x(val))))  
-    model.list<-list()
     output.matrix<-c()
     for (n in 1:length(value)) {
-      Dvolume<<-f(value[n])
-      model.list[[n]]<-update.model(model = model, Dvolume = Dvolume)
-      output.matrix<-rbind(output.matrix, c(value[n], AIC(model.list[[n]])))
+      Dv<-f(value[n])
+      temp.model<-update.model(model = model, Dvolume = Dv)
+      coeff<-summary(temp.model)$coefficients[,4]      
+      if ( length(coeff) == length(temp.model$coefficients) ) # check length to prevent joining models with only one covariate
+        output.matrix<-rbind(output.matrix, c(value[n], -logLik(temp.model), coeff)) else 
+          warning(paste("Dvolume =", value[n], "doesn't fit a model"))      
     }
+    obj.FUN<-function(x) {   # objective function for optimizing the best model
+      Dvolume<<-f(x[1])
+      new.model<-update(object = model, formula. = ". ~ . + Dvolume")
+      return(-logLik(new.model))
+    }
+    
+    opt.model<-nlminb(start = output.matrix[which(output.matrix[,2] == min(output.matrix[,2])), 1], objective = obj.FUN)
+    optimized.model<-update.model(model = model, Dvolume = f(opt.model$par[1]))  
+    output.matrix<-rbind(output.matrix, c(opt.model$par[1], -logLik(optimized.model), summary(optimized.model)$coefficients[,4]))
+    output.matrix<-output.matrix[order(output.matrix[,1]),]
     rm(Dvolume, envir = .GlobalEnv)
+    fit.par<-opt.model$par[1]
   }    
-  return(list(model.list=model.list, output.matrix = output.matrix))
+  names(fit.par)<-type
+  colnames(output.matrix)<-c("Dose", "-LL", names(summary(optimized.model)$coefficients[,4]))
+  # calculating confidence interval for Dvolume and Vdose
+  CI.val <- NULL
+  if (CI == TRUE) { 
+    bound <- qchisq(CI.width,1)/2
+    ### confidence interval for Vdose
+    if (type == "Vdose") {
+      #### start caluclation for low bound of CI ####
+      start.value<-fit.par  # start with optimal parameter value
+      delta.value<-(fit.par - value[1])/2  # delta for steps going down in the CI boundary
+      while ( delta.value > epsilon ) {
+        start.value <- start.value - delta.value  # create step for the value to be fitted
+        while (( start.value >= 0 ) && ((logLik(object = update.model(model = model, Vdose = f(start.value))) -logLik(optimized.model) + bound) > 0 )) 
+          start.value <- start.value - delta.value
+        start.value <- start.value + delta.value
+        delta.value <- delta.value / 2
+      }
+      low.bound.CI <- start.value - delta.value / 2
+      
+      #### start calculation for highbound of CI ####
+      start.value<-fit.par  # start with optimal parameter value
+      delta.value<-(value[length(value)] - fit.par)/2  # delta for steps going up in the CI boundary
+      while ( delta.value > epsilon ) {
+        start.value <- start.value + delta.value  # create step for the value to be fitted
+        while (( start.value <= value[length(value)]) && ((logLik(object = update.model(model = model, Vdose = f(start.value))) -logLik(optimized.model) + bound) > 0 )) 
+          start.value <- start.value + delta.value
+        start.value <- start.value - delta.value
+        delta.value <- delta.value / 2
+      }
+      high.bound.CI <- start.value + delta.value / 2
+    }
+    
+    ### confidence interval for Dvolume
+    if (type == "Dvolume") {
+      #### start caluclation for low bound of CI ####
+      start.value<-fit.par  # start with optimal parameter value
+      delta.value<-(fit.par - value[1])/2  # delta for steps going down in the CI boundary
+      while ( delta.value > epsilon ) {
+        start.value <- start.value - delta.value  # create step for the value to be fitted
+        while (( start.value >= 0 ) && ((logLik(object = update.model(model = model, Dvolume = f(start.value))) -logLik(optimized.model) + bound) > 0))
+          start.value <- start.value - delta.value
+        start.value <- start.value + delta.value
+        delta.value <- delta.value / 2
+      }
+      low.bound.CI <- start.value - delta.value / 2
+      
+      #### start calculation for highbound of CI ####
+      start.value<-fit.par  # start with optimal parameter value
+      delta.value<-(value[length(value)] - fit.par)/2  # delta for steps going up in the CI boundary
+      while ( delta.value > epsilon ) {
+        start.value <- start.value + delta.value  # create step for the value to be fitted
+        while (( start.value <= value[length(value)]) && ((logLik(object = update.model(model = model, Dvolume = f(start.value))) -logLik(optimized.model) + bound) > 0 )) 
+          start.value <- start.value + delta.value
+        start.value <- start.value - delta.value
+        delta.value <- delta.value / 2
+      }
+      high.bound.CI <- start.value + delta.value / 2
+    }
+    CI.val <- c(low.bound.CI, high.bound.CI)
+    names(CI.val) <- c(paste((1-CI.width)/2, "%"), paste((1+CI.width)/2, "%"))
+  }
+  
+
+  
+  return(list(output.matrix = output.matrix, optimized.model = optimized.model, fit.par = fit.par, CI = CI.val))
 }
