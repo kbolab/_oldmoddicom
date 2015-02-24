@@ -260,6 +260,7 @@ DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", 
   
   ## fitting three parameters dose/response model
   if (class(doses)=="dvhmatrix") {
+    doses<-DVH.relative(dvh = DVH.cum.to.diff(dvh = doses))
     # Akaike Information Criterion function
     DR.AIC <-function(LL) return(6 - 2 * LL)
     ## Akaike Information Criterion corrected by the cases number
@@ -319,7 +320,13 @@ DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", 
   aicc <- DR.AICc()
   # set the limit of C.I. with 1/2*chisquare for 1 degree of freedom
   bound <- qchisq(C.I.width,1)/2  
-  
+  # set NULL values of CI before calculating
+  TD50low<-NULL
+  TD50high<-NULL
+  gamma50low<-NULL
+  gamma50high<-NULL
+  alow<-NULL
+  ahigh<-NULL
   # check the kind of doses and start Profile Likelihood sequence
   if (class(doses)=="dvhmatrix") {
     TD50.CI <- function(start.TD50) {
@@ -355,7 +362,7 @@ DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", 
     TD50high<-start.TD50+TD50.step/2
     
     gamma50.CI <- function(start.gamma50) {
-      temp.fit<-nlminb(start = c(fit$par[1], fit$par[3]), objective = nLL.gamma50, lower = Lower[1:3], upper = Upper[1:3], doses = doses, outcome = outcome, gamma50 = start.gamma50)
+      temp.fit<-nlminb(start = c(fit$par[1], fit$par[3]), objective = nLL.gamma50, lower = Lower[c(1,3)], upper = Upper[c(1,3)], doses = doses, outcome = outcome, gamma50 = start.gamma50)
       return(list(MLE=-temp.fit$objective, TD50 = temp.fit$par[1], a = temp.fit$par[2]))
     }
     
@@ -386,7 +393,7 @@ DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", 
     gamma50high<-start.gamma50+gamma50.step/2
     
     a.CI <- function(start.a) {
-      temp.fit<-nlminb(start = c(fit$par[1], fit$par[2]), objective = nLL.a, lower = Lower[1:3], upper = Upper[1:3], doses = doses, outcome = outcome, a = start.a)
+      temp.fit<-nlminb(start = c(fit$par[1], fit$par[2]), objective = nLL.a, lower = Lower[1:2], upper = Upper[1:2], doses = doses, outcome = outcome, a = start.a)
       return(list(MLE=-temp.fit$objective, TD50 = temp.fit$par[1], gamma50 = temp.fit$par[2]))
     }
     
@@ -418,7 +425,10 @@ DR.fit <- function (doses, outcome, DR.fun = c("Lyman", "Niemierko", "Bentzen", 
   }
   
   if ((class(doses)=="numeric") || (class(doses)=="integer")) {
-    
+    TD50.CI <- function(start.TD50) {
+      temp.fit<-nlminb(start = fit$par[2], objective = nLL.TD50, lower = Lower[2:3], upper = Upper[2:3], doses = doses, outcome = outcome, TD50 = start.TD50)
+      return(list(MLE=-temp.fit$objective, gamma50 = temp.fit$par[1], a = temp.fit$par[2]))
+    }
   }    
     
   return(list(fit = fit, AIC = aic, AICc = aicc, MLE = MLE, TD50low = TD50low, TD50high = TD50high, 
