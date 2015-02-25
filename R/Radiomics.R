@@ -6,7 +6,7 @@
 #' @export
 #' @return A list with unknown meaning
 RAD.MultiPIPOblique<-function(dataStorage, Structure, SeriesInstanceUID) {
-  
+  objService<-services()
   # initialize the image array with the right dimension
   image.arr<-array(data=-1, dim = c(dataStorage$info[[SeriesInstanceUID]][[1]]$Rows, 
                                     dataStorage$info[[SeriesInstanceUID]][[1]]$Columns,
@@ -55,18 +55,29 @@ RAD.MultiPIPOblique<-function(dataStorage, Structure, SeriesInstanceUID) {
     }       
   }
   
-  final.array<-MultiPointInPolyObl(DICOMOrientationVector = DOM, totalX = TotalX, totalY = TotalY, NumSlices = length(FullZ),  
+  final.array<-RAD.MultiPointInPolyObl(DICOMOrientationVector = DOM, totalX = TotalX, totalY = TotalY, NumSlices = length(FullZ),  
                                    Offset = Offset,  nX = as.numeric(dataStorage$info[[SeriesInstanceUID]][[1]]$Columns), nY = as.numeric(dataStorage$info[[SeriesInstanceUID]][[1]]$Rows), FullZ = FullZ)
   final.array<-array(data = final.array, dim = c(dataStorage$info[[SeriesInstanceUID]][[1]]$Columns, dataStorage$info[[SeriesInstanceUID]][[1]]$Rows, length(FullZ)))
   
   for ( i in seq(1,dim(image.arr)[3] )) {
-    image.arr[,,i]<-rotateMatrix(image.arr[,,i])
-    final.array[,,i]<-t(rotateMatrix(final.array[,,i],rotations=3))
+    image.arr[,,i]<-objService$rotateMatrix(image.arr[,,i])
+    final.array[,,i]<-t(objService$rotateMatrix(final.array[,,i],rotations=3))
   }
   #image(rotateMatrix(image.arr[,,2]) * t(rotateMatrix(final.array[,,2],rotations=3)),col = grey(seq(0, 1, length = 256)))
   
   return(list(TotalX=TotalX, TotalY=TotalY, FullZ=FullZ, Offset=Offset, 
               DOM=array(DOM, dim = c(3,3,length(index))), final.array=final.array, masked.images=final.array*image.arr))
+}
+#' Wrapper for C function
+#' @useDynLib moddicom
+RAD.MultiPointInPolyObl<-function(DICOMOrientationVector, totalX, totalY, NumSlices, Offset, FullZ, nX, nY) {
+  objService<-services()
+#  dyn.load(objService$SV.LoadAccordingOSType(library.name = "PointInPolygon"))    
+  # creates the PIPvector
+  PIPvector<-rep.int(x = 0, times = nX * nY * NumSlices)  
+  result<-.C("MultiPIPObl", as.double(totalX), as.double(totalY), as.integer(nX), as.integer(nY), 
+             as.integer(NumSlices), as.integer(Offset), as.integer(PIPvector), as.integer(FullZ), as.double(DICOMOrientationVector))  
+  return(result[[7]])
 }
 #' Load and handle a tree
 #' @description This function can be used to load, in one shot, many DICOM studies referring different patients. Each study is stored in a separate element of a list and basics analysis can be done. Even if it is quite deprecated, it can still be useful for 'quick & dirty' image analysis.
@@ -77,27 +88,20 @@ RAD.mmButo<-function() {
   attributeList<-list()
   
   openTreeMultiROIs<-function(Path, structureList) {
-    print("1")
     cubeVoxelList<-list()
     listaFolders<-list.dirs( Path )
     
-    print("2")
     # a bit of froceries
     #    pb <- txtProgressBar(min = 0, max = length(listaFolders)-1, style = 3)
     counter<-1
     for( folderName in listaFolders[2:length(listaFolders)] ) {
       #      setTxtProgressBar(pb, counter)
       # Instantiate the object
-      print("3")
       obj<-geoLet()
-      print("4")
-      obj$setAttribute(attribute="verbose",value=FALSE)
-      print("5")
+      #obj$setAttribute(attribute="verbose",value=FALSE)
+      print( folderName )
       obj$openDICOMFolder( folderName )      
-      print("6")
       listaROI<-obj$getROIList();
-      print("7")
-      
       
       cubeVoxelList[[ folderName ]]<-list()
       cubeVoxelList[[ folderName ]][["voxelCubes"]]<-list()
@@ -112,14 +116,13 @@ RAD.mmButo<-function() {
           SS<-names(ds$img);
           
           #result<-MultiPIPOblique(dataStorage = ds, Structure = ROIName, SeriesInstanceUID = SS, output=c("masked.images","DICOMInformationMatrix","resampled.array"))
-          result<-MultiPIPOblique(dataStorage = ds, Structure = ROIName, SeriesInstanceUID = SS)
+          result<-RAD.MultiPIPOblique(dataStorage = ds, Structure = ROIName, SeriesInstanceUID = SS)
           
           cubeVoxelList[[ folderName ]][["voxelCubes"]][[ ROIName ]]<-result$masked.images    
           #cubeVoxelList[[ folderName ]][["info"]]<-result$DICOMInformationMatrix
           cubeVoxelList[[ folderName ]][["info"]]<-result$DOM
           
           cubeVoxelList[[ folderName ]][["ROIPointList"]][[ ROIName ]]<-ROIPointList
-          
           
           # -im
           info_struct<-ds$info[[SS]]                            # structure which contains information
