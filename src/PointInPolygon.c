@@ -56,6 +56,7 @@ double getPointPlaneDistance(struct pointInSpace pS, struct planeEquation pE) {
         return fabs(pE.a * pS.x  +  pE.b * pS.y  +  pE.c * pS.z  +  pE.d) / sqrt( pE.a * pE.a + pE.b * pE.b + pE.c * pE.c);
 }
 
+
 /*
  * Function for calculating the equation of a plane starting from 3 points in the space
  * Pa   :		1st point
@@ -132,6 +133,25 @@ void MultiPIP (double *X, double *Y, double *totalX, double *totalY, int *nX, in
 		}
 	}
 } 
+
+/*
+ nvert :   number of vertex
+ vertx :   x coords of vertex points
+ verty :   y coords of vertex points
+ 
+*/
+void isThePointInside(int nvert, float *vertx, float *verty, float testx, float testy)
+{
+  int i, j, c = 0;
+  for (i = 0, j = nvert-1; i < nvert; j = i++) {
+    if ( ((verty[i]>testy) != (verty[j]>testy)) &&
+   (testx < (vertx[j]-vertx[i]) * (testy-verty[i]) / (verty[j]-verty[i]) + vertx[i]) )
+       c = !c;
+  }
+  return c;
+}
+
+
 
 
 /*
