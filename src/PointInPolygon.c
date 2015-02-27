@@ -140,6 +140,7 @@ void MultiPIP (double *X, double *Y, double *totalX, double *totalY, int *nX, in
  verty :   y coords of vertex points
  
 */
+/*
 void isThePointInside(int nvert, float *vertx, float *verty, float testx, float testy)
 {
   int i, j, c = 0;
@@ -150,7 +151,7 @@ void isThePointInside(int nvert, float *vertx, float *verty, float testx, float 
   }
   return c;
 }
-
+*/
 
 
 
@@ -172,7 +173,7 @@ void isThePointInside(int nvert, float *vertx, float *verty, float testx, float 
 void MultiPIPObl (double *totalX, double *totalY, int *nX, int *nY,
 		int *NumSlices, int *Offset, int *PIPvector, int *FullZ, double *DICOMv) {
 	int n, i, j, x, y, c;
-	double X, Y;
+//	double X, Y;
 	struct pointInSpace point;
 	struct DICOM_OrientationMatrix DOM;
 
