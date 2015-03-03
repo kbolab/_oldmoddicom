@@ -6,7 +6,7 @@
 #' @export
 #' @return A list with unknown meaning
 RAD.MultiPIPOblique<-function(dataStorage, Structure, SeriesInstanceUID) {
-  
+  objService<-services()
   # initialize the image array with the right dimension
   image.arr<-array(data=-1, dim = c(dataStorage$info[[SeriesInstanceUID]][[1]]$Rows, 
                                     dataStorage$info[[SeriesInstanceUID]][[1]]$Columns,
@@ -55,16 +55,123 @@ RAD.MultiPIPOblique<-function(dataStorage, Structure, SeriesInstanceUID) {
     }       
   }
   
-  final.array<-MultiPointInPolyObl(DICOMOrientationVector = DOM, totalX = TotalX, totalY = TotalY, NumSlices = length(FullZ),  
+  final.array<-RAD.MultiPointInPolyObl(DICOMOrientationVector = DOM, totalX = TotalX, totalY = TotalY, NumSlices = length(FullZ),  
                                    Offset = Offset,  nX = as.numeric(dataStorage$info[[SeriesInstanceUID]][[1]]$Columns), nY = as.numeric(dataStorage$info[[SeriesInstanceUID]][[1]]$Rows), FullZ = FullZ)
   final.array<-array(data = final.array, dim = c(dataStorage$info[[SeriesInstanceUID]][[1]]$Columns, dataStorage$info[[SeriesInstanceUID]][[1]]$Rows, length(FullZ)))
   
   for ( i in seq(1,dim(image.arr)[3] )) {
-    image.arr[,,i]<-rotateMatrix(image.arr[,,i])
-    final.array[,,i]<-t(rotateMatrix(final.array[,,i],rotations=3))
+    image.arr[,,i]<-objService$SV.rotateMatrix(image.arr[,,i])
+    final.array[,,i]<-t(objService$SV.rotateMatrix(final.array[,,i],rotations=3))
   }
-  #image(rotateMatrix(image.arr[,,2]) * t(rotateMatrix(final.array[,,2],rotations=3)),col = grey(seq(0, 1, length = 256)))
-  
+
   return(list(TotalX=TotalX, TotalY=TotalY, FullZ=FullZ, Offset=Offset, 
               DOM=array(DOM, dim = c(3,3,length(index))), final.array=final.array, masked.images=final.array*image.arr))
 }
+#' Wrapper for C function
+#' @useDynLib moddicom
+RAD.MultiPointInPolyObl<-function(DICOMOrientationVector, totalX, totalY, NumSlices, Offset, FullZ, nX, nY) {
+  objService<-services()
+  # creates the PIPvector
+  PIPvector<-rep.int(x = 0, times = nX * nY * NumSlices)  
+  result<-.C("MultiPIPObl", as.double(totalX), as.double(totalY), as.integer(nX), as.integer(nY), 
+             as.integer(NumSlices), as.integer(Offset), as.integer(PIPvector), as.integer(FullZ), as.double(DICOMOrientationVector))  
+  return(result[[7]])
+}
+#' Load and handle a tree
+#' @description this is the old (and deprecated) version of mmButo. It is able to look into a folder serching all DICOM studies and return a structure containint all the voxel cubes.
+#'               The available methods are:
+#'               \itemize{
+#'               \item \code{openTreeMultiROIs(Path, structureList)} 
+#'               is a method used to open a chosen folder. This method loads all the DICOM objects into
+#'               the indicated folder (without recursion) as attribute of the object.
+#'               Information can be retrieved using \code{getAttribute} method or, simply, getting the result of this method.#'               
+#'               }
+#' @export
+RAD.mmButo<-function() {
+  
+  dataStructure<-list()
+  attributeList<-list()
+  
+  openTreeMultiROIs<-function(Path, structureList) {
+    cubeVoxelList<-list()
+    listaFolders<-list.dirs( Path )
+    
+    # a bit of froceries
+    #    pb <- txtProgressBar(min = 0, max = length(listaFolders)-1, style = 3)
+    counter<-1
+    for( folderName in listaFolders[2:length(listaFolders)] ) {
+      #      setTxtProgressBar(pb, counter)
+      # Instantiate the object
+      obj<-geoLet()
+      #obj$setAttribute(attribute="verbose",value=FALSE)  
+#      print( folderName )
+      obj$openDICOMFolder( folderName )      
+      listaROI<-obj$getROIList();
+      
+      cubeVoxelList[[ folderName ]]<-list()
+      cubeVoxelList[[ folderName ]][["voxelCubes"]]<-list()
+      cubeVoxelList[[ folderName ]][["info"]]<-list()
+      cubeVoxelList[[ folderName ]][["ROIPointList"]]<-list()
+      
+      ct<-1;
+      for( ROIName in obj$getROIList()[2,] ) {
+        if ((missingArg(structureList)) ||  (ROIName %in% structureList)  ) {
+          ds<-obj$getAttribute("dataStorage")
+          ROIPointList<-obj$getROIPointList(ROIName)
+          SS<-names(ds$img);
+          
+          #result<-MultiPIPOblique(dataStorage = ds, Structure = ROIName, SeriesInstanceUID = SS, output=c("masked.images","DICOMInformationMatrix","resampled.array"))
+          result<-RAD.MultiPIPOblique(dataStorage = ds, Structure = ROIName, SeriesInstanceUID = SS)
+          
+          cubeVoxelList[[ folderName ]][["voxelCubes"]][[ ROIName ]]<-result$masked.images    
+          #cubeVoxelList[[ folderName ]][["info"]]<-result$DICOMInformationMatrix
+          cubeVoxelList[[ folderName ]][["info"]]<-result$DOM
+          
+          cubeVoxelList[[ folderName ]][["ROIPointList"]][[ ROIName ]]<-ROIPointList
+          
+           info_struct<-ds$info[[SS]]                            # structure which contains information
+          img_struct<-ds$img[[SS]]                              # structure which contains images
+          nnRows<-as.numeric(info_struct[[1]]$Rows)                                     # Rows
+          nnColumns<-as.numeric(info_struct[[1]]$Columns)                               # Columns
+          nnOfSlices<-length(img_struct)                                                # Number of slices
+          instanceNumberList<-as.character( sort( as.numeric( names(img_struct) ) ) )   # List of the instance number (key for img_struct)
+          
+          image.arr<-array(data=-1, dim = c( nnRows, nnColumns, nnOfSlices ) )
+          nn<-0
+          for (n in instanceNumberList) {
+            nn<-nn+1
+            image.arr[,,nn]<-img_struct[[n]]    
+          }
+          image.arr=aperm(a = image.arr, perm = c(2,1,3))[,nnColumns:1,]
+          cubeVoxelList[[ folderName ]][["image.arr"]]<-image.arr
+        }
+      }  
+      
+      counter<-counter+1;
+    }
+    #    close(pb) 
+    dataStructure<<-cubeVoxelList      
+    return( cubeVoxelList );
+  }
+  setAttribute<-function(attribute, value) {
+    if(attribute=="verbose") {
+      if(!is.list(value)) return;
+      for(i in names(value)) {
+        attributeList$verbose[[ i ]] <- value[[i]]
+      }
+      logObj$setOutput( attributeList$verbose )
+      return;  
+    }
+    #attributeList[[ attribute ]]<<-value    
+  }  
+  constructor<-function() {
+    dataStructure<<-list()
+    attributeList<<-list()
+    attributeList$verbose<<-list("lv1"=TRUE,"lv2"=TRUE,"lv3"=FALSE,"onScreen"=TRUE,"onFile"=FALSE)    
+  }
+  constructor()
+  return(list(openTreeMultiROIs=openTreeMultiROIs,setAttribute=setAttribute))
+}
+# example
+# obj<-RAD.mmButo()
+# a<-obj$openTreeMultiROIs("/progetti/immagini/CONTOURED/Positive/easy", structureList=c("GTV","Retto"))
