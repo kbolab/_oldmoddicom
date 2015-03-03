@@ -4,12 +4,10 @@
 \alias{DVH.diff.to.cum}
 \title{Function that converts differential DVHs into cumulative ones}
 \usage{
-DVH.diff.to.cum(dvh, relative = TRUE)
+DVH.diff.to.cum(dvh)
 }
 \arguments{
 \item{dvh}{Either an object of class \code{dvhmatrix} or \code{matrix} type.}
-
-\item{relative}{If \code{TRUE} the structure volume bins are divided by the total volume.}
 }
 \value{
 Either an object of class \code{dvhmatrix} or a \code{matrix} according the argument \code{dvh}.
