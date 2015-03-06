@@ -193,7 +193,8 @@ geoLet<-function() {
               # now update the structure in memory
               imageSerie[["img"]][[seriesInstanceUID]][[instanceNumber]]<-immagine
               imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]]<-list()
-              imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["instanceNumber"]]<-SOPClassUIDList[[i]]$kind
+              imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["SOPClassUID"]]<-SOPClassUIDList[[i]]$kind
+              imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["SOPInstanceUID"]]<-getDICOMTag(i,"0008,0018")
               imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["fileName"]]<-i
               pixelSpacing<-getAttribute(attribute<-"PixelSpacing",fileName=i)
               #pixelSpacing<-getDICOMTag(i,"0028,0030")
