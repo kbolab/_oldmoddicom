@@ -210,7 +210,59 @@ void MultiPIPObl (double *totalX, double *totalY, int *nX, int *nY,
 	}
 }
 
+/*
+ *  Algorithm for Point In Polygon on Oblique planes
+ *  calculated over a multiple series of contours each one on a different slice.
+ *	Each slice is ordered according NumSlices value.
+ *	Variables to be addressed to the C code are:
+ *	totalY: 	vector of all Y coordinates of contours (one appended to the other)
+ *	totalX: 	vector of all X coordinates of contours (one appended to the other)
+ *	offset:		vector of all shifts for moving from one contour to the other
+ *	X, Y:		coordinates position of x & y points matrix of single plan of image
+ *	PIPvector:	vector of Points in Polygon to be arranged in an array in R
+ *	nX, nY:		number of X & Y coordinates in X & Y
+ *	NumSlices:	number of axial slices to be scanned for PIP
+ *	FullZ:		vector of slices containing contours {1} or empty {0}
+ *	DICOMv:		DICOM orientation vector, vectorized DICOM orientation matrix multiplied by pixel spacing
+ */
+void NewMultiPIPObl (double *totalX, double *totalY, int *nX, int *nY,
+		int *NumSlices, int *arrayInstanceNumber, int *PIPvector, int *arrayInstanceNumberWithROI, double *DICOMv) {
+	int n, i, j, x, y, c;
+//	double X, Y;
+	struct pointInSpace point; 
+	struct DICOM_OrientationMatrix DOM;
 
+	//XY = (double*)calloc(1, sizeof(double)*(*nrow * *ncol));  // matrix of point to be checked
+	for (n=0; n< *NumSlices; n++) {		// loop among slices
+		if (FullZ[n]==1) {				// loop for analyzing only full slices
+			// loop for filling full slices by PIP values 0: point outside, 1: point inside
+			for (y=0; y< *nY; y++) {	// loop through Y axis
+				for (x=0; x< *nX; x++) {// loop through X axis
+					DOM.a11= DICOMv[n * 9 + 0];	// position 0 in array
+					DOM.a21= DICOMv[n * 9 + 1];
+					DOM.a31= DICOMv[n * 9 + 2];
+					DOM.a12= DICOMv[n * 9 + 3];
+					DOM.a22= DICOMv[n * 9 + 4];
+					DOM.a32= DICOMv[n * 9 + 5];
+					DOM.Sx=  DICOMv[n * 9 + 6];
+					DOM.Sy=  DICOMv[n * 9 + 7];
+					DOM.Sz=  DICOMv[n * 9 + 8];
+					DOM.XpixelSpacing=1;
+					DOM.YpixelSpacing=1;
+					point=get3DPosFromNxNy(x, y, DOM);
+					//printf("\npoint.x %lf point.y %lf, x %d, y %d %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf", point.x, point.y, x, y,DOM.a11,DOM.a21,DOM.a31,DOM.a12,DOM.a22,DOM.a32,DOM.Sx,DOM.Sy,DOM.Sz,DOM.XpixelSpacing,DOM.YpixelSpacing);
+					c=0;				// default value is 0: outside
+					for (i = Offset[n], j = Offset[n + 1] - 1; i < Offset[n + 1] ; j = i++) {
+						if ( ((totalY[i]>point.y) != (totalY[j]>point.y)) &&
+								(point.x < (totalX[j]-totalX[i]) * (point.y-totalY[i]) / (totalY[j]-totalY[i]) + totalX[i]) )
+							c = !c;		// each cross changes the value of output by opposite
+					}
+					PIPvector[n * (*nX) * (*nY) + x + y * (*nX)]= c;  // fill the output values
+				}
+			}
+		}
+	}
+}
 /*
  * function that calculates the distance between two points "a" and "b"
  * having coordinates (aX, aY) and (bX, bY)
