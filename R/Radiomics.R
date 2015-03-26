@@ -31,8 +31,9 @@ RAD.NewMultiPIPOblique<-function(dataStorage, Structure, SeriesInstanceUID) {
   TotalX<- -10000;  TotalY<- -10000
   OriginX<- -10000;   OriginY<- -10000
   associatedInstanceNumberVect<- -10000
-  arrayInstanceNumberWithROI<-c()
-  contatoreROI<-1
+  arrayInstanceNumberWithROI<-c(); DOMWithROI<-c();
+  arrayPosizioneInstanceNumberWithROI<-c();
+  contatoreROI<-1; indiceDOM<-1;
   # for each instance number
   for (n in index) {
       # check if there is a ROI for such slice
@@ -64,9 +65,13 @@ RAD.NewMultiPIPOblique<-function(dataStorage, Structure, SeriesInstanceUID) {
         
         # track the Instance number with at least one ROI associated
         arrayInstanceNumberWithROI<-c(arrayInstanceNumberWithROI,as.numeric(n))
+        # track the Instance number with at least one ROI associated (also in terms of position)
+        arrayPosizioneInstanceNumberWithROI<-c(arrayPosizioneInstanceNumberWithROI, as.numeric(indiceDOM)-1 )
+        DOMWithROI<-c(DOMWithROI,DOM[indiceDOM])
     }      
+    indiceDOM<-indiceDOM+1;
   }
-  
+
   # build the array with all the Instance Number
   arrayInstanceNumber<-as.numeric(index);
 
@@ -74,36 +79,47 @@ RAD.NewMultiPIPOblique<-function(dataStorage, Structure, SeriesInstanceUID) {
   final.array<-RAD.NewMultiPointInPolyObl(
                                           # array of DICOM Orientation Matrices
                                           DICOMOrientationVector = DOM, 
+                                          # array of DICOM Orientation Matrices limited to the matrices with a ROI
+                                          DICOMOrientationVectorWithROI = DOMWithROI,                                           
                                           # X and Y vector Points
                                           totalX = TotalX, totalY = TotalY, 
-                                          # Number of slices
-                                          NumSlices = length(arrayInstanceNumber),  
                                           # Ordered Instance Number
                                           arrayInstanceNumber = arrayInstanceNumber,
-                                          # Instance Number with a ROI
+                                          # Ordered Instance Number with a ROI                                          
                                           arrayInstanceNumberWithROI = arrayInstanceNumberWithROI,  
+                                          # Ordered Position of Instance Number with a ROI                                          
+                                          arrayPosizioneInstanceNumberWithROI = arrayPosizioneInstanceNumberWithROI,
+                                          # Number of slices
+                                          NumSlices = length(arrayInstanceNumber),                                          
+                                          # Number of slices with ROI
+                                          NumSlicesWithROI = length(arrayInstanceNumberWithROI),                                              
                                           # matrices dimensions (rows and columns)
                                           nX = numberOfColumns, 
                                           nY = numberOfRows)
 
-  final.array<-array(data = final.array, dim = c(dataStorage$info[[SeriesInstanceUID]][[1]]$Columns, dataStorage$info[[SeriesInstanceUID]][[1]]$Rows, length(FullZ)))
+#  final.array<-array(data = final.array, dim = c(dataStorage$info[[SeriesInstanceUID]][[1]]$Columns, dataStorage$info[[SeriesInstanceUID]][[1]]$Rows, length(FullZ)))
   
-  for ( i in seq(1,dim(image.arr)[3] )) {
-    image.arr[,,i]<-objService$SV.rotateMatrix(image.arr[,,i])
-    final.array[,,i]<-t(objService$SV.rotateMatrix(final.array[,,i],rotations=3))
-  }
+#  for ( i in seq(1,dim(image.arr)[3] )) {
+#    image.arr[,,i]<-objService$SV.rotateMatrix(image.arr[,,i])
+#    final.array[,,i]<-t(objService$SV.rotateMatrix(final.array[,,i],rotations=3))
+#  }
 
-  return(list(TotalX=TotalX, TotalY=TotalY, FullZ=FullZ, Offset=Offset, 
-              DOM=array(DOM, dim = c(3,3,length(index))), final.array=final.array, masked.images=final.array*image.arr))
+#  return(list(TotalX=TotalX, TotalY=TotalY, FullZ=FullZ, Offset=Offset, 
+#              DOM=array(DOM, dim = c(3,3,length(index))), final.array=final.array, masked.images=final.array*image.arr))
 }
 #' Wrapper for C function
 #' @useDynLib moddicom
-RAD.NewMultiPointInPolyObl<-function(DICOMOrientationVector, totalX, totalY, NumSlices, arrayInstanceNumber, arrayInstanceNumberWithROI, nX, nY) {
+RAD.NewMultiPointInPolyObl<-function(DICOMOrientationVector, totalX, totalY, NumSlices, arrayInstanceNumber, 
+                                     arrayInstanceNumberWithROI,NumSlicesWithROI, 
+                                     arrayPosizioneInstanceNumberWithROI,DICOMOrientationVectorWithROI,nX, nY) {
   # creates the PIPvector
   PIPvector<-rep.int(x = 0, times = nX * nY * NumSlices)  
+
   result<-.C("NewMultiPIPObl", 
              as.double(totalX), as.double(totalY), as.integer(nX), as.integer(nY), 
-             as.integer(NumSlices), as.integer(arrayInstanceNumber), as.integer(PIPvector), as.integer(arrayInstanceNumberWithROI), as.double(DICOMOrientationVector))  
+             as.integer(NumSlices), as.integer(arrayInstanceNumber), as.integer(PIPvector), as.integer(arrayInstanceNumberWithROI), 
+             as.integer(NumSlicesWithROI),as.double(DICOMOrientationVector),as.double(DICOMOrientationVectorWithROI))  
+
   return(result[[7]])
 }
 RAD.MultiPIPOblique<-function(dataStorage, Structure, SeriesInstanceUID) {
@@ -279,12 +295,14 @@ RAD.mmButo<-function() {
 # a<-obj$openTreeMultiROIs("/progetti/immagini/CONTOURED/Positive/easy", structureList=c("GTV","Retto"))
 
 # example -- ossa stile Sarhos
-# obj<-geoLet();
-# obj$openDICOMFolder("/progetti/immagini/SarhoshTest")
-# a<-obj$getAttribute("dataStorage")
-# ROIName<-"Ossa, NOS"
-# ds<-obj$getAttribute("dataStorage")
-# ROIPointList<-obj$getROIPointList(ROIName)
-# SS<-names(ds$img);
-# SeriesInstanceUID<-"1.2.840.113619.2.278.3.17485314.39.1392360071.244"
-# result<-RAD.MultiPIPOblique(dataStorage = ds, Structure = ROIName, SeriesInstanceUID = SS)
+#obj<-geoLet();
+#obj$openDICOMFolder("/progetti/immagini/SarhoshTest")
+#a<-obj$getAttribute("dataStorage")
+#ROIName<-"Ossa, NOS"
+#ds<-obj$getAttribute("dataStorage")
+#ROIPointList<-obj$getROIPointList(ROIName)
+#SS<-names(ds$img);
+#SeriesInstanceUID<-"1.2.840.113619.2.278.3.17485314.39.1392360071.244"
+#Structure<-ROIName
+#dataStorage<-a
+#result<-RAD.NewMultiPIPOblique(dataStorage = ds, Structure = ROIName, SeriesInstanceUID = SS)
