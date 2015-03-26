@@ -227,7 +227,7 @@ void MultiPIPObl (double *totalX, double *totalY, int *nX, int *nY,
  */
 void NewMultiPIPObl (double *totalX, double *totalY, int *nX, int *nY,
 		int *NumSlices, int *arrayInstanceNumber, int *PIPvector, int *arrayInstanceNumberWithROI, double *DICOMv) {
-	int n, i, j, x, y, c;
+/*	int n, i, j, x, y, c;
 //	double X, Y;
 	struct pointInSpace point; 
 	struct DICOM_OrientationMatrix DOM;
@@ -261,7 +261,7 @@ void NewMultiPIPObl (double *totalX, double *totalY, int *nX, int *nY,
 				}
 			}
 		}
-	}
+	}*/
 }
 /*
  * function that calculates the distance between two points "a" and "b"
