@@ -5,6 +5,8 @@
 #' @param SeriesInstanceUID Is the interested series Instance UID.
 #' @export
 #' @return A list with unknown meaning
+#' @useDynLib moddicom
+#' @export
 RAD.NewMultiPIPOblique<-function(dataStorage, Structure, SeriesInstanceUID) {
   objService<-services()
   
@@ -36,91 +38,95 @@ RAD.NewMultiPIPOblique<-function(dataStorage, Structure, SeriesInstanceUID) {
   contatoreROI<-1; indiceDOM<-1;
   # for each instance number
   for (n in index) {
-      # check if there is a ROI for such slice
-      for (m in which(dataStorage$info[[SeriesInstanceUID]][[n]]$ROIList[,1]==Structure)) {
+    # check if there is a ROI for such slice
+    for (m in which(dataStorage$info[[SeriesInstanceUID]][[n]]$ROIList[,1]==Structure)) {
+      
+      # find the slice and gets the key for accessing at coordinates vectors
+      key<-dataStorage$info[[SeriesInstanceUID]][[n]]$ROIList[m,2]
+      
+      # calculate how many ROIs are co-planar
+      numeroROIComplanari<-length(dataStorage$structures[[Structure]][[key]])
+      
+      # for each one of them concat the array
+      for(indiceROI in seq(1,numeroROIComplanari)) {          
+        TotalX<-c(TotalX, dataStorage$structures[[Structure]][[key]][[indiceROI]][,1])
+        TotalY<-c(TotalY, dataStorage$structures[[Structure]][[key]][[indiceROI]][,2])
         
-        # find the slice and gets the key for accessing at coordinates vectors
-        key<-dataStorage$info[[SeriesInstanceUID]][[n]]$ROIList[m,2]
+        # calculate how many points compose the ROI
+        numeroPunti<-length(dataStorage$structures[[Structure]][[key]][[indiceROI]][,1])
         
-        # calculate how many ROIs are co-planar
-        numeroROIComplanari<-length(dataStorage$structures[[Structure]][[key]])
+        # for each point write which is the relatec InstanceNumber
+        associatedInstanceNumberVect<-c(associatedInstanceNumberVect, rep(as.numeric(n) ,numeroPunti) )
         
-        # for each one of them concat the array
-        for(indiceROI in seq(1,numeroROIComplanari)) {          
-          TotalX<-c(TotalX, dataStorage$structures[[Structure]][[key]][[indiceROI]][,1])
-          TotalY<-c(TotalY, dataStorage$structures[[Structure]][[key]][[indiceROI]][,2])
-          
-          # calculate how many points compose the ROI
-          numeroPunti<-length(dataStorage$structures[[Structure]][[key]][[indiceROI]][,1])
-          
-          # for each point write which is the relatec InstanceNumber
-          associatedInstanceNumberVect<-c(associatedInstanceNumberVect, rep(as.numeric(n) ,numeroPunti) )
-          
-          # Usa OriginX and OriginY as terminator
-          TotalX<-c(TotalX, OriginX)
-          TotalY<-c(TotalY, OriginY)          
-          
-          contatoreROI<-contatoreROI+1      
-        } 
+        # Usa OriginX and OriginY as terminator
+        TotalX<-c(TotalX, OriginX)
+        TotalY<-c(TotalY, OriginY)          
         
-        # track the Instance number with at least one ROI associated
-        arrayInstanceNumberWithROI<-c(arrayInstanceNumberWithROI,as.numeric(n))
-        # track the Instance number with at least one ROI associated (also in terms of position)
-        arrayPosizioneInstanceNumberWithROI<-c(arrayPosizioneInstanceNumberWithROI, as.numeric(indiceDOM)-1 )
-        DOMWithROI<-c(DOMWithROI,DOM[indiceDOM])
+        contatoreROI<-contatoreROI+1      
+      } 
+      
+      # track the Instance number with at least one ROI associated
+      arrayInstanceNumberWithROI<-c(arrayInstanceNumberWithROI,as.numeric(n))
+      # track the Instance number with at least one ROI associated (also in terms of position)
+      arrayPosizioneInstanceNumberWithROI<-c(arrayPosizioneInstanceNumberWithROI, as.numeric(indiceDOM)-1 )
+      DOMWithROI<-c(DOMWithROI,DOM[indiceDOM])
     }      
     indiceDOM<-indiceDOM+1;
   }
-
+  
   # build the array with all the Instance Number
   arrayInstanceNumber<-as.numeric(index);
 
   # ok, call the Wrapper!
   final.array<-RAD.NewMultiPointInPolyObl(
-                                          # array of DICOM Orientation Matrices
-                                          DICOMOrientationVector = DOM, 
-                                          # array of DICOM Orientation Matrices limited to the matrices with a ROI
-                                          DICOMOrientationVectorWithROI = DOMWithROI,                                           
-                                          # X and Y vector Points
-                                          totalX = TotalX, totalY = TotalY, 
-                                          # Ordered Instance Number
-                                          arrayInstanceNumber = arrayInstanceNumber,
-                                          # Ordered Instance Number with a ROI                                          
-                                          arrayInstanceNumberWithROI = arrayInstanceNumberWithROI,  
-                                          # Ordered Position of Instance Number with a ROI                                          
-                                          arrayPosizioneInstanceNumberWithROI = arrayPosizioneInstanceNumberWithROI,
-                                          # Number of slices
-                                          NumSlices = length(arrayInstanceNumber),                                          
-                                          # Number of slices with ROI
-                                          NumSlicesWithROI = length(arrayInstanceNumberWithROI),                                              
-                                          # matrices dimensions (rows and columns)
-                                          nX = numberOfColumns, 
-                                          nY = numberOfRows)
-
-#  final.array<-array(data = final.array, dim = c(dataStorage$info[[SeriesInstanceUID]][[1]]$Columns, dataStorage$info[[SeriesInstanceUID]][[1]]$Rows, length(FullZ)))
+    # array of DICOM Orientation Matrices
+    DICOMOrientationVector = DOM, 
+    # array of DICOM Orientation Matrices limited to the matrices with a ROI
+    DICOMOrientationVectorWithROI = DOMWithROI,                                           
+    # X and Y vector Points
+    totalX = TotalX, totalY = TotalY, 
+    # for eaxh Totalx/y associates also the referred Istance number
+    associatedInstanceNumberVect = associatedInstanceNumberVect,
+    # Ordered Instance Number
+    arrayInstanceNumber = arrayInstanceNumber,
+    # Ordered Instance Number with a ROI                                          
+    arrayInstanceNumberWithROI = arrayInstanceNumberWithROI,  
+    # Ordered Position of Instance Number with a ROI                                          
+    arrayPosizioneInstanceNumberWithROI = arrayPosizioneInstanceNumberWithROI,
+    # Number of slices
+    NumSlices = length(arrayInstanceNumber),                                          
+    # Number of slices with ROI
+    NumSlicesWithROI = length(arrayInstanceNumberWithROI),                                              
+    # matrices dimensions (rows and columns)
+    nX = numberOfColumns, 
+    nY = numberOfRows)
   
-#  for ( i in seq(1,dim(image.arr)[3] )) {
-#    image.arr[,,i]<-objService$SV.rotateMatrix(image.arr[,,i])
-#    final.array[,,i]<-t(objService$SV.rotateMatrix(final.array[,,i],rotations=3))
-#  }
-
-#  return(list(TotalX=TotalX, TotalY=TotalY, FullZ=FullZ, Offset=Offset, 
-#              DOM=array(DOM, dim = c(3,3,length(index))), final.array=final.array, masked.images=final.array*image.arr))
+  #  final.array<-array(data = final.array, dim = c(dataStorage$info[[SeriesInstanceUID]][[1]]$Columns, dataStorage$info[[SeriesInstanceUID]][[1]]$Rows, length(FullZ)))
+  
+  #  for ( i in seq(1,dim(image.arr)[3] )) {
+  #    image.arr[,,i]<-objService$SV.rotateMatrix(image.arr[,,i])
+  #    final.array[,,i]<-t(objService$SV.rotateMatrix(final.array[,,i],rotations=3))
+  #  }
+  
+  #  return(list(TotalX=TotalX, TotalY=TotalY, FullZ=FullZ, Offset=Offset, 
+  #              DOM=array(DOM, dim = c(3,3,length(index))), final.array=final.array, masked.images=final.array*image.arr))
 }
-#' Wrapper for C function
-#' @useDynLib moddicom
-RAD.NewMultiPointInPolyObl<-function(DICOMOrientationVector, totalX, totalY, NumSlices, arrayInstanceNumber, 
-                                     arrayInstanceNumberWithROI,NumSlicesWithROI, 
-                                     arrayPosizioneInstanceNumberWithROI,DICOMOrientationVectorWithROI,nX, nY) {
+RAD.NewMultiPointInPolyObl<-function(totalX, totalY, nX, nY, associatedInstanceNumberVect,
+                                     NumSlices, NumSlicesWithROI, 
+                                     arrayInstanceNumber, arrayInstanceNumberWithROI, arrayPosizioneInstanceNumberWithROI,
+                                     DICOMOrientationVectorWithROI, DICOMOrientationVector ) {
   # creates the PIPvector
   PIPvector<-rep.int(x = 0, times = nX * nY * NumSlices)  
-
+  numberOfPoints<-length(totalX);
   result<-.C("NewMultiPIPObl", 
-             as.double(totalX), as.double(totalY), as.integer(nX), as.integer(nY), 
-             as.integer(NumSlices), as.integer(arrayInstanceNumber), as.integer(PIPvector), as.integer(arrayInstanceNumberWithROI), 
-             as.integer(NumSlicesWithROI),as.double(DICOMOrientationVector),as.double(DICOMOrientationVectorWithROI))  
-
-  return(result[[7]])
+             as.integer(PIPvector), as.double(totalX), as.double(totalY), as.integer(numberOfPoints), as.integer(associatedInstanceNumberVect), 
+             as.integer(nX), as.integer(nY), 
+             as.integer(NumSlices), as.integer(NumSlicesWithROI), 
+             as.integer(arrayInstanceNumber), as.integer(arrayInstanceNumberWithROI), as.integer(arrayPosizioneInstanceNumberWithROI),
+             as.double(DICOMOrientationVector),as.double(DICOMOrientationVectorWithROI))  
+  
+  
+  return(result[[1]])
 }
 RAD.MultiPIPOblique<-function(dataStorage, Structure, SeriesInstanceUID) {
   objService<-services()

@@ -135,27 +135,6 @@ void MultiPIP (double *X, double *Y, double *totalX, double *totalY, int *nX, in
 } 
 
 /*
- nvert :   number of vertex
- vertx :   x coords of vertex points
- verty :   y coords of vertex points
- 
-*/
-/*
-void isThePointInside(int nvert, float *vertx, float *verty, float testx, float testy)
-{
-  int i, j, c = 0;
-  for (i = 0, j = nvert-1; i < nvert; j = i++) {
-    if ( ((verty[i]>testy) != (verty[j]>testy)) &&
-   (testx < (vertx[j]-vertx[i]) * (testy-verty[i]) / (verty[j]-verty[i]) + vertx[i]) )
-       c = !c;
-  }
-  return c;
-}
-*/
-
-
-
-/*
  *  Algorithm for Point In Polygon on Oblique planes
  *  calculated over a multiple series of contours each one on a different slice.
  *	Each slice is ordered according NumSlices value.
@@ -209,7 +188,23 @@ void MultiPIPObl (double *totalX, double *totalY, int *nX, int *nY,
 		}
 	}
 }
+/*
+ nvert :   number of vertex
+ vertx :   x coords of vertex points
+ verty :   y coords of vertex points
+ 
+*/
 
+int isThePointInsideThePoly(int nvert, float *vertx, float *verty, float testx, float testy)
+{
+  int i, j, c = 0;
+  for (i = 0, j = nvert-1; i < nvert; j = i++) {
+    if ( ((verty[i]>testy) != (verty[j]>testy)) &&
+   (testx < (vertx[j]-vertx[i]) * (testy-verty[i]) / (verty[j]-verty[i]) + vertx[i]) )
+       c = !c;
+  }
+  return c;
+}
 /*
  *  Algorithm for Point In Polygon on Oblique planes
  *  calculated over a multiple series of contours each one on a different slice.
@@ -225,11 +220,12 @@ void MultiPIPObl (double *totalX, double *totalY, int *nX, int *nY,
  *	FullZ:		vector of slices containing contours {1} or empty {0}
  *	DICOMv:		DICOM orientation vector, vectorized DICOM orientation matrix multiplied by pixel spacing
  */
-void NewMultiPIPObl (double *totalX, double *totalY, int *nX, int *nY,
-		int *NumSlices, int *arrayInstanceNumber, int *PIPvector, int *arrayInstanceNumberWithROI, 
-                int *arrayPosizioneInstanceNumberWithROI, int *NumSlicesWithROI, 
+void NewMultiPIPObl (int *PIPvector, double *totalX, int *numberOfPoints, int *associatedInstanceNumberVect,
+                double *totalY, int *nX, int *nY,
+		int *NumSlices, int *NumSlicesWithROI, int *arrayInstanceNumber, int *arrayInstanceNumberWithROI, 
+                int *arrayPosizioneInstanceNumberWithROI, 
                 double *DICOMv,double *DICOMr) {
-	int n, i, j, x, y, c, m;
+	int n, i, j, x, y, c, m, ROIRunner;
 	struct pointInSpace point; 
 	struct DICOM_OrientationMatrix DOM;
          
@@ -237,35 +233,50 @@ void NewMultiPIPObl (double *totalX, double *totalY, int *nX, int *nY,
 	//XY = (double*)calloc(1, sizeof(double)*(*nrow * *ncol));  // matrix of point to be checked
 	for (n=0; n< *NumSlicesWithROI; n++) {		
 
-            printf(".");
+            m = arrayPosizioneInstanceNumberWithROI[ n ];
+
+            DOM.a11= DICOMr[ m * 9 + 0 ]; DOM.a21= DICOMr[ m * 9 + 1 ];
+            DOM.a31= DICOMr[ m * 9 + 2 ]; DOM.a12= DICOMr[ m * 9 + 3 ];
+            DOM.a22= DICOMr[ m * 9 + 4 ]; DOM.a32= DICOMr[ m * 9 + 5 ];
+            DOM.Sx=  DICOMr[ m * 9 + 6 ]; DOM.Sy=  DICOMr[ m * 9 + 7 ];
+            DOM.Sz=  DICOMr[ m * 9 + 8 ];
+            DOM.XpixelSpacing = 1;  DOM.YpixelSpacing = 1;
+            
             // loop for filling full slices by PIP values 0: point outside, 1: point inside
             for (y=0; y< *nY; y++) {	// loop through Y axis
                     for (x=0; x< *nX; x++) {// loop through X axis
-                            m = arrayPosizioneInstanceNumberWithROI[ n ];
+                            
+                            point = get3DPosFromNxNy(x, y, DOM);
+                            
+                            // check all the points in the array
+                            for( ROIRunner = 0; ROIRunner <= *numberOfPoints; ROIRunner++ ) {
+                                
+                                // if you are looking at a terminator (or you are at the beginnning) and the next ROIPoint is 
+                                // associated to the slice of interest (in the loop on 'n'), well, it means that a sequence of
+                                // ROI points is going to begin
+                                if( (totalX[ROIRunner]==-10000 || ROIRunner==0) && 
+                                        associatedInstanceNumberVect[ROIRunner+1]==arrayInstanceNumberWithROI[n]) {
+                                    ;
+                                }
 
-                            /*
-                            DOM.a11= DICOMr[ m * 9 + 0 ];	// position 0 in array
-                            DOM.a21= DICOMr[ m * 9 + 1 ];
-                            DOM.a31= DICOMr[ m * 9 + 2 ];
-                            DOM.a12= DICOMr[ m * 9 + 3 ];
-                            DOM.a22= DICOMr[ m * 9 + 4 ];
-                            DOM.a32= DICOMr[ m * 9 + 5 ];
-                            DOM.Sx=  DICOMr[ m * 9 + 6 ];
-                            DOM.Sy=  DICOMr[ m * 9 + 7 ];
-                            DOM.Sz=  DICOMr[ m * 9 + 8 ];
-                            DOM.XpixelSpacing = 1;
-                            DOM.YpixelSpacing = 1;
-                            point=get3DPosFromNxNy(x, y, DOM);
+
+                                
+                            }
+                            
+                            
+                            
+                            
+                            
                             //printf("\npoint.x %lf point.y %lf, x %d, y %d %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf", point.x, point.y, x, y,DOM.a11,DOM.a21,DOM.a31,DOM.a12,DOM.a22,DOM.a32,DOM.Sx,DOM.Sy,DOM.Sz,DOM.XpixelSpacing,DOM.YpixelSpacing);
-                            c=0;				// default value is 0: outside
-                            for (i = Offset[n], j = Offset[n + 1] - 1; i < Offset[n + 1] ; j = i++) {
+//                            c=0;				// default value is 0: outside
+                            
+//                            for (i = Offset[n], j = Offset[n + 1] - 1; i < Offset[n + 1] ; j = i++) {
                                     if ( ((totalY[i]>point.y) != (totalY[j]>point.y)) &&
                                                     (point.x < (totalX[j]-totalX[i]) * (point.y-totalY[i]) / (totalY[j]-totalY[i]) + totalX[i]) )
                                             c = !c;		// each cross changes the value of output by opposite
-                            }
-                            PIPvector[n * (*nX) * (*nY) + x + y * (*nX)]= c;  // fill the output values
+//                            }
                             
-                            */
+                            PIPvector[m * (*nX) * (*nY) + x + y * (*nX)]= c;  // fill the output values
                     }
             }
 	} 
