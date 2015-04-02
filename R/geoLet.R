@@ -74,7 +74,7 @@ geoLet<-function() {
     if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("---------------------------------------")
     if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("Load Images")
     if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("---------------------------------------")
-    imageStructure<-loadCTRMNScans(SOPClassUIDList);
+    imageStructure<-loadCTRMNRDScans(SOPClassUIDList);
     # put images into dataStorage
     dataStorage<<-imageStructure;
     # Load RTStruct Files
@@ -175,10 +175,10 @@ geoLet<-function() {
     }
   }
   # ------------------------------------------------
-  # loadCTRMNScans
+  # loadCTRMRDNScans
   # Loads a DICOM CT/MR Scans
   # ------------------------------------------------  
-  loadCTRMNScans<-function(SOPClassUIDList) {   imageSerie<-list()
+  loadCTRMNRDScans<-function(SOPClassUIDList) {   imageSerie<-list()
     # loop over the list    
     for(i in names(SOPClassUIDList)) {
 #      if(SOPClassUIDList[[i]]$kind=="RTDoseStorage" | 
@@ -227,6 +227,25 @@ geoLet<-function() {
               imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["planeEquation"]]<-piano
               if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog(i)
       }
+      
+      if(  SOPClassUIDList[[i]]$kind=="RTDoseStorage") {
+        # get the Series number
+        seriesInstanceUID<-getDICOMTag(i,"0020,000e")              
+        studyInstanceUID<-getDICOMTag(i,"0020,000d")              
+        imagePositionPatient<-getAttribute(attribute<-"ImagePositionPatient",fileName=i)
+        ImageOrientationPatient<-getAttribute(attribute<-"ImageOrientationPatient",fileName=i)
+        Rows<-getDICOMTag(i,"0028,0010");
+        Columns<-getDICOMTag(i,"0028,0011")
+        pixelSpacing<-getAttribute(attribute<-"PixelSpacing",fileName=i)
+        imageSerie[["info"]][[seriesInstanceUID]][["imagePositionPatient"]]<-imagePositionPatient
+        imageSerie[["info"]][[seriesInstanceUID]][["ImageOrientationPatient"]]<-ImageOrientationPatient
+        imageSerie[["info"]][[seriesInstanceUID]][["Rows"]]<-Rows
+        imageSerie[["info"]][[seriesInstanceUID]][["Columns"]]<-Columns
+        imageSerie[["info"]][[seriesInstanceUID]][["pixelSpacing"]]<-pixelSpacing
+        imageSerie[["info"]][[seriesInstanceUID]][["doseType"]]<-getDICOMTag(i,getDICOMTag(i,"0020,000d")) 
+        immagine<-getDICOMTag(i,"7fe0,0010");
+        imageSerie[["dose"]][[seriesInstanceUID]]<-immagine
+      }      
     }
     return(imageSerie);
   }
@@ -302,9 +321,19 @@ geoLet<-function() {
     rowsDICOM<-as.numeric(getDICOMTag(fileName,'0028,0010'))
     columnsDICOM<-as.numeric(getDICOMTag(fileName,'0028,0011'))
     bitsAllocated<-as.numeric(getDICOMTag(fileName,'0028,0100'))
-    if(bitsAllocated!=16) stop("Bits not allocated in 16 bit word!")
-    rn<-readBin(con = fileNameRAW, what="integer", size=2, endian="little",n=rowsDICOM*columnsDICOM)    
-    rn<-matrix(rn,ncol=columnsDICOM, byrow = TRUE)
+    if(bitsAllocated!=16 && bitsAllocated!=32) stop("Bits not allocated in 16 or 32 bit word!")
+    
+    if(bitsAllocated==16) {
+      rn<-readBin(con = fileNameRAW, what="integer", size=2, endian="little",n=rowsDICOM*columnsDICOM)    
+      rn<-matrix(rn,ncol=columnsDICOM, byrow = TRUE)
+    }
+    if(bitsAllocated==32) {
+      print("Sono arrivato qui")
+      stop()
+      rn<-readBin(con = fileNameRAW, what="integer", size=2, endian="little",n=rowsDICOM*columnsDICOM)    
+      rn<-matrix(rn,ncol=columnsDICOM, byrow = TRUE)
+    }
+    
     return(rn)
   }
   getROIList<-function() {
