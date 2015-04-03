@@ -232,8 +232,9 @@ geoLet<-function() {
         # get the Series number
         seriesInstanceUID<-getDICOMTag(i,"0020,000e")              
         studyInstanceUID<-getDICOMTag(i,"0020,000d")              
-        imagePositionPatient<-getAttribute(attribute<-"ImagePositionPatient",fileName=i)
-        ImageOrientationPatient<-getAttribute(attribute<-"ImageOrientationPatient",fileName=i)
+        imagePositionPatient<-getAttribute("ImagePositionPatient",fileName=i)
+        ImageOrientationPatient<-getAttribute("ImageOrientationPatient",fileName=i)
+        GridFrameOffsetVector<-getAttribute("GridFrameOffsetVector",fileName=i)
         Rows<-getDICOMTag(i,"0028,0010");
         Columns<-getDICOMTag(i,"0028,0011")
         
@@ -244,6 +245,8 @@ geoLet<-function() {
         imageSerie[["info"]][[seriesInstanceUID]][["Columns"]]<-Columns
         imageSerie[["info"]][[seriesInstanceUID]][["pixelSpacing"]]<-pixelSpacing
         imageSerie[["info"]][[seriesInstanceUID]][["doseType"]]<-getDICOMTag(i,"0020,000d") 
+        imageSerie[["info"]][[seriesInstanceUID]][["GridFrameOffsetVector"]]<-GridFrameOffsetVector
+        imageSerie[["info"]][[seriesInstanceUID]][["DoseGridScaling"]]<-getDICOMTag(i,"3004,000e") 
         immagine<-getDICOMTag(i,"7fe0,0010");
         imageSerie[["dose"]][[seriesInstanceUID]]<-immagine
       }      
@@ -387,6 +390,7 @@ geoLet<-function() {
     if(attribute=="ImageOrientationPatient" | attribute=="(0020,0037)")  return(   splittaTAG(getDICOMTag(fileName,"0020,0037"))  )
     if(attribute=="PixelSpacing" | attribute=="(0028,0030)")  return(splittaTAG(getDICOMTag(fileName,"0028,0030")))
     if(attribute=="PixelSpacing" | attribute=="(0028,0030)")  return(splittaTAG(getDICOMTag(fileName,"0028,0030")))
+    if(attribute=="GridFrameOffsetVector" | attribute=="(3004,000c)")  return(splittaTAG(getDICOMTag(fileName,"3004,000c")))
     
     if(attribute=="orientationMatrix")  return( buildOrientationMatrix(fileName)  )
   }
@@ -489,9 +493,34 @@ geoLet<-function() {
     }
     attributeList[[ attribute ]]<<-value    
   }
+  info<-function(X, level = 1,cutoff=6) {  
+    if(X=="dataStorage") X<-dataStorage;
+    if( is.list( X ) ) {    
+      ct <- 1
+      for(i in names(X) ) {
+        if( ct< cutoff) {      
+          if (ct == length( X ) ) {
+            cat( rep(" ",level),  "└──" , i , "\n" )
+            nametree( X[[i]] , level + 1 )
+            return;
+          }
+          else {
+            cat( rep(" ",level), "├──" , i , "\n"  )  
+          }
+          nametree( X[[i]] , level + 1 )
+          ct <- ct + 1
+        }
+        else {
+          if(ct==cutoff) cat( rep(" ",level), "├──" , "...." , "\n"  )
+          ct <- ct + 1
+          return;
+        }
+      }     
+    }
+  }
   constructor<-function() {
-    dataStorage <<-list();   
-    dataChache<<-list();
+    dataStorage <<- list();   
+    dataChache <<- list();
     
     attributeList<<-list()
     attributeList$verbose<<-list("lv1"=TRUE,"lv2"=TRUE,"lv3"=FALSE,"onScreen"=TRUE,"onFile"=FALSE)
@@ -504,7 +533,7 @@ geoLet<-function() {
   constructor()
   return(list(openDICOMFolder=openDICOMFolder,getAttribute=getAttribute,
               getDICOMTag=getDICOMTag,getROIList=getROIList,getROIPointList=getROIPointList,
-              setAttribute=setAttribute,getFolderContent=getFolderContent))
+              setAttribute=setAttribute,getFolderContent=getFolderContent,info=info))
 }
 
 # --------------------------------------------------------------------------------------------------------------------
