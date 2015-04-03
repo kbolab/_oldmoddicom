@@ -304,6 +304,7 @@ RAD.mmButo<-function() {
 #obj<-geoLet();
 #obj$openDICOMFolder("/progetti/immagini/SarhoshTest")
 #a<-obj$getAttribute("dataStorage")
+#image(a$dose[[1]][,,10], col = gray.colors(2^8))
 #ROIName<-"Ossa, NOS"
 #ds<-obj$getAttribute("dataStorage")
 #ROIPointList<-obj$getROIPointList(ROIName)

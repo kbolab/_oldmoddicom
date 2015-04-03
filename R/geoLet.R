@@ -236,13 +236,14 @@ geoLet<-function() {
         ImageOrientationPatient<-getAttribute(attribute<-"ImageOrientationPatient",fileName=i)
         Rows<-getDICOMTag(i,"0028,0010");
         Columns<-getDICOMTag(i,"0028,0011")
+        
         pixelSpacing<-getAttribute(attribute<-"PixelSpacing",fileName=i)
         imageSerie[["info"]][[seriesInstanceUID]][["imagePositionPatient"]]<-imagePositionPatient
         imageSerie[["info"]][[seriesInstanceUID]][["ImageOrientationPatient"]]<-ImageOrientationPatient
         imageSerie[["info"]][[seriesInstanceUID]][["Rows"]]<-Rows
         imageSerie[["info"]][[seriesInstanceUID]][["Columns"]]<-Columns
         imageSerie[["info"]][[seriesInstanceUID]][["pixelSpacing"]]<-pixelSpacing
-        imageSerie[["info"]][[seriesInstanceUID]][["doseType"]]<-getDICOMTag(i,getDICOMTag(i,"0020,000d")) 
+        imageSerie[["info"]][[seriesInstanceUID]][["doseType"]]<-getDICOMTag(i,"0020,000d") 
         immagine<-getDICOMTag(i,"7fe0,0010");
         imageSerie[["dose"]][[seriesInstanceUID]]<-immagine
       }      
@@ -307,10 +308,10 @@ geoLet<-function() {
   # into memory (using DCMTK)
   # ------------------------------------------------ 
   getImageFromRAW<-function(fileName) {    
+    objSV<-services()
     fileNameRAW<-paste(fileName,".0.raw")    
     fileNameRAW<-str_replace_all(string = fileNameRAW , pattern = " .0.raw",replacement = ".0.raw")
     pathToStore<-substr(fileName,1,tail(which(strsplit(fileName, '')[[1]]=='/'),1)-1)
-
     if(!file.exists( fileNameRAW )) {
       stringa1<-"dcmdump";
       stringa2<-paste(" +W  ",pathToStore,fileName,collapse='')
@@ -320,20 +321,37 @@ geoLet<-function() {
     }
     rowsDICOM<-as.numeric(getDICOMTag(fileName,'0028,0010'))
     columnsDICOM<-as.numeric(getDICOMTag(fileName,'0028,0011'))
+    
     bitsAllocated<-as.numeric(getDICOMTag(fileName,'0028,0100'))
-    if(bitsAllocated!=16 && bitsAllocated!=32) stop("Bits not allocated in 16 or 32 bit word!")
-    
-    if(bitsAllocated==16) {
+
+    if(SOPClassUIDList[[fileName]]$kind!="RTDoseStorage"){
+      if(bitsAllocated!=16) stop("16bit pixel are allowed only for non-RTDoseStorage")
       rn<-readBin(con = fileNameRAW, what="integer", size=2, endian="little",n=rowsDICOM*columnsDICOM)    
       rn<-matrix(rn,ncol=columnsDICOM, byrow = TRUE)
     }
-    if(bitsAllocated==32) {
-      print("Sono arrivato qui")
-      stop()
-      rn<-readBin(con = fileNameRAW, what="integer", size=2, endian="little",n=rowsDICOM*columnsDICOM)    
-      rn<-matrix(rn,ncol=columnsDICOM, byrow = TRUE)
-    }
-    
+    if(SOPClassUIDList[[fileName]]$kind=="RTDoseStorage"){
+      if(bitsAllocated==32) {
+        if(SOPClassUIDList[[fileName]]$kind!="RTDoseStorage") stop("32bit pixel are allowed only for RTDoseStorage")
+        numberOfFrames<-as.numeric(getDICOMTag(fileName,'0028,0008'))
+        rn<-readBin(con = fileNameRAW, what="integer", size=4, endian="little",n=rowsDICOM*columnsDICOM*numberOfFrames) 
+        # per ora va via come ciclo FOR, poi ci ragioniamo....        
+        matRN<-array(0,c(rowsDICOM,columnsDICOM,numberOfFrames))
+        ct<-1
+        for( z in seq(1,numberOfFrames)) {
+          for(x in seq(1,rowsDICOM)) {
+            for(y in seq(1,columnsDICOM)) {
+              matRN[x,columnsDICOM-y,z]<-rn[ct]
+              ct<-ct+1
+            }
+          }
+        }        
+        new_atRN<-array(0,c(columnsDICOM,rowsDICOM,numberOfFrames))
+        for(ct in seq(1:dim(matRN)[3]  )) {
+          new_atRN[,,ct]<-t(objSV$SV.rotateMatrix( matRN[,,ct], rotations=2 ))
+        }
+        rn<-new_atRN
+      } else stop("RTDose must have 32 bit words!")
+    }    
     return(rn)
   }
   getROIList<-function() {
@@ -368,6 +386,8 @@ geoLet<-function() {
     if(attribute=="ImagePositionPatient" | attribute=="(0020,0032)")  return(  splittaTAG(getDICOMTag(fileName,"0020,0032"))   )      
     if(attribute=="ImageOrientationPatient" | attribute=="(0020,0037)")  return(   splittaTAG(getDICOMTag(fileName,"0020,0037"))  )
     if(attribute=="PixelSpacing" | attribute=="(0028,0030)")  return(splittaTAG(getDICOMTag(fileName,"0028,0030")))
+    if(attribute=="PixelSpacing" | attribute=="(0028,0030)")  return(splittaTAG(getDICOMTag(fileName,"0028,0030")))
+    
     if(attribute=="orientationMatrix")  return( buildOrientationMatrix(fileName)  )
   }
 # ------------------------------------------------
