@@ -76,7 +76,6 @@ RAD.NewMultiPIPOblique<-function(dataStorage, Structure, SeriesInstanceUID) {
   
   # build the array with all the Instance Number
   arrayInstanceNumber<-as.numeric(index);
-
   # ok, call the Wrapper!
   final.array<-RAD.NewMultiPointInPolyObl(
     # array of DICOM Orientation Matrices
@@ -85,7 +84,7 @@ RAD.NewMultiPIPOblique<-function(dataStorage, Structure, SeriesInstanceUID) {
     DICOMOrientationVectorWithROI = DOMWithROI,                                           
     # X and Y vector Points
     totalX = TotalX, totalY = TotalY, 
-    # for eaxh Totalx/y associates also the referred Istance number
+    # for each Totalx/y associates also the referred Istance number
     associatedInstanceNumberVect = associatedInstanceNumberVect,
     # Ordered Instance Number
     arrayInstanceNumber = arrayInstanceNumber,
@@ -101,8 +100,44 @@ RAD.NewMultiPIPOblique<-function(dataStorage, Structure, SeriesInstanceUID) {
     nX = numberOfColumns, 
     nY = numberOfRows)
   
-  #  final.array<-array(data = final.array, dim = c(dataStorage$info[[SeriesInstanceUID]][[1]]$Columns, dataStorage$info[[SeriesInstanceUID]][[1]]$Rows, length(FullZ)))
+# In Example: 
+# -----------------------------------------------------------------------------------------------------------
+#> TotalX[0:70]
+#[1] -10000.00     -5.16     -3.28     -1.41      0.47      2.34      4.22      5.12      6.09      7.61      7.97      9.48      9.84     10.96
+#[15]     11.72     12.14     12.93     13.59     13.61     14.19     14.70     14.85     14.23     13.59     13.45     12.68     11.72     11.11
+#[29]      9.84      8.78      7.97      6.09      4.22      2.84      2.34      0.85      0.47      0.14     -1.41     -3.28     -3.92     -5.16
+#[43]     -5.73     -6.56     -7.03     -8.91    -10.26    -10.78    -11.25    -11.86    -12.01    -11.83    -11.29    -10.78    -10.64     -9.88
+#[57]     -8.91     -8.81     -7.51     -7.03     -5.46     -5.16 -10000.00     -5.16     -3.28     -1.41      0.47      2.34      4.22      5.38
+# -----------------------------------------------------------------------------------------------------------
+#> associatedInstanceNumberVect[0:70]
+#[1] -10000      9      9      9      9      9      9      9      9      9      9      9      9      9      9      9      9      9      9      9      9
+#[22]      9      9      9      9      9      9      9      9      9      9      9      9      9      9      9      9      9      9      9      9      9
+#[43]      9      9      9      9      9      9      9      9      9      9      9      9      9      9      9      9      9      9      9      9     10
+#[64]     10     10     10     10     10     10     10
+# -----------------------------------------------------------------------------------------------------------
+#> arrayInstanceNumber
+#[1]   1   2   3   4   5   6   7   8   9  10  11  12  13  14  15  16  17  18  19  20  21  22  23  24  25  26  27  28  29  30  31  32  33  34  35  36
+#[37]  37  38  39  40  41  42  43  44  45  46  47  48  49  50  51  52  53  54  55  56  57  58  59  60  61  62  63  64  65  66  67  68  69  70  71  72
+#[73]  73  74  75  76  77  78  79  80  81  82  83  84  85  86  87  88  89  90  91  92  93  94  95  96  97  98  99 100 101 102 103 104 105 106 107 108
+#[109] 109 110 111 112 113 114 115 116 117 118 119
+# -----------------------------------------------------------------------------------------------------------
+#> arrayInstanceNumberWithROI
+#[1]   9  10  11  12  13  14  15  16  17  18  19  20  21  22  23  24  25  26  27  28  29  30  31  32  33  34  35  36  37  38  39  40  41  42  43  44
+#[37]  45  46  47  48  49  50  51  52  53  54  55  56  57  58  59  60  61  62  63  64  65  66  67  68  69  70  71  72  73  74  75  76  77  78  79  80
+#[73]  81  82  83  84  85  86  87  88  89  90  91  92  93  94  95  96  97  98  99 100 101 102 103 104 105 106 107 108 109 110 111 112 113 114 115 116
+#[109] 117 118 119
+# -----------------------------------------------------------------------------------------------------------
+#> arrayPosizioneInstanceNumberWithROI
+#[1]   8   9  10  11  12  13  14  15  16  17  18  19  20  21  22  23  24  25  26  27  28  29  30  31  32  33  34  35  36  37  38  39  40  41  42  43
+#[37]  44  45  46  47  48  49  50  51  52  53  54  55  56  57  58  59  60  61  62  63  64  65  66  67  68  69  70  71  72  73  74  75  76  77  78  79
+#[73]  80  81  82  83  84  85  86  87  88  89  90  91  92  93  94  95  96  97  98  99 100 101 102 103 104 105 106 107 108 109 110 111 112 113 114 115
+#[109] 116 117 118
+# -----------------------------------------------------------------------------------------------------------
+
   
+  final.array<-array(data = final.array, dim = c(   numberOfColumns, numberOfRows, numberOfSlices )   )
+  
+  return( list("final.array"=final.array) )
   #  for ( i in seq(1,dim(image.arr)[3] )) {
   #    image.arr[,,i]<-objService$SV.rotateMatrix(image.arr[,,i])
   #    final.array[,,i]<-t(objService$SV.rotateMatrix(final.array[,,i],rotations=3))
@@ -111,6 +146,8 @@ RAD.NewMultiPIPOblique<-function(dataStorage, Structure, SeriesInstanceUID) {
   #  return(list(TotalX=TotalX, TotalY=TotalY, FullZ=FullZ, Offset=Offset, 
   #              DOM=array(DOM, dim = c(3,3,length(index))), final.array=final.array, masked.images=final.array*image.arr))
 }
+#' Wrapper for C function
+#' @useDynLib moddicom
 RAD.NewMultiPointInPolyObl<-function(totalX, totalY, nX, nY, associatedInstanceNumberVect,
                                      NumSlices, NumSlicesWithROI, 
                                      arrayInstanceNumber, arrayInstanceNumberWithROI, arrayPosizioneInstanceNumberWithROI,
@@ -118,6 +155,7 @@ RAD.NewMultiPointInPolyObl<-function(totalX, totalY, nX, nY, associatedInstanceN
   # creates the PIPvector
   PIPvector<-rep.int(x = 0, times = nX * nY * NumSlices)  
   numberOfPoints<-length(totalX);
+#  result<-.C("NewMultiPIPObl", 
   result<-.C("NewMultiPIPObl", 
              as.integer(PIPvector), as.double(totalX), as.double(totalY), as.integer(numberOfPoints), as.integer(associatedInstanceNumberVect), 
              as.integer(nX), as.integer(nY), 
@@ -313,3 +351,7 @@ RAD.mmButo<-function() {
 #Structure<-ROIName
 #dataStorage<-a
 #result<-RAD.NewMultiPIPOblique(dataStorage = ds, Structure = ROIName, SeriesInstanceUID = SS)
+## dyn.load("./src/PointInPolygon.so"); 
+
+
+
