@@ -194,26 +194,11 @@ void MultiPIPObl (double *totalX, double *totalY, int *nX, int *nY,
  verty :   y coords of vertex points
  
 */
-int oldold_isThePointInsideThePoly(int nvert, float *vertx, float *verty, float testx, float testy, int fromPosition, int toPosition)
-{
-  int i, j, c = 0;
-  for (i = 0, j = nvert-1; i < nvert; j = i++) {
-    if ( ((verty[i]>testy) != (verty[j]>testy)) &&
-   (testx < (vertx[j]-vertx[i]) * (testy-verty[i]) / (verty[j]-verty[i]) + vertx[i]) )
-       c = !c;
-  }
-  return c;
-}
-
-int isThePointInsideThePoly(int nvert, float *vertx, float *verty, float testx, float testy, int fromPosition, int toPosition)
+int isThePointInsideThePoly(int nvert, double *vertx, double *verty, double testx, double testy, int fromPosition, int toPosition)
 {
     int i, j, c = 0;
-    printf("\n nvert = %d, testx=%lf, testy=%lf, fromPosition=%d, toPosition=%d",nvert,testx,testy,fromPosition,toPosition);
-    for (i = fromPosition, j = fromPosition+nvert-1; i < fromPosition+nvert; j = i++) {
-        printf("<%lf,%lf>[%d,%d ] ",vertx[i],verty[i],i,j);
-    }
-    return;
-  
+    
+
   for (i = fromPosition, j = fromPosition+nvert-1; i < fromPosition+nvert; j = i++) {
     if ( ((verty[i]>testy) != (verty[j]>testy)) &&
    (testx < (vertx[j]-vertx[i]) * (testy-verty[i]) / (verty[j]-verty[i]) + vertx[i]) )
@@ -226,90 +211,73 @@ int isThePointInsideThePoly(int nvert, float *vertx, float *verty, float testx, 
  *  calculated over a multiple series of contours each one on a different slice.
  *	Each slice is ordered according NumSlices value.
  *	Variables to be addressed to the C code are:
+ *      PIPvector       vector of Points in Polygon to be arranged in an array in R
  *	totalY: 	vector of all Y coordinates of contours (one appended to the other)
  *	totalX: 	vector of all X coordinates of contours (one appended to the other)
- *	offset:		vector of all shifts for moving from one contour to the other
- *	X, Y:		coordinates position of x & y points matrix of single plan of image
- *	PIPvector:	vector of Points in Polygon to be arranged in an array in R
- *	nX, nY:		number of X & Y coordinates in X & Y
- *	NumSlices:	number of axial slices to be scanned for PIP
- *	FullZ:		vector of slices containing contours {1} or empty {0}
- *	DICOMv:		DICOM orientation vector, vectorized DICOM orientation matrix multiplied by pixel spacing
+ *      numberOfPoints: number of points declared in totalX/Y
+ *      nX, nY, nZ:	x,y,z dimensions of the voxel matrix
+ *      arrayAssociationROIandSlice: associates each point in totalX/Y with a slice. terminator (-100000) means the ROI is closed
+ *	arrayDOM:		DICOM orientation vector, vectorized DICOM orientation matrix multiplied by pixel spacing
+ * 
+ *      minX,maxX,minY,maxY: min, max values of coords in order to preserve time. In future they will be calculated directly into this C code...
  */
-
-void NewMultiPIPObl (int *PIPvector, double *totalX, double *totalY, int *numberOfPoints, int *associatedInstanceNumberVect,
-                 int *nX, int *nY,
-		int *NumSlices, int *NumSlicesWithROI, int *arrayInstanceNumber, int *arrayInstanceNumberWithROI, 
-                int *arrayPosizioneInstanceNumberWithROI, 
-                double *DICOMv,double *DICOMr) {
-	int n, i, j, x, y, c, m, ROIRunner, fromPosition, toPosition;
+void NewMultiPIPObl (int *PIPvector, double *totalX, double *totalY, int *numberOfPoints,
+                 int *nX, int *nY, int *nZ,
+		int *arrayAssociationROIandSlice, 
+                double *arrayDOM,
+                double *minX, double *maxX, double *minY, double *maxY) {
+	int x, y, z, c, fromPosition, toPosition;
 	struct pointInSpace point; 
 	struct DICOM_OrientationMatrix DOM;
-        
-        int contatoreA,contatoreB;
-        contatoreA = contatoreB = 0;
-        
-	//XY = (double*)calloc(1, sizeof(double)*(*nrow * *ncol));  // matrix of point to be checked
-	for (n=0; n< *NumSlicesWithROI; n++) {		
+//        int n,i,j,m,ROIRunner;
+//        int sliceLocationInMatrix;
 
-            //m = arrayPosizioneInstanceNumberWithROI[ n ];
-
-            m = arrayInstanceNumberWithROI[ n ];
+        int baseCursor = 0;
+        for (baseCursor = 0; baseCursor < *numberOfPoints; baseCursor++ ) {
             
-            DOM.a11= DICOMr[ m * 9 + 0 ]; DOM.a21= DICOMr[ m * 9 + 1 ];
-            DOM.a31= DICOMr[ m * 9 + 2 ]; DOM.a12= DICOMr[ m * 9 + 3 ];
-            DOM.a22= DICOMr[ m * 9 + 4 ]; DOM.a32= DICOMr[ m * 9 + 5 ];
-            DOM.Sx=  DICOMr[ m * 9 + 6 ]; DOM.Sy=  DICOMr[ m * 9 + 7 ];
-            DOM.Sz=  DICOMr[ m * 9 + 8 ];
-            DOM.XpixelSpacing = 1;  DOM.YpixelSpacing = 1;
-            
-
-            // loop for filling full slices by PIP values 0: point outside, 1: point inside
-            for (y=0; y< *nY; y++) {	// loop through Y axis
+           // check if a new ROI is beginning (AND you are not looking the last point!) )
+            if ( totalX[ baseCursor ] == -10000 && baseCursor < (*numberOfPoints-1) ) {
                 
-                    for (x=0; x< *nX; x++) {// loop through X axis
-                            point = get3DPosFromNxNy(x, y, DOM);
-                            
-                            // check all the points in the array
-                            for( ROIRunner = 0; ROIRunner <= *numberOfPoints; ROIRunner++ ) {
-                                
-                                if( ROIRunner == 0 && associatedInstanceNumberVect[ ROIRunner + 1 ] == m) {
-                                    // the begin is clear    
-                                    fromPosition = ROIRunner;
-                                    // run the 'partialEnd' until the terminator
-                                    for ( toPosition = ROIRunner+1; totalX[toPosition]!=-10000; toPosition++) ;;
-                                    toPosition--;
-                                    
-                                    // now check if the given point is in the poly
-                                    c = isThePointInsideThePoly(toPosition-fromPosition, totalX, totalY, 
-                                            point.x, point.y,  fromPosition+1,  toPosition+1);
-                                    printf("arrivato qui");
-                                    return;
-                                    if(c!=0) printf("(x=%lf y=%lf)",point.x,point.y);
-                                    
-                                    if( c == 1 )   {     
-                                        PIPvector[m * (*nX) * (*nY) + x + y * (*nX)] = !PIPvector[m * (*nX) * (*nY) + x + y * (*nX)];
-                                        contatoreA++;    
-                                    } else { contatoreB++; }
+                // get the corresponding z position
+                z = arrayAssociationROIandSlice[ baseCursor + 1 ];
+                
+                // get the DOM
+                DOM.a11= arrayDOM[ z * 9 + 0 ]; DOM.a21= arrayDOM[ z * 9 + 1 ];
+                DOM.a31= arrayDOM[ z * 9 + 2 ]; DOM.a12= arrayDOM[ z * 9 + 3 ];
+                DOM.a22= arrayDOM[ z * 9 + 4 ]; DOM.a32= arrayDOM[ z * 9 + 5 ];
+                DOM.Sx=  arrayDOM[ z * 9 + 6 ]; DOM.Sy=  arrayDOM[ z * 9 + 7 ];
+                DOM.Sz=  arrayDOM[ z * 9 + 8 ];
+                DOM.XpixelSpacing = 1;  DOM.YpixelSpacing = 1;
 
-                                }
+                // now Run to find the beginning (clear) and the end of the 
+                // points of the ROI, in the given array
+                fromPosition = baseCursor;
+                for ( toPosition = fromPosition+1; totalX[toPosition]!=-10000; toPosition++) ;;
+                toPosition--;                
+
+                // check all the voxel on such z-slice
+                // loop through Y axis
+                for ( y = 0; y < *nY; y++ ) {	
+                        // loop through X axis
+                        for ( x = 0; x < *nX; x++ ) {
+                                point = get3DPosFromNxNy(x, y, DOM);
                                 
-                                // if you are looking at a terminator (or you are at the beginnning) and the next ROIPoint is 
-                                // associated to the slice of interest (in the loop on 'n'), well, it means that a sequence of
-                                // ROI points is going to begin
-//                                if( (totalX[ROIRunner]==-10000 || ROIRunner==0) && 
-//                                        associatedInstanceNumberVect[ROIRunner+1]==arrayInstanceNumberWithROI[n]) {
-//                                    ;
-//                                }
-                            }
-                            
-                           
-//                            PIPvector[m * (*nX) * (*nY) + x + y * (*nX)]= c;  // fill the output values
-                    }
+                                // check the box, just to avoid redundant computation
+                                if(point.x < *minX || point.x > *maxX || point.y < *minY || point.y > *maxY) continue;  
+
+                                // now check if the given point is in the poly
+                                c = isThePointInsideThePoly(toPosition-fromPosition-1, totalX, totalY, 
+                                        point.x, point.y,  fromPosition+1,  toPosition+1);
+
+                                if( c == 1 )   {                                             
+                                    PIPvector[z * (*nX) * (*nY) + x + y * (*nX)] = !PIPvector[z * (*nX) * (*nY) + x + y * (*nX)];
+                                }                                
+                        }
+                }
             }
+        }
+} 
 
-	} 
-}
 /*
  * function that calculates the distance between two points "a" and "b"
  * having coordinates (aX, aY) and (bX, bY)
