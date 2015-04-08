@@ -69,10 +69,15 @@ RAD.NewMultiPIPOblique<-function(dataStorage, Structure, SeriesInstanceUID) {
       arrayInstanceNumberWithROI<-c(arrayInstanceNumberWithROI,as.numeric(n))
       # track the Instance number with at least one ROI associated (also in terms of position)
       arrayPosizioneInstanceNumberWithROI<-c(arrayPosizioneInstanceNumberWithROI, as.numeric(indiceDOM)-1 )
-      DOMWithROI<-c(DOMWithROI,DOM[indiceDOM])
+      DOMWithROI<-c(DOMWithROI, dataStorage$info[[SeriesInstanceUID]][[indiceDOM]]$orientationMatrix[c(1:3,5:7,13:15)])
     }      
     indiceDOM<-indiceDOM+1;
   }
+  
+  maxX<-max(TotalX)
+  minX<-min(TotalX[which(TotalX>-10000)])
+  maxY<-max(TotalY)
+  minY<-min(TotalY[which(TotalY>-10000)])
   
   # build the array with all the Instance Number
   arrayInstanceNumber<-as.numeric(index);
@@ -98,8 +103,11 @@ RAD.NewMultiPIPOblique<-function(dataStorage, Structure, SeriesInstanceUID) {
     NumSlicesWithROI = length(arrayInstanceNumberWithROI),                                              
     # matrices dimensions (rows and columns)
     nX = numberOfColumns, 
-    nY = numberOfRows)
+    nY = numberOfRows,
+    minX,maxX,minY,maxY
+    )
   
+    final.array<-array(data = final.array, dim = c(   numberOfColumns, numberOfRows, numberOfSlices )   )
 # In Example: 
 # -----------------------------------------------------------------------------------------------------------
 #> TotalX[0:70]
@@ -135,7 +143,7 @@ RAD.NewMultiPIPOblique<-function(dataStorage, Structure, SeriesInstanceUID) {
 # -----------------------------------------------------------------------------------------------------------
 
   
-  final.array<-array(data = final.array, dim = c(   numberOfColumns, numberOfRows, numberOfSlices )   )
+  
   
   return( list("final.array"=final.array) )
   #  for ( i in seq(1,dim(image.arr)[3] )) {
@@ -151,7 +159,7 @@ RAD.NewMultiPIPOblique<-function(dataStorage, Structure, SeriesInstanceUID) {
 RAD.NewMultiPointInPolyObl<-function(totalX, totalY, nX, nY, associatedInstanceNumberVect,
                                      NumSlices, NumSlicesWithROI, 
                                      arrayInstanceNumber, arrayInstanceNumberWithROI, arrayPosizioneInstanceNumberWithROI,
-                                     DICOMOrientationVectorWithROI, DICOMOrientationVector ) {
+                                     DICOMOrientationVectorWithROI, DICOMOrientationVector,minX,maxX,minY,maxY ) {
   # creates the PIPvector
   PIPvector<-rep.int(x = 0, times = nX * nY * NumSlices)  
   numberOfPoints<-length(totalX);
@@ -161,7 +169,7 @@ RAD.NewMultiPointInPolyObl<-function(totalX, totalY, nX, nY, associatedInstanceN
              as.integer(nX), as.integer(nY), 
              as.integer(NumSlices), as.integer(NumSlicesWithROI), 
              as.integer(arrayInstanceNumber), as.integer(arrayInstanceNumberWithROI), as.integer(arrayPosizioneInstanceNumberWithROI),
-             as.double(DICOMOrientationVector),as.double(DICOMOrientationVectorWithROI))  
+             as.double(DICOMOrientationVector),as.double(DICOMOrientationVectorWithROI),as.double(minX),as.double(maxX),as.double(minY),as.double(maxY))  
   
   
   return(result[[1]])
