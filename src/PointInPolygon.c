@@ -194,6 +194,7 @@ void MultiPIPObl (double *totalX, double *totalY, int *nX, int *nY,
  verty :   y coords of vertex points
  
 */
+
 int isThePointInsideThePoly(int nvert, double *vertx, double *verty, double testx, double testy, int fromPosition, int toPosition)
 {
     int i, j, c = 0;
@@ -229,8 +230,6 @@ void NewMultiPIPObl (int *PIPvector, double *totalX, double *totalY, int *number
 	int x, y, z, c, fromPosition, toPosition;
 	struct pointInSpace point; 
 	struct DICOM_OrientationMatrix DOM;
-//        int n,i,j,m,ROIRunner;
-//        int sliceLocationInMatrix;
 
         int baseCursor = 0;
         for (baseCursor = 0; baseCursor < *numberOfPoints; baseCursor++ ) {
