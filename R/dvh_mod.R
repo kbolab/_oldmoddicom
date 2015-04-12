@@ -679,6 +679,7 @@ DVH.lq.correct<-function(dvh, ref.frac = 2, nf, alphabeta = 3) {
 #' @param CI Logcal Value for calculating the confidence interval of the dose-volume fitting parameter and for the \eqn{\alpha\beta} if modLQ is optioned \code{TRUE}
 #' @param CI.width Width of confidence interval
 #' @param epsilon Error limit for calculating the Log Likelihood function in determining the confidence interval of dose-volume parameter
+#' @examples ## NOT RUN DR.fit.DoseVolume(dvh = D, outcome = Dout, model = glm(formula = Dout ~ 1 , family = binomial(link = 'logit')), type = 'Vdose')
 #' @references \emph{Special Considerations Regarding Absorbed-Dose and Dose-Volume Prescribing and Reporting in IMRT}. J ICRU. 2010 Apr;10(1):27-40. doi: 10.1093/jicru/ndq008. PubMed PMID: 24173325.
 #' @references Graham MV, Purdy JA, Emami B, Harms W, Bosch W, Lockett MA, Perez CA. \emph{Clinical dose-volume histogram analysis for pneumonitis after 3D treatment for non-small cell lung cancer (NSCLC)}. Int J Radiat Oncol Biol Phys. 1999 Sep 1;45(2):323-9. PubMed PMID: 10487552.
 #' @export
