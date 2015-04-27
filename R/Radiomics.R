@@ -1,4 +1,4 @@
-#' Calculates image voxels internal respect a given ROI.
+#' Calculates image voxels internal respect a given ROI
 #' @description This function can be used to calculate internal voxels, for each ROIs, in a \code{dataStorage} data structure taken from a \code{geoLet} object
 #' @param dataStorage is the structure returned from a \code{obj$getAttribute("dataStructure")} where \code{obj} is an instance of a \code{geoLet}
 #' @param Structure is the ROI name od the ROI that should be extracted
