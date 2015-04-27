@@ -226,6 +226,8 @@ RAD.mmButo<-function() {
     # Kernel Density Function
     if( algorithm == "KDF" ) {      
       arrayAR[["KDF"]]<<-list();      
+      arrayAR[["KDF"]]$details<<-list();
+      arrayAR[["KDF"]]$summary<<-list();
       # loop for each Series Instance UID
       for( SeriesInstanceUID in names(dataStructure)) {          
         XmaxVal <- c(XmaxVal,max(dataStructure[[SeriesInstanceUID]]$image.arr));      
@@ -249,13 +251,19 @@ RAD.mmButo<-function() {
     logObj$sendLog(message = "Not yet implemented", NMI = TRUE);
   }
 
-  plotResults<-function( algorithm="all" ) {        
+  plotResults<-function( algorithm = "all", ylim = FALSE, color = "red", xlab = "Normalized greylevel Histogram", main="Kernel Density Function") {      
+    
     if( algorithm == "all" | algorithm == "KDF")  {
       ct<-1;
-      for(pathName in arrayAR$KDF$details ) {        
-        plot( arrayAR$KDF$details[[1]], ylim=c(0,arrayAR$KDF$summary$YmaxVal) ) 
-        lines( arrayAR$KDF$details[[2]] ) 
-        lines( arrayAR$KDF$details[[3]] )        
+
+      for(pathName in names(arrayAR$KDF$details) ) {        
+        if( ct == 1) {
+          if ( ylim == FALSE ) ylim = c(0,arrayAR$KDF$summary$YmaxVal)
+          plot( arrayAR$KDF$details[[pathName]], ylim = ylim, col = color , xlab = xlab, main = main ) 
+        }
+        else 
+          lines( arrayAR$KDF$details[[pathName]] , col = color ) 
+        ct<-ct+1
       }      
     }
   } 
@@ -287,7 +295,12 @@ RAD.mmButo<-function() {
     logObj$setOutput( list("onScreen" = attributeList$verbose$onScreen,   "onFile" = attributeList$verbose$onFile )  )
   }
   constructor()
-  return(list(openTreeMultiROIs=openTreeMultiROIs,setAttribute=setAttribute,getAttribute=getAttribute,execAlgorithm=execAlgorithm,plotResults=plotResults))
+  return(list(
+      openTreeMultiROIs=openTreeMultiROIs,
+      setAttribute=setAttribute,
+      getAttribute=getAttribute,
+      execAlgorithm=execAlgorithm,
+      plotResults=plotResults))
 }
 
 # example -- mmButo stile Toronto
