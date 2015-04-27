@@ -249,6 +249,16 @@ RAD.mmButo<-function() {
     logObj$sendLog(message = "Not yet implemented", NMI = TRUE);
   }
 
+  plotResults<-function( algorithm="all" ) {        
+    if( algorithm == "all" | algorithm == "KDF")  {
+      ct<-1;
+      for(pathName in arrayAR$KDF$details ) {        
+        plot( arrayAR$KDF$details[[1]], ylim=c(0,arrayAR$KDF$summary$YmaxVal) ) 
+        lines( arrayAR$KDF$details[[2]] ) 
+        lines( arrayAR$KDF$details[[3]] )        
+      }      
+    }
+  } 
 
   setAttribute<-function(attribute, value) {
     if(attribute=="verbose") {
@@ -277,7 +287,7 @@ RAD.mmButo<-function() {
     logObj$setOutput( list("onScreen" = attributeList$verbose$onScreen,   "onFile" = attributeList$verbose$onFile )  )
   }
   constructor()
-  return(list(openTreeMultiROIs=openTreeMultiROIs,setAttribute=setAttribute,getAttribute=getAttribute,execAlgorithm=execAlgorithm))
+  return(list(openTreeMultiROIs=openTreeMultiROIs,setAttribute=setAttribute,getAttribute=getAttribute,execAlgorithm=execAlgorithm,plotResults=plotResults))
 }
 
 # example -- mmButo stile Toronto
