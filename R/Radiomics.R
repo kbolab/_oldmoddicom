@@ -237,7 +237,8 @@ RAD.mmButo<-function() {
       } 
       # NORMALIZATION (for upper bound only)
       for( SeriesInstanceUID in names(dataStructure)) {
-       array4VoxelCube[[SeriesInstanceUID]]<-density(array4VoxelCube[[SeriesInstanceUID]]/max( XmaxVal ))
+        browser();
+       array4VoxelCube[[SeriesInstanceUID]]<-density(    as.array(array4VoxelCube[[SeriesInstanceUID]]/max( XmaxVal ))    )
        YmaxVal <- c(YmaxVal,max(array4VoxelCube[[SeriesInstanceUID]]$y));      
       }
       # write the results in the array
@@ -327,6 +328,5 @@ RAD.mmButo<-function() {
 #dataStorage<-a
 #result<-RAD.NewMultiPIPOblique(dataStorage = ds, Structure = ROIName, SeriesInstanceUID = SS)
 ## dyn.load("./src/PointInPolygon.so"); 
-
 
 
