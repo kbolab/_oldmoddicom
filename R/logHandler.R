@@ -40,7 +40,7 @@ logHandler<-function() {
   do<-function(what2Do, arguments="") {
     if( what2Do == "clearOutputFile" ) { if (file.exists(fileName)) { file.remove(fileName) }; return(); }
   }
-  sendLog<-function(message) {
+  sendLog<-function(message, NMI = FALSE) {
     if( onFile == TRUE ) { 
       write( message, file=fileName, append=TRUE)
     }  
@@ -48,6 +48,7 @@ logHandler<-function() {
       if( returnOnEOL == TRUE) cat('\n', message) 
       else cat( message )    
     }
+    if ( NMI == TRUE ) stop();
   }  
   constructor<-function() {
     onScreen<<-TRUE;
