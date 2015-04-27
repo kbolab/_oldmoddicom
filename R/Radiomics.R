@@ -1,3 +1,45 @@
+#' Calculates the position of elements which is possible to do virtual Biopsy
+#' @description This function can be used to calculate the index of elements for virtual Biopsy along a given distance along x,y,z
+#' @param voxelCubes is the voxel space along x
+#' @param nx is the voxel space along x
+#' @param ny is the voxel space along y
+#' @param nz is the voxel space along z
+#' @return A matrix with 1 and 0 which indicates the index for virtual Biopsy
+#' @export
+RAD.virtualBiopsy<-function (voxelCubes,nx,ny,nz){ 
+  
+  carotaggio.volume <- array(0, dim = dim(voxelCubes))
+  # legge ogni singolo elemento della matrice dei voxelCubes ad una distanza dai bordi pari a nx,ny,nz
+  for (i in (nx+1):(dim(voxelCubes)[1]-nx))
+  {
+    for (j in (ny+1):(dim(voxelCubes)[2]-ny))
+    {
+      for(k in (nz+1):(dim(voxelCubes)[3]-nz))
+      {
+        if (voxelCubes[i,j,k]!=0)
+        {
+          # expand grid delle possibili combinazioni dell'intorno, centrate in i,j,k
+          combinazioni.poss <- expand.grid(indiceX=seq(i-nx,i+nx),indiceY=seq(j-ny,j+ny),indiceZ=seq(k-nz,k+nz))
+          indici.tumore <- as.matrix(combinazioni.poss)
+          somma <- 0
+          # check degli elementi intorno a i,j,k ed incrementa la variabile somma se diverso da zero
+          for(ct in (1:nrow(indici.tumore))) {
+            if(indici.tumore[[ct,1]]!=i | indici.tumore[[ct,2]]!=j | indici.tumore[[ct,3]]!=k) {
+              if(voxelCubes[indici.tumore[ct,1],indici.tumore[ct,2],indici.tumore[ct,3]]>0) 
+                somma<-somma+1
+            }
+          }
+          # sovrascrive 1 nella posizione i,j,k nella matrice di output se variabile somma è pari al numero di
+          # combinazioni calcolate dall'expand grid -1
+          if (somma==((nrow(indici.tumore))-1)){
+            carotaggio.volume[i,j,k] <- 1
+          } 
+        }
+      }
+    }
+  }
+  return(carotaggio.volume)
+}
 #' Calculates image voxels internal respect a given ROI
 #' @description This function can be used to calculate internal voxels, for each ROIs, in a \code{dataStorage} data structure taken from a \code{geoLet} object
 #' @param dataStorage is the structure returned from a \code{obj$getAttribute("dataStructure")} where \code{obj} is an instance of a \code{geoLet}
