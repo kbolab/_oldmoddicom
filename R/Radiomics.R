@@ -263,13 +263,14 @@ RAD.mmButo<-function() {
     
     XmaxVal<-c() 
     YmaxVal<-c() 
-    array4VoxelCube<<-list();
+    array4VoxelCube<-list();
 
     # Kernel Density Function
     if( algorithm == "KDF" ) {      
       arrayAR[["KDF"]]<<-list();      
       arrayAR[["KDF"]]$details<<-list();
-      arrayAR[["KDF"]]$summary<<-list();
+      arrayAR[["KDF"]]$summary<<-list(); 
+      interpolatedDensity<<-list();
       # loop for each Series Instance UID
       for( SeriesInstanceUID in names(dataStructure)) {          
         XmaxVal <- c(XmaxVal,max(dataStructure[[SeriesInstanceUID]]$image.arr));      
@@ -279,12 +280,18 @@ RAD.mmButo<-function() {
       } 
       # NORMALIZATION (for upper bound only)
       for( SeriesInstanceUID in names(dataStructure)) {
-        browser();
-       array4VoxelCube[[SeriesInstanceUID]]<-density(    as.array(array4VoxelCube[[SeriesInstanceUID]]/max( XmaxVal ))    )
+       tmpArr<-as.array(array4VoxelCube[[SeriesInstanceUID]])
+       maxRMN<-max(  dataStructure[[SeriesInstanceUID]]$image.arr  )
+#       array4VoxelCube[[SeriesInstanceUID]]<-density(    tmpArr * ( max( XmaxVal )/max(maxRMN) )    )
+       array4VoxelCube[[SeriesInstanceUID]]<-density(    tmpArr /  max(tmpArr)     )
+       interpolatedDensity[[SeriesInstanceUID]]<-approx(array4VoxelCube[[SeriesInstanceUID]]$x,array4VoxelCube[[SeriesInstanceUID]]$y,n=100,xout=seq(from=0,to=1,by = .01))
+#       interpolatedDensity[[SeriesInstanceUID]][ is.na(interpolatedDensity[[SeriesInstanceUID]])  ]<-0
        YmaxVal <- c(YmaxVal,max(array4VoxelCube[[SeriesInstanceUID]]$y));      
       }
       # write the results in the array
-      arrayAR$KDF$details<<-array4VoxelCube
+      arrayAR$KDF$details$density<<-array4VoxelCube
+      arrayAR$KDF$details$interpolatedD<<-interpolatedDensity
+
       arrayAR$KDF$summary<<-list();
       arrayAR$KDF$summary$XmaxVal<<-max( XmaxVal )
       arrayAR$KDF$summary$YmaxVal<<-max( YmaxVal )
@@ -294,20 +301,31 @@ RAD.mmButo<-function() {
     logObj$sendLog(message = "Not yet implemented", NMI = TRUE);
   }
 
-  plotResults<-function( algorithm = "all", ylim = FALSE, color = "red", xlab = "Normalized greylevel Histogram", main="Kernel Density Function") {      
+  plotResults<-function( algorithm = "all", ylim = FALSE, xlim = FALSE, colMean = "blue", color = "red", xlab = "Normalized greylevel Histogram", main="Kernel Density Function") {      
     
     if( algorithm == "all" | algorithm == "KDF")  {
       ct<-1;
+      addingMatrix<-c()
 
-      for(pathName in names(arrayAR$KDF$details) ) {        
+      for(pathName in names(arrayAR$KDF$details$interpolatedD) ) {        
         if( ct == 1) {
           if ( ylim == FALSE ) ylim = c(0,arrayAR$KDF$summary$YmaxVal)
-          plot( arrayAR$KDF$details[[pathName]], ylim = ylim, col = color , xlab = xlab, main = main ) 
+          if ( xlim == FALSE ) 
+            plot( arrayAR$KDF$details$interpolatedD[[pathName]], ylim = ylim, col = color , xlab = xlab, main = main, type='l' ) 
+          else 
+            plot( arrayAR$KDF$details$interpolatedD[[pathName]], ylim = ylim, col = color , xlab = xlab, main = main, xlim = xlim, type='l' ) 
         }
         else 
-          lines( arrayAR$KDF$details[[pathName]] , col = color ) 
+          lines( arrayAR$KDF$details$interpolatedD[[pathName]] , col = color ) 
+
+        addingMatrix<-rbind(addingMatrix,arrayAR$KDF$details$interpolatedD[[pathName]]$y)
         ct<-ct+1
-      }      
+      }
+      
+      # calculate the mean
+      addingMatrix<-colMeans(addingMatrix, na.rm = TRUE)
+      # plot it
+      lines( x = arrayAR$KDF$details$interpolatedD[[pathName]]$x , y=addingMatrix , col = colMean ) 
     }
   } 
 
