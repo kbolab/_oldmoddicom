@@ -301,40 +301,52 @@ RAD.mmButo<-function() {
     logObj$sendLog(message = "Not yet implemented", NMI = TRUE);
   }
 
-  plotResults<-function( algorithm = "all", ylim = c(), xlim = c(), colMean = "blue", color = "red", xlab = "Normalized greylevel Histogram", main="Kernel Density Function") {      
+  plotResults<-function( singleLines = TRUE, meanLine=TRUE, algorithm = "all", ylim = c(), xlim = c(), add=FALSE, colMean = "blue", color = "red", xlab = "Normalized greylevel Histogram", main="Kernel Density Function") {      
     
     if( algorithm == "all" | algorithm == "KDF")  {
       ct<-1;
       addingMatrix<-c()
       
       for(pathName in names(arrayAR$KDF$details$interpolatedD) ) {        
-        if( ct == 1) {
-          
-          
-          if(length(ylim)==0) ylim <- c(0,arrayAR$KDF$summary$YmaxVal)
-          
-          if ( length(xlim) == 0 ) 
-            plot( arrayAR$KDF$details$interpolatedD[[pathName]], ylim = ylim, col = color , xlab = xlab, main = main, type='l' ) 
+        if(length(ylim)==0) ylim <- c(0,arrayAR$KDF$summary$YmaxVal)
+
+        if( singleLines == TRUE) {
+          if( ct == 1  & add==FALSE) {      
+            if ( length(xlim) == 0 ) 
+              plot( arrayAR$KDF$details$interpolatedD[[pathName]], ylim = ylim, col = color , xlab = xlab, main = main, type='l' ) 
+            else 
+              plot( arrayAR$KDF$details$interpolatedD[[pathName]], ylim = ylim, col = color , xlab = xlab, main = main, xlim = xlim, type='l' ) 
+          }
           else 
-            plot( arrayAR$KDF$details$interpolatedD[[pathName]], ylim = ylim, col = color , xlab = xlab, main = main, xlim = xlim, type='l' ) 
+            lines( arrayAR$KDF$details$interpolatedD[[pathName]] , col = color ) 
         }
-        else 
-          lines( arrayAR$KDF$details$interpolatedD[[pathName]] , col = color ) 
         
         addingMatrix<-rbind(addingMatrix,arrayAR$KDF$details$interpolatedD[[pathName]]$y)        
         ct<-ct+1
       }
       
-      # calculate the mean
-      stDevMatrix<-apply(addingMatrix, 2, sd)
-      meanMatrix<-colMeans(addingMatrix, na.rm = TRUE)      
-      
-      # plot it
-      x<- arrayAR$KDF$details$interpolatedD[[pathName]]$x
-      
-      polygon(c(x,rev(x)),c(meanMatrix,rev(meanMatrix+stDevMatrix)), col=rgb(.7, .7, .7, 0.2), lty = c("dashed"))
-      polygon(c(x,rev(x)),c(meanMatrix,rev(meanMatrix-stDevMatrix)), col=rgb(.7, .7, .7, 0.2), lty = c("dashed"))
-      lines( x = x , y=meanMatrix , col = colMean ) 
+      if( meanLine == TRUE ) {
+        
+        if( singleLines == FALSE & add==FALSE) {
+            xlim<-c( min(arrayAR$KDF$details$interpolatedD[[pathName]]$x) ,max(arrayAR$KDF$details$interpolatedD[[pathName]]$x)  )
+            if ( length(xlim) == 0 ) 
+              plot( x=c(), y=c(), ylim = ylim, col = color , xlab = xlab, main = main, type='l' ) 
+            else 
+              plot(  x=c(), y=c(), ylim = ylim, col = color , xlab = xlab, main = main, xlim = xlim, type='l' ) 
+        }
+        
+        
+        # calculate the mean
+        stDevMatrix<-apply(addingMatrix, 2, sd)
+        meanMatrix<-colMeans(addingMatrix, na.rm = TRUE)      
+        
+        # plot it
+        x<- arrayAR$KDF$details$interpolatedD[[pathName]]$x
+        
+        polygon(c(x,rev(x)),c(meanMatrix,rev(meanMatrix+stDevMatrix)), col=rgb(.7, .7, .7, 0.2), lty = c("dashed"))
+        polygon(c(x,rev(x)),c(meanMatrix,rev(meanMatrix-stDevMatrix)), col=rgb(.7, .7, .7, 0.2), lty = c("dashed"))
+        lines( x = x , y=meanMatrix , col = colMean ) 
+      }
     }
   } 
 
