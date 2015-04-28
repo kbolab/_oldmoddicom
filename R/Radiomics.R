@@ -301,31 +301,40 @@ RAD.mmButo<-function() {
     logObj$sendLog(message = "Not yet implemented", NMI = TRUE);
   }
 
-  plotResults<-function( algorithm = "all", ylim = FALSE, xlim = FALSE, colMean = "blue", color = "red", xlab = "Normalized greylevel Histogram", main="Kernel Density Function") {      
+  plotResults<-function( algorithm = "all", ylim = c(), xlim = c(), colMean = "blue", color = "red", xlab = "Normalized greylevel Histogram", main="Kernel Density Function") {      
     
     if( algorithm == "all" | algorithm == "KDF")  {
       ct<-1;
       addingMatrix<-c()
-
+      
       for(pathName in names(arrayAR$KDF$details$interpolatedD) ) {        
         if( ct == 1) {
-          if ( ylim == FALSE ) ylim = c(0,arrayAR$KDF$summary$YmaxVal)
-          if ( xlim == FALSE ) 
+          
+          
+          if(length(ylim)==0) ylim <- c(0,arrayAR$KDF$summary$YmaxVal)
+          
+          if ( length(xlim) == 0 ) 
             plot( arrayAR$KDF$details$interpolatedD[[pathName]], ylim = ylim, col = color , xlab = xlab, main = main, type='l' ) 
           else 
             plot( arrayAR$KDF$details$interpolatedD[[pathName]], ylim = ylim, col = color , xlab = xlab, main = main, xlim = xlim, type='l' ) 
         }
         else 
           lines( arrayAR$KDF$details$interpolatedD[[pathName]] , col = color ) 
-
-        addingMatrix<-rbind(addingMatrix,arrayAR$KDF$details$interpolatedD[[pathName]]$y)
+        
+        addingMatrix<-rbind(addingMatrix,arrayAR$KDF$details$interpolatedD[[pathName]]$y)        
         ct<-ct+1
       }
       
       # calculate the mean
-      addingMatrix<-colMeans(addingMatrix, na.rm = TRUE)
+      stDevMatrix<-apply(addingMatrix, 2, sd)
+      meanMatrix<-colMeans(addingMatrix, na.rm = TRUE)      
+      
       # plot it
-      lines( x = arrayAR$KDF$details$interpolatedD[[pathName]]$x , y=addingMatrix , col = colMean ) 
+      x<- arrayAR$KDF$details$interpolatedD[[pathName]]$x
+      
+      polygon(c(x,rev(x)),c(meanMatrix,rev(meanMatrix+stDevMatrix)), col=rgb(.7, .7, .7, 0.2), lty = c("dashed"))
+      polygon(c(x,rev(x)),c(meanMatrix,rev(meanMatrix-stDevMatrix)), col=rgb(.7, .7, .7, 0.2), lty = c("dashed"))
+      lines( x = x , y=meanMatrix , col = colMean ) 
     }
   } 
 
