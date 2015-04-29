@@ -109,15 +109,19 @@ geoLet<-function() {
     matrice3<-TMP$tableROIPointList;
 
     listaROI<-list()
+    
     # for each ROI
     for(i in matrice2[2,]) {
       # get the points
       subMatrix<-matrice3[which(matrice3[,2]==i,arr.ind = TRUE),]
       # if some points exist
+
       if( dim(subMatrix)[1] >0 ) {
+#      if( length(subMatrix) >0 ) {
         listaROI[[i]]<-list()
         # add properly the points to the 'listaROI' structure
         for(contatore in seq(1,dim(subMatrix)[1]) ) {
+#        for(contatore in seq(1,length(subMatrix)) ) {      
           ROIPointStringList<-subMatrix[contatore,3][[1]]
           listaCoords<-strsplit(ROIPointStringList,"\\\\");
           listaCoords<-as.numeric(listaCoords[[1]])

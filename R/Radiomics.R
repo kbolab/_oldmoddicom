@@ -1,45 +1,3 @@
-#' Calculates the position of elements which is possible to do virtual Biopsy
-#' @description This function can be used to calculate the index of elements for virtual Biopsy along a given distance along x,y,z
-#' @param voxelCubes is the voxel space along x
-#' @param nx is the voxel space along x
-#' @param ny is the voxel space along y
-#' @param nz is the voxel space along z
-#' @return A matrix with 1 and 0 which indicates the index for virtual Biopsy
-#' @export
-RAD.virtualBiopsy<-function (voxelCubes,nx,ny,nz){ 
-  
-  carotaggio.volume <- array(0, dim = dim(voxelCubes))
-  # legge ogni singolo elemento della matrice dei voxelCubes ad una distanza dai bordi pari a nx,ny,nz
-  for (i in (nx+1):(dim(voxelCubes)[1]-nx))
-  {
-    for (j in (ny+1):(dim(voxelCubes)[2]-ny))
-    {
-      for(k in (nz+1):(dim(voxelCubes)[3]-nz))
-      {
-        if (voxelCubes[i,j,k]!=0)
-        {
-          # expand grid delle possibili combinazioni dell'intorno, centrate in i,j,k
-          combinazioni.poss <- expand.grid(indiceX=seq(i-nx,i+nx),indiceY=seq(j-ny,j+ny),indiceZ=seq(k-nz,k+nz))
-          indici.tumore <- as.matrix(combinazioni.poss)
-          somma <- 0
-          # check degli elementi intorno a i,j,k ed incrementa la variabile somma se diverso da zero
-          for(ct in (1:nrow(indici.tumore))) {
-            if(indici.tumore[[ct,1]]!=i | indici.tumore[[ct,2]]!=j | indici.tumore[[ct,3]]!=k) {
-              if(voxelCubes[indici.tumore[ct,1],indici.tumore[ct,2],indici.tumore[ct,3]]>0) 
-                somma<-somma+1
-            }
-          }
-          # sovrascrive 1 nella posizione i,j,k nella matrice di output se variabile somma è pari al numero di
-          # combinazioni calcolate dall'expand grid -1
-          if (somma==((nrow(indici.tumore))-1)){
-            carotaggio.volume[i,j,k] <- 1
-          } 
-        }
-      }
-    }
-  }
-  return(carotaggio.volume)
-}
 #' Calculates image voxels internal respect a given ROI
 #' @description This function can be used to calculate internal voxels, for each ROIs, in a \code{dataStorage} data structure taken from a \code{geoLet} object
 #' @param dataStorage is the structure returned from a \code{obj$getAttribute("dataStructure")} where \code{obj} is an instance of a \code{geoLet}
@@ -125,22 +83,20 @@ RAD.NewMultiPIPOblique<-function(dataStorage, Structure, SeriesInstanceUID) {
   )
   
   final.array<-array(data = final.array, dim = c(   numberOfColumns, numberOfRows, numberOfSlices )   )
-# In Example: 
-#
-# > TotalX[0:70]
-# [1] -10000.00     -5.16     -3.28     -1.41      0.47      2.34      4.22      5.12      6.09      7.61      7.97      9.48      9.84     10.96     11.72
-# [16]     12.14     12.93     13.59     13.61     14.19     14.70     14.85     14.23     13.59     13.45     12.68     11.72     11.11      9.84      8.78
-# [31]      7.97      6.09      4.22      2.84      2.34      0.85      0.47      0.14     -1.41     -3.28     -3.92     -5.16     -5.73     -6.56     -7.03
-# [46]     -8.91    -10.26    -10.78    -11.25    -11.86    -12.01    -11.83    -11.29    -10.78    -10.64     -9.88     -8.91     -8.81     -7.51     -7.03
-# [61]     -5.46     -5.16 -10000.00     -5.16     -3.28     -1.41      0.47      2.34      4.22      5.38
-# 
-# 
-# > arrayAssociationROIandSlice[0:70]
-# [1] -10000      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8
-# [22]      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8
-# [43]      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      9 -10000
-# [64]      9      9      9      9      9      9      9
-#     
+    # In Example: 
+    #
+    # > TotalX[0:70]
+    # [1] -10000.00     -5.16     -3.28     -1.41      0.47      2.34      4.22      5.12      6.09      7.61      7.97      9.48      9.84     10.96     11.72
+    # [16]     12.14     12.93     13.59     13.61     14.19     14.70     14.85     14.23     13.59     13.45     12.68     11.72     11.11      9.84      8.78
+    # [31]      7.97      6.09      4.22      2.84      2.34      0.85      0.47      0.14     -1.41     -3.28     -3.92     -5.16     -5.73     -6.56     -7.03
+    # [46]     -8.91    -10.26    -10.78    -11.25    -11.86    -12.01    -11.83    -11.29    -10.78    -10.64     -9.88     -8.91     -8.81     -7.51     -7.03
+    # [61]     -5.46     -5.16 -10000.00     -5.16     -3.28     -1.41      0.47      2.34      4.22      5.38
+    # 
+    # > arrayAssociationROIandSlice[0:70]
+    # [1] -10000      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8
+    # [22]      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8
+    # [43]      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      9 -10000
+    # [64]      9      9      9      9      9      9      9
   
     # ROTATE THE MATRIX
     for ( i in seq(1,dim(image.arr)[3] )) {
@@ -195,7 +151,11 @@ RAD.mmButo<-function() {
   attributeList<-list()
   logObj<-list()
   arrayAR<-list()           # arrayAlgorithmResult
-  
+
+  # ========================================================================================
+  # openTreeMultiROIs
+  # it load all the subfolder of a given folder searching for all the available studyes
+  # ========================================================================================  
   openTreeMultiROIs<-function(Path, structureList) {
     cubeVoxelList<-list()
     listaFolders<-list.dirs( Path )
@@ -257,20 +217,86 @@ RAD.mmButo<-function() {
     #    close(pb) 
     dataStructure<<-cubeVoxelList      
   }
-
-
-  execAlgorithm<-function( algorithm, ROIName ) {
+  # ========================================================================================
+  # ROIStats
+  # return stats of a ROI
+  # ========================================================================================
+  ROIStats<-function(ROIName) {
+    res<-list();
+    res$details<-list();
+    res$total<-list();
+    for(i in names(dataStructure)) {
+      res$details$stdev[[i]]<-sd(dataStructure[[i]]$voxelCubes$Urina[which(dataStructure[[i]]$voxelCubes$Urina!=0)])
+      res$details$mean[[i]]<-mean(dataStructure[[i]]$voxelCubes$Urina[which(dataStructure[[i]]$voxelCubes$Urina!=0)])
+    }
+    res$total$mean<-mean(res$details$mean)
+    res$total$min<-min(res$details$mean)
+    res$total$max<-max(res$details$mean)
+    return(res);    
+  }
+  # ========================================================================================
+  # execAlgorithm
+  # execute an algorithm on the loaded DICOM studies.
+  # ========================================================================================
+  execAlgorithm<-function( algorithm, ROIName , grayTuniningValue, ROIName4Tuning ) {
     
     XmaxVal<-c() 
     YmaxVal<-c() 
     array4VoxelCube<-list();
+    normalizedVoxelCube<-list();
+
+    # BAVA
+    if( algorithm == "BAVA" ) {      
+      interpolatedDensity<-list();
+      if(length(grayTuniningValue)==0) logObj$sendLog("'grayTuniningValue' is missing", NMI = TRUE)
+      if(length(ROIName4Tuning)==0) logObj$sendLog("'ROIName4Tuning' is missing", NMI = TRUE)
+      
+      # massimo valore di grigio della ROI di tutti i pazienti 
+      # (lo uso per sapere la X massima per il resampling)
+      maxGreyOfROIName<-ROIStats(ROIName=ROIName)
+      maxGreyOfROIName<-maxGreyOfROIName$total$max+1; 
+      valoreMassimoX<-c()
+      valoreMassimoY<-c()
+      # loop for each Series Instance UID
+      for( i in names(dataStructure)) {   
+
+        # Prendi il valore medio della vescita del paziente in esame
+        maxSpecificROI4Tuning<-mean(dataStructure[[i]]$voxelCubes[[ROIName4Tuning]][which(dataStructure[[i]]$voxelCubes[[ROIName4Tuning]]!=0)])
+        # Normalizza
+        normalizedVoxelCube[[i]] <- dataStructure[[i]]$voxelCubes[[ROIName]] * ( grayTuniningValue / maxSpecificROI4Tuning)
+        
+        #voxelCube <- dataStructure[[i]]$voxelCubes[[ROIName]]
+        voxelCube <- normalizedVoxelCube[[i]]
+        array4VoxelCube[[i]] <- voxelCube[which(  voxelCube  !=0 )];
+        # passa alla KDF così ho la versione continua
+        array4VoxelCube[[i]]<-density(    array4VoxelCube[[i]]   )        
+        # memorizza il valore massimo della x (per poter poi fare il resampling sulla stessa scala)
+        valoreMassimoX<-c(valoreMassimoX,array4VoxelCube[[i]]$x)
+        valoreMassimoY<-c(valoreMassimoY,array4VoxelCube[[i]]$y)
+      }       
+      # ora fai i resampling
+      for( i in names(dataStructure)) { 
+        interpolatedDensity[[i]]<-approx(array4VoxelCube[[i]]$x,array4VoxelCube[[i]]$y,n=valoreMassimoX, xout=seq( from=0 , to=max(valoreMassimoX) )) 
+        # azzera gli NA
+        interpolatedDensity[[i]]$y[which(is.na(interpolatedDensity[[i]]$y))]<-0        
+      }
+      # write the results in the array
+      arrayAR$BAVA<<-list();
+      arrayAR$BAVA$details<<-list();
+#      arrayAR$BAVA$details$density<<-interpolatedDensity     
+      arrayAR$BAVA$details$interpolatedD<<-interpolatedDensity     
+      arrayAR$BAVA$summary<<-list();
+      arrayAR$BAVA$summary$XmaxVal<<-max( valoreMassimoX )
+      arrayAR$BAVA$summary$YmaxVal<<-max( valoreMassimoY )      
+      return();
+    }
 
     # Kernel Density Function
     if( algorithm == "KDF" ) {      
       arrayAR[["KDF"]]<<-list();      
       arrayAR[["KDF"]]$details<<-list();
       arrayAR[["KDF"]]$summary<<-list(); 
-      interpolatedDensity<<-list();
+      interpolatedDensity<-list();
       # loop for each Series Instance UID
       for( SeriesInstanceUID in names(dataStructure)) {          
         XmaxVal <- c(XmaxVal,max(dataStructure[[SeriesInstanceUID]]$image.arr));      
@@ -282,11 +308,9 @@ RAD.mmButo<-function() {
       for( SeriesInstanceUID in names(dataStructure)) {
        tmpArr<-as.array(array4VoxelCube[[SeriesInstanceUID]])
        maxRMN<-max(  dataStructure[[SeriesInstanceUID]]$image.arr  )
-#       array4VoxelCube[[SeriesInstanceUID]]<-density(    tmpArr * ( max( XmaxVal )/max(maxRMN) )    )
        array4VoxelCube[[SeriesInstanceUID]]<-density(    tmpArr /  max(tmpArr)     )
        interpolatedDensity[[SeriesInstanceUID]]<-approx(array4VoxelCube[[SeriesInstanceUID]]$x,array4VoxelCube[[SeriesInstanceUID]]$y,n=100,xout=seq(from=0,to=1,by = .01))
-#       interpolatedDensity[[SeriesInstanceUID]][ is.na(interpolatedDensity[[SeriesInstanceUID]])  ]<-0
-       YmaxVal <- c(YmaxVal,max(array4VoxelCube[[SeriesInstanceUID]]$y));      
+       YmaxVal <- c(YmaxVal,max(array4VoxelCube[[SeriesInstanceUID]]$y));    # sospetto errore.   
       }
       # write the results in the array
       arrayAR$KDF$details$density<<-array4VoxelCube
@@ -300,56 +324,82 @@ RAD.mmButo<-function() {
     # Not yet implemented NMI error
     logObj$sendLog(message = "Not yet implemented", NMI = TRUE);
   }
-
-  plotResults<-function( singleLines = TRUE, meanLine=TRUE, algorithm = "all", ylim = c(), xlim = c(), add=FALSE, colMean = "blue", color = "red", xlab = "Normalized greylevel Histogram", main="Kernel Density Function") {      
+  # ========================================================================================
+  # plotResults
+  # It plots the results of a chosen algorithm
+  # ========================================================================================
+  plotResults<-function( singleLines = TRUE, meanLine=TRUE, algorithm , ylim = c(), xlim = c(), add=FALSE, colMean = "blue", color = "red", xlab=c() , main=c()) {      
     
-    if( algorithm == "all" | algorithm == "KDF")  {
+    if( algorithm == "KDF" | algorithm == "BAVA")  {
       ct<-1;
       addingMatrix<-c()
-      
-      for(pathName in names(arrayAR$KDF$details$interpolatedD) ) {        
-        if(length(ylim)==0) ylim <- c(0,arrayAR$KDF$summary$YmaxVal)
+      if( algorithm == "KDF" ) {
+        if(length(xlab)==0) xlab<-"Normalized greylevel Histogram"
+        if(length(main)==0) main="Kernel Density Function"
+      }
+      if( algorithm == "BAVA") {
+        if(length(xlab)==0) xlab<-"Normalized greylevel Histogram"
+        if(length(main)==0) main="BAVA comparison"
+      }
+        
+      for(pathName in names(arrayAR[[algorithm]]$details$interpolatedD) ) {        
+        if(length(ylim)==0) ylim <- c(0,arrayAR[[algorithm]]$summary$YmaxVal)
 
         if( singleLines == TRUE) {
           if( ct == 1  & add==FALSE) {      
             if ( length(xlim) == 0 ) 
-              plot( arrayAR$KDF$details$interpolatedD[[pathName]], ylim = ylim, col = color , xlab = xlab, main = main, type='l' ) 
+              plot( arrayAR[[algorithm]]$details$interpolatedD[[pathName]], ylim = ylim, col = color , xlab = xlab, main = main, type='l' ) 
             else 
-              plot( arrayAR$KDF$details$interpolatedD[[pathName]], ylim = ylim, col = color , xlab = xlab, main = main, xlim = xlim, type='l' ) 
+              plot( arrayAR[[algorithm]]$details$interpolatedD[[pathName]], ylim = ylim, col = color , xlab = xlab, main = main, xlim = xlim, type='l' ) 
           }
           else 
-            lines( arrayAR$KDF$details$interpolatedD[[pathName]] , col = color ) 
+            lines( arrayAR[[algorithm]]$details$interpolatedD[[pathName]] , col = color ) 
         }
         
-        addingMatrix<-rbind(addingMatrix,arrayAR$KDF$details$interpolatedD[[pathName]]$y)        
+        addingMatrix<-rbind(addingMatrix,arrayAR[[algorithm]]$details$interpolatedD[[pathName]]$y)        
         ct<-ct+1
       }
       
       if( meanLine == TRUE ) {
         
         if( singleLines == FALSE & add==FALSE) {
-            xlim<-c( min(arrayAR$KDF$details$interpolatedD[[pathName]]$x) ,max(arrayAR$KDF$details$interpolatedD[[pathName]]$x)  )
+            xlim<-c( min(arrayAR[[algorithm]]$details$interpolatedD[[pathName]]$x) ,max(arrayAR[[algorithm]]$details$interpolatedD[[pathName]]$x)  )
             if ( length(xlim) == 0 ) 
               plot( x=c(), y=c(), ylim = ylim, col = color , xlab = xlab, main = main, type='l' ) 
             else 
               plot(  x=c(), y=c(), ylim = ylim, col = color , xlab = xlab, main = main, xlim = xlim, type='l' ) 
-        }
-        
+        }        
         
         # calculate the mean
-        stDevMatrix<-apply(addingMatrix, 2, sd)
-        meanMatrix<-colMeans(addingMatrix, na.rm = TRUE)      
+#        stDevMatrix<-apply(addingMatrix, 2, sd)
+
+        x<-arrayAR[[algorithm]]$details$interpolatedD[[pathName]]$x
+        x[which(is.na(x))]<-0
+        addingMatrix[which(is.na(addingMatrix))]<-0
+
+        quantileMatrix<-apply(addingMatrix, 2, quantile, probs = c(.025, .975), na.rm = TRUE)
+
+        quantileMatrixSPU<-smooth.spline( x = x, y = quantileMatrix[1,])
+        quantileMatrixSPL<-smooth.spline( x = x, y = quantileMatrix[2,])
+
+        meanMatrix<-colMeans(addingMatrix, na.rm = TRUE)      # media normale
+        #meanMatrix<-apply(addingMatrix, 2, bootstrapColMatrix)  # media bootstrappata    
         
         # plot it
-        x<- arrayAR$KDF$details$interpolatedD[[pathName]]$x
-        
-        polygon(c(x,rev(x)),c(meanMatrix,rev(meanMatrix+stDevMatrix)), col=rgb(.7, .7, .7, 0.2), lty = c("dashed"))
-        polygon(c(x,rev(x)),c(meanMatrix,rev(meanMatrix-stDevMatrix)), col=rgb(.7, .7, .7, 0.2), lty = c("dashed"))
+        polygon(c(x,rev(x)),c(meanMatrix,rev(quantileMatrixSPU$y)), col=rgb(.7, .7, .7, 0.2), lty = c("dashed"))
+        polygon(c(x,rev(x)),c(meanMatrix,rev(quantileMatrixSPL$y)), col=rgb(.7, .7, .7, 0.2), lty = c("dashed"))
         lines( x = x , y=meanMatrix , col = colMean ) 
       }
     }
   } 
-
+  bootstrapColMatrix<-function( x ){
+    d<-sample(x=x,size=10000,replace=T)
+    return(mean(d))
+  }
+  # ========================================================================================
+  # setAttribute
+  # set an attribute of the class
+  # ========================================================================================
   setAttribute<-function(attribute, value) {
     if(attribute=="verbose") {
       if(!is.list(value)) return;
@@ -361,10 +411,17 @@ RAD.mmButo<-function() {
     }
     #attributeList[[ attribute ]]<<-value     
   } 
+  # ========================================================================================
+  # setAttribute
+  # get an attribute of the class
+  # ========================================================================================
   getAttribute<-function(attribute) {
     if(attribute == "dataStorage") return(dataStructure)
     if(attribute == "algorithmsResult") return(arrayAR)
   }
+  # ========================================================================================
+  # constructor
+  # ========================================================================================
   constructor<-function() {
     dataStructure<<-list()
     attributeList<<-list()
@@ -382,7 +439,8 @@ RAD.mmButo<-function() {
       setAttribute=setAttribute,
       getAttribute=getAttribute,
       execAlgorithm=execAlgorithm,
-      plotResults=plotResults))
+      plotResults=plotResults,
+      ROIStats=ROIStats))
 }
 
 # example -- mmButo stile Toronto
