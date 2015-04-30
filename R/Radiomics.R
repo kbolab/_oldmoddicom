@@ -328,7 +328,7 @@ RAD.mmButo<-function() {
   # plotResults
   # It plots the results of a chosen algorithm
   # ========================================================================================
-  plotResults<-function( singleLines = TRUE, meanLine=TRUE, algorithm , ylim = c(), xlim = c(), add=FALSE, colMean = "blue", color = "red", xlab=c() , main=c()) {      
+  plotResults<-function( singleLines = TRUE, meanLine=TRUE, algorithm , ylim = c(), xlim = c(), add=FALSE, colMean = "blue", color = "red", xlab=c() , main=c(), meanDensityLine=2) {      
     
     if( algorithm == "KDF" | algorithm == "BAVA")  {
       ct<-1;
@@ -365,9 +365,9 @@ RAD.mmButo<-function() {
         if( singleLines == FALSE & add==FALSE) {
             xlim<-c( min(arrayAR[[algorithm]]$details$interpolatedD[[pathName]]$x) ,max(arrayAR[[algorithm]]$details$interpolatedD[[pathName]]$x)  )
             if ( length(xlim) == 0 ) 
-              plot( x=c(), y=c(), ylim = ylim, col = color , xlab = xlab, main = main, type='l' ) 
+              plot( x=c(), y=c(), ylim = ylim, col = color , xlab = xlab, main = main, type='l',lwd=meanDensityLine ) 
             else 
-              plot(  x=c(), y=c(), ylim = ylim, col = color , xlab = xlab, main = main, xlim = xlim, type='l' ) 
+              plot(  x=c(), y=c(), ylim = ylim, col = color , xlab = xlab, main = main, xlim = xlim, type='l',lwd=meanDensityLine ) 
         }        
         
         # calculate the mean
@@ -377,13 +377,15 @@ RAD.mmButo<-function() {
         x[which(is.na(x))]<-0
         addingMatrix[which(is.na(addingMatrix))]<-0
 
-        quantileMatrix<-apply(addingMatrix, 2, quantile, probs = c(.025, .975), na.rm = TRUE)
+        bootstrappedAddingMatrix<-apply(addingMatrix,2,sample,size=1000,replace=T)
+        #quantileMatrix<-apply(addingMatrix, 2, quantile, probs = c(.025, .975), na.rm = TRUE)   # versione NON bootstrappata
+        quantileMatrix<-apply(bootstrappedAddingMatrix, 2, quantile, probs = c(.025, .975), na.rm = TRUE)   # versione bootstrappato
 
         quantileMatrixSPU<-smooth.spline( x = x, y = quantileMatrix[1,])
         quantileMatrixSPL<-smooth.spline( x = x, y = quantileMatrix[2,])
 
         meanMatrix<-colMeans(addingMatrix, na.rm = TRUE)      # media normale
-        #meanMatrix<-apply(addingMatrix, 2, bootstrapColMatrix)  # media bootstrappata    
+        
         
         # plot it
         polygon(c(x,rev(x)),c(meanMatrix,rev(quantileMatrixSPU$y)), col=rgb(.7, .7, .7, 0.2), lty = c("dashed"))
