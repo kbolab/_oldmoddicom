@@ -1,6 +1,7 @@
 #' class for handling logs/warnings/errorss
 #' 
 #' @description  It handles messages from script to a chosen output (screen, file, etc.)
+#' @useDynLib moddicom
 #' @export
 services<-function() {
     # ------------------------------------------------
@@ -48,40 +49,32 @@ services<-function() {
   #' param: ny is the voxel space along y
   #' param: nz is the voxel space along z
   #' return: A matrix with 1 and 0 which indicates the index for virtual Biopsy
-  virtualBiopsyCentroids<-function (voxelCubes,nx,ny,nz){ 
+  virtualBiopsyCentroids <- function (voxelCubes,nx,ny,nz) {
     
-    carotaggio.volume <- array(0, dim = dim(voxelCubes))
-    # legge ogni singolo elemento della matrice dei voxelCubes ad una distanza dai bordi pari a nx,ny,nz
-    for (i in (nx+1):(dim(voxelCubes)[1]-nx))
-    {
-      for (j in (ny+1):(dim(voxelCubes)[2]-ny))
-      {
-        for(k in (nz+1):(dim(voxelCubes)[3]-nz))
-        {
-          if (voxelCubes[i,j,k]!=0)
-          {
-            # expand grid delle possibili combinazioni dell'intorno, centrate in i,j,k
-            combinazioni.poss <- expand.grid(indiceX=seq(i-nx,i+nx),indiceY=seq(j-ny,j+ny),indiceZ=seq(k-nz,k+nz))
-            indici.tumore <- as.matrix(combinazioni.poss)
-            somma <- 0
-            # check degli elementi intorno a i,j,k ed incrementa la variabile somma se diverso da zero
-            for(ct in (1:nrow(indici.tumore))) {
-              if(indici.tumore[[ct,1]]!=i | indici.tumore[[ct,2]]!=j | indici.tumore[[ct,3]]!=k) {
-                if(voxelCubes[indici.tumore[ct,1],indici.tumore[ct,2],indici.tumore[ct,3]]>0) 
-                  somma<-somma+1
-              }
-            }
-            # sovrascrive 1 nella posizione i,j,k nella matrice di output se variabile somma è pari al numero di
-            # combinazioni calcolate dall'expand grid -1
-            if (somma==((nrow(indici.tumore))-1)){
-              carotaggio.volume[i,j,k] <- 1
-            } 
-          }
-        }
-      }
-    }
-    return(carotaggio.volume)
-  }  
+    #voxelCubes <- ds.positive[[1]]$voxelCubes[[1]]
+    exam <- array(voxelCubes, dim = dim(voxelCubes)[1]*dim(voxelCubes)[2]*dim(voxelCubes)[3])
+    size1 <- (dim(voxelCubes)[1])
+    size2 <- (dim(voxelCubes)[2])
+    size3 <- (dim(voxelCubes)[3])
+    cmp <- as.matrix(expand.grid(indiceX=seq(i-nx,i+nx),indiceY=seq(j-ny,j+ny),indiceZ=seq(k-nz,k+nz)))
+    expand <- array(cmp, dim = dim(voxelCubes)[1]*dim(voxelCubes)[2])
+    control <- (dim(cmp)[1])
+    lungh <- length(exam)
+    carotaggioVolume <- array(data = c(0), dim = dim(voxelCubes)[1]*dim(voxelCubes)[2]*dim(voxelCubes)[3])
+    
+    #load virtual biopsy C function
+    biopsy <- .C(   "virtualBiopsy", as.integer (exam), as.integer (size1), as.integer (size2), 
+                    as.integer (size3), as.integer(nx), as.integer(ny), as.integer(nz), as.integer(expand),
+                    as.integer (control), as.integer(lungh), as.integer(carotaggioVolume)   )
+    
+    
+    virtual.biopsy <- array (biopsy[11][[1]], dim=c(size1,size2,size3))
+    return(virtual.biopsy)
+    
+  }
+  
+  
+  
   return(list(SV.getPointPlaneDistance = SV.getPointPlaneDistance,
               SV.get3DPosFromNxNy = SV.get3DPosFromNxNy,
               SV.getPlaneEquationBetween3Points = SV.getPlaneEquationBetween3Points,
