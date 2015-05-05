@@ -3,7 +3,6 @@
 #' @param dataStorage is the structure returned from a \code{obj$getAttribute("dataStructure")} where \code{obj} is an instance of a \code{geoLet}
 #' @param Structure is the ROI name od the ROI that should be extracted
 #' @param SeriesInstanceUID Is the interested series Instance UID.
-#' @export
 #' @return A list with unknown meaning
 #' @useDynLib moddicom
 #' @export
@@ -144,6 +143,7 @@ RAD.NewMultiPointInPolyObl<-function(DICOMOrientationVector,totalX,totalY,arrayA
 #'               the indicated folder (without recursion) as attribute of the object.
 #'               Information can be retrieved using \code{getAttribute} method or, simply, getting the result of this method.#'               
 #'               }
+#' @import MASS colorRamps 
 #' @export
 RAD.mmButo<-function() {
   
@@ -160,15 +160,11 @@ RAD.mmButo<-function() {
     cubeVoxelList<-list()
     listaFolders<-list.dirs( Path )
     
-    # a bit of froceries
-    #    pb <- txtProgressBar(min = 0, max = length(listaFolders)-1, style = 3)
     counter<-1
     for( folderName in listaFolders[2:length(listaFolders)] ) {
       #      setTxtProgressBar(pb, counter)
       # Instantiate the object
       obj<-geoLet()
-      #obj$setAttribute(attribute="verbose",value=FALSE)  
-#      print( folderName )
       obj$openDICOMFolder( folderName )      
       listaROI<-obj$getROIList();
       
@@ -184,12 +180,9 @@ RAD.mmButo<-function() {
           ROIPointList<-obj$getROIPointList(ROIName)
           SS<-names(ds$img);
           
-          #result<-MultiPIPOblique(dataStorage = ds, Structure = ROIName, SeriesInstanceUID = SS, output=c("masked.images","DICOMInformationMatrix","resampled.array"))
-          #result<-RAD.MultiPIPOblique(dataStorage = ds, Structure = ROIName, SeriesInstanceUID = SS)
           result<-RAD.NewMultiPIPOblique(dataStorage = ds, Structure = ROIName, SeriesInstanceUID = SS)
           
           cubeVoxelList[[ folderName ]][["voxelCubes"]][[ ROIName ]]<-result$masked.images    
-          #cubeVoxelList[[ folderName ]][["info"]]<-result$DICOMInformationMatrix
           cubeVoxelList[[ folderName ]][["info"]]<-result$DOM
           
           cubeVoxelList[[ folderName ]][["ROIPointList"]][[ ROIName ]]<-ROIPointList
@@ -398,6 +391,95 @@ RAD.mmButo<-function() {
     d<-sample(x=x,size=10000,replace=T)
     return(mean(d))
   }
+  # ========================================================================================
+  # virtualBiopsy
+  # Calculates the position of elements which is possible to do virtual Biopsy
+  # ======================================================================================== 
+  #' Calculates the position of elements which is possible to do virtual Biopsy
+  #' description: This function can be used to calculate the index of elements for virtual Biopsy along a given distance along x,y,z
+  #' param: voxelCubes is the voxel space along x
+  #' param: nx is the voxel space along x
+  #' param: ny is the voxel space along y
+  #' param: nz is the voxel space along z
+  #' return: a list 
+  virtualBiopsy <- function (voxelCubes,nx,ny,nz) {    
+    i<-0;    j<-0;    k<-0    
+    exam <- array(voxelCubes,dim = dim(voxelCubes)[1]*dim(voxelCubes)[2]*dim(voxelCubes)[3])
+    size1 <- (dim(voxelCubes)[1])
+    size2 <- (dim(voxelCubes)[2])
+    size3 <- (dim(voxelCubes)[3])
+    cmp <- as.matrix(expand.grid(indiceX=seq(i-nx,i+nx),indiceY=seq(j-ny,j+ny),indiceZ=seq(k-nz,k+nz)))
+    expand <- array(cmp, dim = dim(voxelCubes)[1]*dim(voxelCubes)[2])
+    control <- (dim(cmp)[1])
+    lungh <- length(exam)
+    carotaggioVolume <- array(data = c(0), dim = dim(voxelCubes)[1]*dim(voxelCubes)[2]*dim(voxelCubes)[3])
+    
+    #load virtual biopsy C function
+    biopsy <- .C(   "virtualBiopsy", as.integer (exam), as.integer (size1), as.integer (size2), 
+                    as.integer (size3), as.integer(nx), as.integer(ny), as.integer(nz), as.integer(expand),
+                    as.integer (control), as.integer(lungh), as.integer(carotaggioVolume)   )
+    
+    virtual.biopsy <- array (biopsy[11][[1]], dim=c(size1,size2,size3))
+    
+    # list of of Virtual Biopsy
+    indici.carot <- which(virtual.biopsy == 1, arr.ind=T)
+    array.devianze2 <- (     rep(  c(0), times=nrow(indici.carot==1)  )  )
+    medie2 <- (     rep(  c(0), times=nrow(indici.carot==1)  )  )
+    p <- 1;     q <- 1
+    lista.grigi <- list()
+    if(nrow(indici.carot)<2) return(list("isResultValid"="no"))
+    
+    for(  i in (1:(nrow(indici.carot)))   )
+    {      
+      comb.poss2 <- expand.grid(    indiceX=   seq(  indici.carot[i,1]-nx,indici.carot[i,1]+nx  ),
+                                    indiceY=   seq(  indici.carot[i,2]-ny,indici.carot[i,2]+ny  ),
+                                    indiceZ=   seq(  indici.carot[i,3]-nz,indici.carot[i,3]+nz  ))
+      scala.grigi2 <- c()      
+      for(ct in (1:nrow(comb.poss2)))
+      {
+        scala.grigi2[ct] <- voxelCubes [comb.poss2[ct,1],comb.poss2[ct,2],comb.poss2[ct,3]]
+      }
+      
+      lista.grigi[[i]] <- scala.grigi2
+      array.devianze2[p] <- sd(scala.grigi2)
+      medie2[q] <- mean(scala.grigi2)
+      p <- p+1;      q <- q+1
+    }
+    
+    return(list("lista.grigi"=lista.grigi,"devianze"=array.devianze2,"medie"=medie2,"isResultValid"="si"))
+  } 
+  # ========================================================================================
+  # allPopulationVirtualBiopsy
+  # set an attribute of the class
+  # ========================================================================================
+  allPopulationVirtualBiopsy<-function( nx=2,ny=2,nz=0, ROIName4Normalization="Urina", normalization=TRUE) {
+    
+    # if requested, get the higher value in order to "normalize" the greylevel
+    if( normalization == TRUE) UpperBoundDiNormalizzazione <- ROIStats(ROIName4Normalization)$total$max;
+    else UpperBoundDiNormalizzazione=1;
+    
+    # get the number of patient to treat
+    total<-length(names(dataStructure));
+    
+    medie<-list();
+    devianze<-list();
+    
+    for(i in names(dataStructure) )  { 
+      
+      # do you need a normalization ROI?
+      if( normalization == TRUE)
+        piscioPaziente4Tuning<-mean(dataStructure[[ i ]]$voxelCubes[[ROIName4Normalization]][which(dataStructure[[ i ]]$voxelCubes[[ROIName4Normalization]]!=0)])
+      else piscioPaziente4Tuning=1;
+      
+      # get the biopsy for the given patient
+      a<-Biopsy(   (dataStructure[[ i ]]$voxelCubes$GTV)*(UpperBoundDiNormalizzazione/piscioPaziente4Tuning)    ,nx,ny,nz)
+      
+      # add the result in terms of mean and std.deviation
+      medie[[i]]<-a$medie
+      devianze[[i]]<-a$devianze  
+    }
+    return( list( "medie"=medie, "devianze"=devianze  ) )    
+  } 
   # ========================================================================================
   # setAttribute
   # set an attribute of the class
