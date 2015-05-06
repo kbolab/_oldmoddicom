@@ -36,8 +36,8 @@ DVH.generate<-function(dvh.number, type=c("random","convex","concave","mix"),
     min.vol <- 2
   }
   if (max.dose <= 10) stop("max.dose must by higher than 10 Gy")
-  # create the vector of volumes
-  volumes <- runif(n = dvh.number, min = min.vol, max = max.vol)
+  # create the vector of volumes  
+  volumes <- runif(n = dvh.number, min = min.vol, max = max.vol)  
   volbin.num <- round(volumes/((volbin.side/10)^3)) # number of bins for each volume
   # function for generating convex DVHs voxels series
   convex.dvh <- function(n) {

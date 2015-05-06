@@ -52,7 +52,6 @@
 #'               }
 #' @export
 #' @import stringr XML 
-#' @export
 geoLet<-function() {
 
   dataStorage<-list();          # Attribute with ALL the data
