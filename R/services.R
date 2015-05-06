@@ -1,6 +1,7 @@
 #' class for handling logs/warnings/errorss
 #' 
 #' @description  It handles messages from script to a chosen output (screen, file, etc.)
+#' @useDynLib moddicom
 #' @export
 services<-function() {
     # ------------------------------------------------
@@ -37,60 +38,57 @@ services<-function() {
     if (Sys.info()["sysname"]=="Linux")
       return(paste(library.name, ".so", sep=""))
   }
-  # ========================================================================================
-  # virtualBiopsy
-  # Calculates the position of elements which is possible to do virtual Biopsy
-  # ======================================================================================== 
-  #' Calculates the position of elements which is possible to do virtual Biopsy
-  #' description: This function can be used to calculate the index of elements for virtual Biopsy along a given distance along x,y,z
-  #' param: voxelCubes is the voxel space along x
-  #' param: nx is the voxel space along x
-  #' param: ny is the voxel space along y
-  #' param: nz is the voxel space along z
-  #' return: A matrix with 1 and 0 which indicates the index for virtual Biopsy
-  virtualBiopsyCentroids<-function (voxelCubes,nx,ny,nz){ 
+  elaboraCarlottaggio<-function( ds.n ,nx=2,ny=2,nz=0) {
     
-    carotaggio.volume <- array(0, dim = dim(voxelCubes))
-    # legge ogni singolo elemento della matrice dei voxelCubes ad una distanza dai bordi pari a nx,ny,nz
-    for (i in (nx+1):(dim(voxelCubes)[1]-nx))
-    {
-      for (j in (ny+1):(dim(voxelCubes)[2]-ny))
-      {
-        for(k in (nz+1):(dim(voxelCubes)[3]-nz))
-        {
-          if (voxelCubes[i,j,k]!=0)
-          {
-            # expand grid delle possibili combinazioni dell'intorno, centrate in i,j,k
-            combinazioni.poss <- expand.grid(indiceX=seq(i-nx,i+nx),indiceY=seq(j-ny,j+ny),indiceZ=seq(k-nz,k+nz))
-            indici.tumore <- as.matrix(combinazioni.poss)
-            somma <- 0
-            # check degli elementi intorno a i,j,k ed incrementa la variabile somma se diverso da zero
-            for(ct in (1:nrow(indici.tumore))) {
-              if(indici.tumore[[ct,1]]!=i | indici.tumore[[ct,2]]!=j | indici.tumore[[ct,3]]!=k) {
-                if(voxelCubes[indici.tumore[ct,1],indici.tumore[ct,2],indici.tumore[ct,3]]>0) 
-                  somma<-somma+1
-              }
-            }
-            # sovrascrive 1 nella posizione i,j,k nella matrice di output se variabile somma è pari al numero di
-            # combinazioni calcolate dall'expand grid -1
-            if (somma==((nrow(indici.tumore))-1)){
-              carotaggio.volume[i,j,k] <- 1
-            } 
-          }
-        }
-      }
+    UpperBoundDiNormalizzazione<-max(c(obj.n$ROIStats("Urina")$total$max,obj.p$ROIStats("Urina")$total$max))
+    
+    total<-length(names(ds.n));
+    
+    
+    #medieNorm<-list();
+    #devianzeNorm<-list();
+    #centroide<-list();
+    
+    medie<-list();
+    devianze<-list();
+    
+    for(i in names(ds.n) )  {    
+      
+      print( i )
+      piscioPaziente4Tuning<-mean(ds.n[[i]]$voxelCubes[["Urina"]][which(ds.n[[i]]$voxelCubes[["Urina"]]!=0)])
+      
+      a<-Biopsy(   (ds.n[[ i ]]$voxelCubes$GTV)*(UpperBoundDiNormalizzazione/piscioPaziente4Tuning)    ,nx,ny,nz)
+      
+      if(a$fottiti!="si")
+        medie[[i]]<-a$medie
+      devianze[[i]]<-a$devianze  
+      
+      #     medie[[i]]<-density(a$medie)
+      #     devianze[[i]]<-density(a$devianze)
+      
+      #medieNorm[[i]]<-approx(medie$x,medie$y,n=UpperBoundDiNormalizzazione, xout=seq( from=0 , to=max(UpperBoundDiNormalizzazione) ))
+      #devianzeNorm[[i]]<-approx(devianze$x,devianze$y,n=UpperBoundDiNormalizzazione, xout=seq( from=0 , to=max(UpperBoundDiNormalizzazione) )) 
+      
+      #medieNorm[[i]]$y[which(is.na(medieNorm[[i]]$y))]<-0
+      #devianzeNorm[[i]]$y[which(is.na(devianzeNorm[[i]]$y))]<-0
+      
+      #centro<-COGravity(x=a$medie,y=a$devianze);
+      #centroide[[i]]<-c(   centro[1] , centro[3] )
+      
     }
-    return(carotaggio.volume)
+    #return( list( "medie"=a$medie, "devianze"=a$devianze,"medieNorm"=medieNorm, "devianzeNorm"=devianzeNorm, "centroide"=centroide  ) )
+    return( list( "medie"=medie, "devianze"=devianze  ) )
+    
   }  
+#lanciaEsempio<-function() 
+  # list of the available methods of the class
   return(list(SV.getPointPlaneDistance = SV.getPointPlaneDistance,
               SV.get3DPosFromNxNy = SV.get3DPosFromNxNy,
               SV.getPlaneEquationBetween3Points = SV.getPlaneEquationBetween3Points,
               SV.rotateMatrix = SV.rotateMatrix,
               SV.LoadAccordingOSType = SV.LoadAccordingOSType,
-              SV.rotateMatrix = SV.rotateMatrix,
-              virtualBiopsyCentroids = virtualBiopsyCentroids
+              SV.rotateMatrix = SV.rotateMatrix
               ))  
 }
-
 
 

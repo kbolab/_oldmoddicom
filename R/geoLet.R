@@ -5,12 +5,12 @@
 #'               
 #'               The available methods are:
 #'               \itemize{
-#'               \item \code{openDICOMFolder(pathToOpen)} 
+#'               \item \code{void openDICOMFolder(string pathToOpen)} 
 #'               is a method used to open a chosen folder. This method loads all the DICOM objects into
 #'               the indicated folder (without recursion) as attribute of the object.
 #'               Information can be retrieved using \code{getAttribute} method or 
 #'               more specific methods.
-#'               \item \code{getAttribute(attribute,seriesInstanceUID="",fileName="")} 
+#'               \item \code{list/string/array getAttribute(string attribute,string seriesInstanceUID="",string fileName="")} 
 #'               Is a method used to get internal attributes. Allowed values fot \code{attributes} are:
 #'               
 #'               \itemize{
@@ -32,24 +32,25 @@
 #'                 \item \code{PixelSpacing} : return the content of the (0028,0030) DICOM tag(*);
 #'               }
 #'               
-#'               If no \code{seriesInstanceUID} or \code{filename} are provided, it returns the tag found in 
+#'               (*) If no \code{seriesInstanceUID} or \code{filename} are provided, it returns the tag found in 
 #'               what seems to be the referencing CT or RMN scan. Pay attention to this point: in case of doubt about the
 #'               content of the folder this can lead to errors.
-#'               \item \code{getDICOMTag(fileName="",tag=tag) }
+#'               \item \code{string getDICOMTag(string fileName="",string tag) }
 #'               it allows to retrieve the value of a specific DICOM tag on a specified DICOM filename. If the name is not
 #'               indicated the method gets the first DICOM file he can find. 
-#'               \item \code{getROIList() }
+#'               \item  \code{matrix getROIList() }
 #'               returns the list of the available ROIs
-#'               \item \code{getROIPointList(ROINumber) }
+#'               \item \code{list getROIPointList(string ROINumber) }
 #'               returns the list of the points which define the indicated ROI. 
-#'               \item \code{setAttribute(attributeName,attributeValue) }
+#'               \item \code{ void setAttribute(string attributeName,string attributeValue) }
 #'               it sets the value of the specified attribute. The list of the availeable attributes is the following:
 #'                  \itemize{
 #'                    \item \code{verbose} : it define the policy adopted to print warnings and logs during computation. It is handled using an \code{errorHandler} object and works with three different levels. A list indicating the behaviour for each level should be provided.
 #'                  }
-#'               \item \code{getFolderContent(pathToOpen="") }
+#'               \item \code{list getFolderContent(string pathToOpen="") }
 #'               explores the content of the given folder and returns informarion about the stored DICOM objects
 #'               }
+#' @export
 #' @import stringr XML 
 #' @export
 geoLet<-function() {
@@ -61,12 +62,13 @@ geoLet<-function() {
   logObj<-list()               # log handler
   objServ<-list();
   
-  # ------------------------------------------------
+  #=================================================================================
   # openDICOMFolder
   # Loads a Folder containing one or more DICOM Studies
-  # ------------------------------------------------
+  #=================================================================================
   #' Open a folder and load the content
   openDICOMFolder<-function(pathToOpen) {
+
     if( attributeList$verbose$lv1 == TRUE ) logObj$sendLog(pathToOpen)
     # get the dcm file type
     SOPClassUIDList<<-getFolderContent(pathToOpen);
@@ -87,10 +89,10 @@ geoLet<-function() {
     # set the internal attribute indicating the path
     attributeList[["path"]]<<-pathToOpen
   }
-  # ------------------------------------------------
+  #=================================================================================
   # loadRTStructFiles
   # Loads a DICOM RT Struct (one x folder)
-  # ------------------------------------------------
+  #=================================================================================
   loadRTStructFiles<-function(SOPClassUIDList) {    
     imageSerie<-list()
     listaPuntiROI<-list()
@@ -136,10 +138,10 @@ geoLet<-function() {
 
     return(listaROI); 
   }  
-  # ------------------------------------------------
+  #=================================================================================
   # associateROIandImageSlices
   # Create the association between ROI and images
-  # ------------------------------------------------  
+  #=================================================================================
   associateROIandImageSlices<-function() {
     # ok now try to find out which is the RMN plane
     lista<-dataStorage$info[[1]]
@@ -178,11 +180,13 @@ geoLet<-function() {
       }
     }
   }
-  # ------------------------------------------------
+  #=================================================================================
   # loadCTRMRDNScans
   # Loads a DICOM CT/MR Scans
-  # ------------------------------------------------  
-  loadCTRMNRDScans<-function(SOPClassUIDList) {   imageSerie<-list()
+  #=================================================================================  
+  loadCTRMNRDScans<-function(SOPClassUIDList) {   
+    imageSerie<-list()
+
     # loop over the list    
     for(i in names(SOPClassUIDList)) {
 #      if(SOPClassUIDList[[i]]$kind=="RTDoseStorage" | 
@@ -252,16 +256,16 @@ geoLet<-function() {
         imageSerie[["info"]][[seriesInstanceUID]][["GridFrameOffsetVector"]]<-GridFrameOffsetVector
         imageSerie[["info"]][[seriesInstanceUID]][["DoseGridScaling"]]<-getDICOMTag(i,"3004,000e") 
         immagine<-getDICOMTag(i,"7fe0,0010");
-        imageSerie[["dose"]][[seriesInstanceUID]]<-immagine
+        imageSerie[["dose"]][[seriesInstanceUID]]<-immagine * as.numeric( imageSerie[["info"]][[seriesInstanceUID]][["DoseGridScaling"]] )
       }      
     }
     return(imageSerie);
   }
-  # ------------------------------------------------
+  #=================================================================================
   # getImageFromRAW
   # build a row data from a DICOM file stored on filesystem and load it 
   # into memory (using DCMTK)
-  # ------------------------------------------------ 
+  #================================================================================= 
   getStructuresFromXML<-function(fileName) {    
     fileNameXML<-paste(fileName,".xml")    
     fileNameXML<-str_replace_all(string = fileNameXML , pattern = " .xml",replacement = ".xml")
@@ -271,7 +275,6 @@ geoLet<-function() {
       stringa1<-"dcm2xml";
       stringa2<-paste(" +M  ",fileName,fileNameXML,collapse='')
       options(warn=-1)
-#      cat(stringa1,stringa2);
       system2(stringa1,stringa2,stdout=NULL)
       options(warn=0)
     }
@@ -279,7 +282,6 @@ geoLet<-function() {
     # Load the XML file
     doc = xmlInternalTreeParse(fileNameXML)
     
-    #n1<-getNodeSet(doc,"/file-format/data-set/element")    
     # SEQUENCES: the one with the attribute  tag="3006,0020"  and name="StructureSetROISequence" is the one with association NAME<->ID
     n2XML<-getNodeSet(doc,'/file-format/data-set/sequence[@tag="3006,0020" and @name="StructureSetROISequence"]/item')
     # SEQUENCES: now get the true coords
@@ -309,11 +311,11 @@ geoLet<-function() {
     
     return(list("IDROINameAssociation"=matrice2,"tableROIPointList"=matrice3))
   }
-  # ------------------------------------------------
+  #=================================================================================
   # getImageFromRAW
   # build a row data from a DICOM file stored on filesystem and load it 
   # into memory (using DCMTK)
-  # ------------------------------------------------ 
+  #=================================================================================
   getImageFromRAW<-function(fileName) {    
     objSV<-services()
     fileNameRAW<-paste(fileName,".0.raw")    
@@ -368,10 +370,11 @@ geoLet<-function() {
   getROIPointList<-function(ROINumber) {    
     return(dataStorage$structures[ROINumber][[names(dataStorage$structures[ROINumber])]])
   }
-# ------------------------------------------------
-# getAttribute
-# getAttribute: what else?
-# ------------------------------------------------ 
+  #=================================================================================
+  # getAttribute
+  # getAttribute: what else?
+  #=================================================================================
+
   getAttribute<-function(attribute,seriesInstanceUID="",fileName="") {
 
     if(fileName == "" ) fileName<-getDefaultFileName(seriesInstanceUID)    
@@ -398,29 +401,29 @@ geoLet<-function() {
     
     if(attribute=="orientationMatrix")  return( buildOrientationMatrix(fileName)  )
   }
-# ------------------------------------------------
-# splittaTAG
-# internal and stupid function useful to kill artifacts from 
-# a text taken from DCMTK files
-# ------------------------------------------------ 
+  #=================================================================================
+  # splittaTAG
+  # internal and stupid function useful to kill artifacts from 
+  # a text taken from DCMTK files
+  #=================================================================================
   splittaTAG<-function(stringa) {
     return( as.numeric(strsplit(stringa,split = "\\\\")[[1]])   )  
   }
-# ------------------------------------------------
-# buildOrientationMatrix
-# internal and stupid function to build Orientation Matrix
-# ------------------------------------------------ 
+  #=================================================================================
+  # buildOrientationMatrix
+  # internal and stupid function to build Orientation Matrix
+  #=================================================================================
   buildOrientationMatrix<-function(fileName) {
     iPP<-getAttribute(attribute="ImagePositionPatient",fileName=fileName)
     iOP<-getAttribute(attribute="ImageOrientationPatient",fileName=fileName)
     matrice<-matrix(c(iOP[1],iOP[2],iOP[3],0,iOP[4],iOP[5],iOP[6],0,0,0,0,0,iPP[1],iPP[2],iPP[3],1),ncol=4); 
     return(matrice)
   }
-# ------------------------------------------------
-# getDefaultFileName
-# give back the filename of the first CT Scan of the seriesInstanceUID 
-# (if specified)
-# ------------------------------------------------ 
+  #=================================================================================
+  # getDefaultFileName
+  # give back the filename of the first CT Scan of the seriesInstanceUID 
+  # (if specified)
+  #=================================================================================
   getDefaultFileName<-function(seriesInstanceUID="") {
     if(seriesInstanceUID=="") seriesInstanceUID<-names(dataStorage$info)[1]
     primoIndice<-names(dataStorage$info[[seriesInstanceUID]])[1]
@@ -522,10 +525,12 @@ geoLet<-function() {
       }     
     }
   }
+  #=================================================================================
+  # Constructor
+  #=================================================================================
   constructor<-function() {
     dataStorage <<- list();   
     dataChache <<- list();
-    
     attributeList<<-list()
     attributeList$verbose<<-list("lv1"=TRUE,"lv2"=TRUE,"lv3"=FALSE,"onScreen"=TRUE,"onFile"=FALSE)
     logObj<<-logHandler()
