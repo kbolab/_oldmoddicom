@@ -314,6 +314,13 @@ RAD.mmButo<-function() {
       arrayAR$KDF$summary$YmaxVal<<-max( YmaxVal )
       return();
     }
+    #  CARLOTTAGGIO
+    if( algorithm == "virtualBiopsy" ) { 
+      arrayAR$Biopsy<<-list();  
+      arrayAR$Biopsy$results<<-list()
+      arrayAR$Biopsy$results<<-allPopulationVirtualBiopsy( nx=2,ny=2,nz=0, ROIName4Normalization=ROIName4Tuning, normalization=TRUE, grayTuniningValue = grayTuniningValue)
+      return();
+    }
     # Not yet implemented NMI error
     logObj$sendLog(message = "Not yet implemented", NMI = TRUE);
   }
@@ -452,10 +459,13 @@ RAD.mmButo<-function() {
   # allPopulationVirtualBiopsy
   # set an attribute of the class
   # ========================================================================================
-  allPopulationVirtualBiopsy<-function( nx=2,ny=2,nz=0, ROIName4Normalization="Urina", normalization=TRUE) {
+  allPopulationVirtualBiopsy<-function( nx=2,ny=2,nz=0, ROIName4Normalization, grayTuniningValue, normalization=TRUE) {
     
     # if requested, get the higher value in order to "normalize" the greylevel
-    if( normalization == TRUE) {UpperBoundDiNormalizzazione <- ROIStats(ROIName4Normalization)$total$max;}
+    if( normalization == TRUE) {
+      UpperBoundDiNormalizzazione <- grayTuniningValue
+#      UpperBoundDiNormalizzazione <- ROIStats(ROIName4Normalization)$total$max;
+    }
     else {UpperBoundDiNormalizzazione=1;}
     
     # get the number of patient to treat
@@ -472,7 +482,7 @@ RAD.mmButo<-function() {
       else {piscioPaziente4Tuning=1;}
       
       # get the biopsy for the given patient
-      a<-Biopsy(   (dataStructure[[ i ]]$voxelCubes$GTV)*(UpperBoundDiNormalizzazione/piscioPaziente4Tuning)    ,nx,ny,nz)
+      a<-virtualBiopsy(   (dataStructure[[ i ]]$voxelCubes$GTV)*(UpperBoundDiNormalizzazione/piscioPaziente4Tuning)    ,nx,ny,nz)
       
       # add the result in terms of mean and std.deviation
       medie[[i]]<-a$medie

@@ -80,17 +80,15 @@ services<-function() {
     return( list( "medie"=medie, "devianze"=devianze  ) )
     
   }  
-  lanciaEsempio<-function()
+#lanciaEsempio<-function() 
   # list of the available methods of the class
   return(list(SV.getPointPlaneDistance = SV.getPointPlaneDistance,
               SV.get3DPosFromNxNy = SV.get3DPosFromNxNy,
               SV.getPlaneEquationBetween3Points = SV.getPlaneEquationBetween3Points,
               SV.rotateMatrix = SV.rotateMatrix,
               SV.LoadAccordingOSType = SV.LoadAccordingOSType,
-              SV.rotateMatrix = SV.rotateMatrix,
-              virtualBiopsy  = virtualBiopsy 
+              SV.rotateMatrix = SV.rotateMatrix
               ))  
 }
-
 
 

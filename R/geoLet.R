@@ -50,6 +50,7 @@
 #'               \item \code{getFolderContent(pathToOpen="") }
 #'               explores the content of the given folder and returns informarion about the stored DICOM objects
 #'               }
+#' @export
 #' @import stringr XML 
 #' @export
 geoLet<-function() {
@@ -67,6 +68,7 @@ geoLet<-function() {
   # ------------------------------------------------
   #' Open a folder and load the content
   openDICOMFolder<-function(pathToOpen) {
+
     if( attributeList$verbose$lv1 == TRUE ) logObj$sendLog(pathToOpen)
     # get the dcm file type
     SOPClassUIDList<<-getFolderContent(pathToOpen);
@@ -223,7 +225,6 @@ geoLet<-function() {
               immagine<-getDICOMTag(i,"7fe0,0010");
               # three points to find out plane equation
               Pa<-c(oM[1,4],oM[2,4],oM[3,4])  
-
               Pb<-objServ$SV.get3DPosFromNxNy(1000,0,oM)
               Pc<-objServ$SV.get3DPosFromNxNy(0,1000,oM)
 
@@ -528,7 +529,6 @@ geoLet<-function() {
   constructor<-function() {
     dataStorage <<- list();   
     dataChache <<- list();
-    
     attributeList<<-list()
     attributeList$verbose<<-list("lv1"=TRUE,"lv2"=TRUE,"lv3"=FALSE,"onScreen"=TRUE,"onFile"=FALSE)
     logObj<<-logHandler()
