@@ -455,8 +455,8 @@ RAD.mmButo<-function() {
   allPopulationVirtualBiopsy<-function( nx=2,ny=2,nz=0, ROIName4Normalization="Urina", normalization=TRUE) {
     
     # if requested, get the higher value in order to "normalize" the greylevel
-    if( normalization == TRUE) UpperBoundDiNormalizzazione <- ROIStats(ROIName4Normalization)$total$max;
-    else UpperBoundDiNormalizzazione=1;
+    if( normalization == TRUE) {UpperBoundDiNormalizzazione <- ROIStats(ROIName4Normalization)$total$max;}
+    else {UpperBoundDiNormalizzazione=1;}
     
     # get the number of patient to treat
     total<-length(names(dataStructure));
@@ -468,8 +468,8 @@ RAD.mmButo<-function() {
       
       # do you need a normalization ROI?
       if( normalization == TRUE)
-        piscioPaziente4Tuning<-mean(dataStructure[[ i ]]$voxelCubes[[ROIName4Normalization]][which(dataStructure[[ i ]]$voxelCubes[[ROIName4Normalization]]!=0)])
-      else piscioPaziente4Tuning=1;
+        { piscioPaziente4Tuning<-mean(dataStructure[[ i ]]$voxelCubes[[ROIName4Normalization]][which(dataStructure[[ i ]]$voxelCubes[[ROIName4Normalization]]!=0)])}
+      else {piscioPaziente4Tuning=1;}
       
       # get the biopsy for the given patient
       a<-Biopsy(   (dataStructure[[ i ]]$voxelCubes$GTV)*(UpperBoundDiNormalizzazione/piscioPaziente4Tuning)    ,nx,ny,nz)

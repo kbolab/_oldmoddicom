@@ -182,7 +182,9 @@ geoLet<-function() {
   # loadCTRMRDNScans
   # Loads a DICOM CT/MR Scans
   # ------------------------------------------------  
-  loadCTRMNRDScans<-function(SOPClassUIDList) {   imageSerie<-list()
+  loadCTRMNRDScans<-function(SOPClassUIDList) {   
+    imageSerie<-list()
+
     # loop over the list    
     for(i in names(SOPClassUIDList)) {
 #      if(SOPClassUIDList[[i]]$kind=="RTDoseStorage" | 
@@ -221,6 +223,7 @@ geoLet<-function() {
               immagine<-getDICOMTag(i,"7fe0,0010");
               # three points to find out plane equation
               Pa<-c(oM[1,4],oM[2,4],oM[3,4])  
+
               Pb<-objServ$SV.get3DPosFromNxNy(1000,0,oM)
               Pc<-objServ$SV.get3DPosFromNxNy(0,1000,oM)
 
