@@ -327,13 +327,13 @@ RAD.mmButo<-function() {
     # AREA/VOLUME
     if( algorithm == "rawAreaVolume" ) { 
       objS<-services()
-      arrayAR$AreaVolumt<<-list();  
-      arrayAR$AreaVolumt$results<<-list()
+      arrayAR$AreaVolume<<-list()
       for ( i in names(dataStructure)) {
         pSX<-dataStructure[[ i ]]$geometricData$pixelSpacing[[1]]
         pSY<-dataStructure[[ i ]]$geometricData$pixelSpacing[[2]]
         pSZ<-dataStructure[[ i ]]$geometricData$SliceThickness
-        objS$SV.rawSurface(voxelMatrix = dataStructure[[ i ]]$voxelCubes[[ROIName]], pSX = pSX, pSY=pSY,pSZ=pSZ)
+        arrayAR$AreaVolume[[i]]$Area<<-objS$SV.rawSurface(voxelMatrix = dataStructure[[ i ]]$voxelCubes[[ROIName]], pSX = pSX, pSY=pSY,pSZ=pSZ)
+        arrayAR$AreaVolume[[i]]$Volume<<-length(which(dataStructure[[ i ]]$voxelCubes[[ ROIName ]]!=0))
       }
       return();
     }
