@@ -544,9 +544,9 @@ void MeshSurface(double *X, double *Y, double *Z, int *numT, int *V1, int *V2, i
  * nx,ny,nz  are the dimensions of the matrix along the 3 axes
  *
  */
-//int posDecod(int x, int y, int z, int nx, int ny, int nz) {
-//  return( z*ny*nx+ y*nx + x   );
-//}
+int posDecod(int x, int y, int z, int nx, int ny, int nz) {
+  return( z*ny*nx+ y*nx + x   );
+}
 /*
  * Function to calculate the raw surface from a 3D voxel matrix
  + arr the input matrix, serialized
