@@ -1,7 +1,7 @@
 #include <stdlib.h>  
 #include <stdio.h>
 
-void virtualBiopsy(   int *esame, int *dimensione1, int *dimensione2, int *dimensione3, int *nx, int *ny, int *nz,
+void virtualBiopsy(   double *esame, int *dimensione1, int *dimensione2, int *dimensione3, int *nx, int *ny, int *nz,
                       int *expand, int *controllo  ,int *lunghezza, int *carotaggioVolume    ){
   int i;
   int j;
@@ -45,4 +45,34 @@ void virtualBiopsy(   int *esame, int *dimensione1, int *dimensione2, int *dimen
     }
   }
   
+}
+
+// C function to evaluate grey matrix to 1/0 matrix
+void greyMatrix(int *indX, int *indY, int *indZ, int *numCentroidi, int *nx, int *ny, int *nz,
+                int *outputGrigi, double *exam, int *size1, int *size2, int *size3, int *control  ){               
+  int ct;
+  int l;
+  int m;
+  int n;
+  int numcarot=0;
+  int indice2;
+  // examine only index of the point not equal to zero
+  for(ct=0; ct<*numCentroidi; ct++)
+  {
+    // expand grid around point not equal to zero
+    for (n=-*nz; n<=*nz; n++)
+    {
+      for (m=-*ny; m<=*ny; m++)
+      {
+        for (l=-*nx; l<=*nx; l++)
+        {
+          indice2= ( ((((indZ[ct])-1)+n)  *  (*size1)*(*size2))  +  ((((indY[ct])-1)+m)*(*size1)) 
+                                                +  (  ((indX[ct])-1)  +l   ));
+          // create grey matrix
+          outputGrigi[numcarot]= exam   [ indice2 ];
+          numcarot++;
+        }
+      }   
+    } 
+  }
 }
