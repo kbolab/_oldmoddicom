@@ -234,7 +234,7 @@ RAD.mmButo<-function() {
   # execAlgorithm
   # execute an algorithm on the loaded DICOM studies.
   # ========================================================================================
-  execAlgorithm<-function( algorithm, ROIName , grayTuniningValue, ROIName4Tuning ) {
+  execAlgorithm<-function( algorithm, ROIName , grayTuniningValue, ROIName4Tuning , additionalParams=c()) {
     
     XmaxVal<-c() 
     YmaxVal<-c() 
@@ -415,7 +415,7 @@ RAD.mmButo<-function() {
     return(mean(d))
   }
   # ========================================================================================
-  # virtualBiopsy
+  # virtualBiopsy (deprecated: to delete)
   # Calculates the position of elements which is possible to do virtual Biopsy
   # ======================================================================================== 
   #' Calculates the position of elements which is possible to do virtual Biopsy
@@ -425,7 +425,7 @@ RAD.mmButo<-function() {
   #' param: ny is the voxel space along y
   #' param: nz is the voxel space along z
   #' return: a list 
-  virtualBiopsy <- function (voxelCubes,nx,ny,nz) {    
+old_virtualBiopsy <- function (voxelCubes,nx,ny,nz) {    
     i<-0;    j<-0;    k<-0    
     exam <- array(voxelCubes,dim = dim(voxelCubes)[1]*dim(voxelCubes)[2]*dim(voxelCubes)[3])
     size1 <- (dim(voxelCubes)[1])
@@ -438,7 +438,7 @@ RAD.mmButo<-function() {
     carotaggioVolume <- array(data = c(0), dim = dim(voxelCubes)[1]*dim(voxelCubes)[2]*dim(voxelCubes)[3])
     
     #load virtual biopsy C function
-    biopsy <- .C(   "virtualBiopsy", as.integer (exam), as.integer (size1), as.integer (size2), 
+    biopsy <- .C(   "virtualBiopsy", as.double (exam), as.integer (size1), as.integer (size2), 
                     as.integer (size3), as.integer(nx), as.integer(ny), as.integer(nz), as.integer(expand),
                     as.integer (control), as.integer(lungh), as.integer(carotaggioVolume)   )
     
@@ -471,6 +471,73 @@ RAD.mmButo<-function() {
     
     return(list("lista.grigi"=lista.grigi,"devianze"=array.devianze2,"medie"=medie2,"isResultValid"="si"))
   } 
+  # ========================================================================================
+  # virtualBiopsy
+  # Calculates the position of elements which is possible to do virtual Biopsy
+  # ======================================================================================== 
+  #' Calculates the position of elements which is possible to do virtual Biopsy
+  #' description: This function can be used to calculate the index of elements for virtual Biopsy along a given distance along x,y,z
+  #' param: voxelCubes is the voxel space along x
+  #' param: nx is the voxel space along x
+  #' param: ny is the voxel space along y
+  #' param: nz is the voxel space along z
+  #' return: a list 
+
+  virtualBiopsy <- function (voxelCubes,nx,ny,nz) {
+    
+    i<-0;    j<-0;    k<-0
+    #voxelCubes <- ds.positive[[1]]$voxelCubes[[1]]
+    exam <- array(voxelCubes,dim = dim(voxelCubes)[1]*dim(voxelCubes)[2]*dim(voxelCubes)[3])
+    size1 <- (dim(voxelCubes)[1]);    size2 <- (dim(voxelCubes)[2]);    size3 <- (dim(voxelCubes)[3])
+    cmp <- as.matrix(expand.grid(indiceX=seq(i-nx,i+nx),indiceY=seq(j-ny,j+ny),indiceZ=seq(k-nz,k+nz)))
+    expand <- array(cmp, dim = dim(voxelCubes)[1]*dim(voxelCubes)[2])
+    control <- (dim(cmp)[1])
+    lungh <- length(exam)
+    carotaggioVolume <- array(data = c(0), dim = dim(voxelCubes)[1]*dim(voxelCubes)[2]*dim(voxelCubes)[3])
+    
+    #load virtual biopsy C function to complete matrix with 1 and 0
+    biopsy <- .C(   "virtualBiopsy", as.double (exam), as.integer (size1), as.integer (size2),
+                    as.integer (size3), as.integer(nx), as.integer(ny), as.integer(nz), as.integer(expand),
+                    as.integer (control), as.integer(lungh), as.integer(carotaggioVolume)   )
+    
+    
+    #organize output into matrix structure
+    virtual.biopsy <- array (biopsy[11][[1]], dim=c(size1,size2,size3))
+    
+    # create list of Grey of Virtual Biopsy
+    index.carot <- which(virtual.biopsy == 1, arr.ind=T)   #indici di punti carotabili
+    
+    #input C grey function
+    #initialitation
+    indX <- index.carot[,1];    indY <- index.carot[,2];    indZ <- index.carot[,3]
+    numCentroidi <- nrow(index.carot)
+    lista.grigi2 <- data.frame()
+    outputGrigi <- array(data = c(0), dim = control*numCentroidi)
+    media <- c();    deviance <- c()
+    
+    # load C Grey function
+    grigi <- .C(   "greyMatrix", as.integer(indX), as.integer(indY), as.integer(indZ), as.integer(numCentroidi),
+                   as.integer(nx), as.integer(ny), as.integer(nz), as.integer(outputGrigi), as.double(exam),
+                   as.integer (size1), as.integer (size2), as.integer (size3), as.integer (control)
+    )
+    #Grey array into matrix
+    grey.matrix <- array (grigi[[8]], dim=c(control,numCentroidi))  
+    
+    # Evaluate mean and sd
+    k <- 1
+    for(j in 1:numCentroidi) {
+      media[k] <- mean(grey.matrix[,j])
+      deviance[k] <- sd (grey.matrix[,j])
+      k <- k+1
+    }
+    
+    #Grey matrix into a list. Each list's element is a virtual biopsy
+    lista.grigi2 <- split(grey.matrix, rep(1:ncol(grey.matrix), each = nrow(grey.matrix)))
+    
+    # print the means, sd and grey list
+    return(list("medie"=media, "devianze"= deviance, "lista.grigi"=lista.grigi2))
+  }
+
   # ========================================================================================
   # allPopulationVirtualBiopsy
   # set an attribute of the class
@@ -527,7 +594,7 @@ RAD.mmButo<-function() {
   # ========================================================================================
   getAttribute<-function(attribute) {
     if(attribute == "dataStorage") return(dataStructure)
-    if(attribute == "algorithmsResult") return(arrayAR)
+    if(attribute == "results") return(arrayAR)
   }
   # ========================================================================================
   # constructor
@@ -550,6 +617,7 @@ RAD.mmButo<-function() {
       getAttribute=getAttribute,
       execAlgorithm=execAlgorithm,
       plotResults=plotResults,
+      
       ROIStats=ROIStats))
 }
 
