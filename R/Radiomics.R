@@ -333,7 +333,7 @@ RAD.mmButo<-function() {
         pSY<-dataStructure[[ i ]]$geometricData$pixelSpacing[[2]]
         pSZ<-dataStructure[[ i ]]$geometricData$SliceThickness
         arrayAR$AreaVolume[[i]]$Area<<-objS$SV.rawSurface(voxelMatrix = dataStructure[[ i ]]$voxelCubes[[ROIName]], pSX = pSX, pSY=pSY,pSZ=pSZ)
-        arrayAR$AreaVolume[[i]]$Volume<<-length(which(dataStructure[[ i ]]$voxelCubes[[ ROIName ]]!=0))
+        arrayAR$AreaVolume[[i]]$Volume<<-length(which(dataStructure[[ i ]]$voxelCubes[[ ROIName ]]!=0))*pSX*pSY*pSZ
       }
       return();
     }
@@ -414,63 +414,6 @@ RAD.mmButo<-function() {
     d<-sample(x=x,size=10000,replace=T)
     return(mean(d))
   }
-  # ========================================================================================
-  # virtualBiopsy (deprecated: to delete)
-  # Calculates the position of elements which is possible to do virtual Biopsy
-  # ======================================================================================== 
-  #' Calculates the position of elements which is possible to do virtual Biopsy
-  #' description: This function can be used to calculate the index of elements for virtual Biopsy along a given distance along x,y,z
-  #' param: voxelCubes is the voxel space along x
-  #' param: nx is the voxel space along x
-  #' param: ny is the voxel space along y
-  #' param: nz is the voxel space along z
-  #' return: a list 
-old_virtualBiopsy <- function (voxelCubes,nx,ny,nz) {    
-    i<-0;    j<-0;    k<-0    
-    exam <- array(voxelCubes,dim = dim(voxelCubes)[1]*dim(voxelCubes)[2]*dim(voxelCubes)[3])
-    size1 <- (dim(voxelCubes)[1])
-    size2 <- (dim(voxelCubes)[2])
-    size3 <- (dim(voxelCubes)[3])
-    cmp <- as.matrix(expand.grid(indiceX=seq(i-nx,i+nx),indiceY=seq(j-ny,j+ny),indiceZ=seq(k-nz,k+nz)))
-    expand <- array(cmp, dim = dim(voxelCubes)[1]*dim(voxelCubes)[2])
-    control <- (dim(cmp)[1])
-    lungh <- length(exam)
-    carotaggioVolume <- array(data = c(0), dim = dim(voxelCubes)[1]*dim(voxelCubes)[2]*dim(voxelCubes)[3])
-    
-    #load virtual biopsy C function
-    biopsy <- .C(   "virtualBiopsy", as.double (exam), as.integer (size1), as.integer (size2), 
-                    as.integer (size3), as.integer(nx), as.integer(ny), as.integer(nz), as.integer(expand),
-                    as.integer (control), as.integer(lungh), as.integer(carotaggioVolume)   )
-    
-    virtual.biopsy <- array (biopsy[11][[1]], dim=c(size1,size2,size3))
-    
-    # list of of Virtual Biopsy
-    indici.carot <- which(virtual.biopsy == 1, arr.ind=T)
-    array.devianze2 <- (     rep(  c(0), times=nrow(indici.carot==1)  )  )
-    medie2 <- (     rep(  c(0), times=nrow(indici.carot==1)  )  )
-    p <- 1;     q <- 1
-    lista.grigi <- list()
-    if(nrow(indici.carot)<2) return(list("isResultValid"="no"))
-    
-    for(  i in (1:(nrow(indici.carot)))   )
-    {      
-      comb.poss2 <- expand.grid(    indiceX=   seq(  indici.carot[i,1]-nx,indici.carot[i,1]+nx  ),
-                                    indiceY=   seq(  indici.carot[i,2]-ny,indici.carot[i,2]+ny  ),
-                                    indiceZ=   seq(  indici.carot[i,3]-nz,indici.carot[i,3]+nz  ))
-      scala.grigi2 <- c()      
-      for(ct in (1:nrow(comb.poss2)))
-      {
-        scala.grigi2[ct] <- voxelCubes [comb.poss2[ct,1],comb.poss2[ct,2],comb.poss2[ct,3]]
-      }
-      
-      lista.grigi[[i]] <- scala.grigi2
-      array.devianze2[p] <- sd(scala.grigi2)
-      medie2[q] <- mean(scala.grigi2)
-      p <- p+1;      q <- q+1
-    }
-    
-    return(list("lista.grigi"=lista.grigi,"devianze"=array.devianze2,"medie"=medie2,"isResultValid"="si"))
-  } 
   # ========================================================================================
   # virtualBiopsy
   # Calculates the position of elements which is possible to do virtual Biopsy
@@ -563,10 +506,8 @@ old_virtualBiopsy <- function (voxelCubes,nx,ny,nz) {
       if( normalization == TRUE)
         { piscioPaziente4Tuning<-mean(dataStructure[[ i ]]$voxelCubes[[ROIName4Normalization]][which(dataStructure[[ i ]]$voxelCubes[[ROIName4Normalization]]!=0)])}
       else {piscioPaziente4Tuning=1;}
-      
       # get the biopsy for the given patient
       a<-virtualBiopsy(   (dataStructure[[ i ]]$voxelCubes$GTV)*(UpperBoundDiNormalizzazione/piscioPaziente4Tuning)    ,nx,ny,nz)
-      
       # add the result in terms of mean and std.deviation
       medie[[i]]<-a$medie
       devianze[[i]]<-a$devianze  
