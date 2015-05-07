@@ -38,6 +38,18 @@ services<-function() {
     if (Sys.info()["sysname"]=="Linux")
       return(paste(library.name, ".so", sep=""))
   }
+  SV.rawSurface<-function(voxelMatrix, pSX, pSY, pSZ) {
+    
+    if( pSX != pSY ) warning("\n X and Y must have the same pixelSpacing for this implementation");
+    
+    nX<-dim(voxelMatrix)[1]
+    nY<-dim(voxelMatrix)[2]
+    nZ<-dim(voxelMatrix)[3]
+    arr<-array(voxelMatrix)
+    superficie<-0
+    res<-.C("rawSurface",as.double(arr),as.integer(nX), as.integer(nY), as.integer(nZ), as.double(pSX), as.double(pSY), as.double(pSZ), as.double(superficie) );
+    return(res[[8]]);    
+  } 
   elaboraCarlottaggio<-function( ds.n ,nx=2,ny=2,nz=0) {
     
     UpperBoundDiNormalizzazione<-max(c(obj.n$ROIStats("Urina")$total$max,obj.p$ROIStats("Urina")$total$max))
@@ -87,7 +99,8 @@ services<-function() {
               SV.getPlaneEquationBetween3Points = SV.getPlaneEquationBetween3Points,
               SV.rotateMatrix = SV.rotateMatrix,
               SV.LoadAccordingOSType = SV.LoadAccordingOSType,
-              SV.rotateMatrix = SV.rotateMatrix
+              SV.rotateMatrix = SV.rotateMatrix,
+              SV.rawSurface = SV.rawSurface
               ))  
 }
 

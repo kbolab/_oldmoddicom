@@ -185,8 +185,11 @@ RAD.mmButo<-function() {
           cubeVoxelList[[ folderName ]][["voxelCubes"]][[ ROIName ]]<-result$masked.images    
           cubeVoxelList[[ folderName ]][["info"]]<-result$DOM
           
+          cubeVoxelList[[ folderName ]][["geometricData"]]<-list();
+          cubeVoxelList[[ folderName ]][["geometricData"]]$pixelSpacing<-ds$info[[1]][[1]]$pixelSpacing
+          cubeVoxelList[[ folderName ]][["geometricData"]]$SliceThickness<-as.numeric(ds$info[[1]][[1]]$SliceThickness)
           cubeVoxelList[[ folderName ]][["ROIPointList"]][[ ROIName ]]<-ROIPointList
-          
+                  
           info_struct<-ds$info[[SS]]                            # structure which contains information
           img_struct<-ds$img[[SS]]                              # structure which contains images
           nnRows<-as.numeric(info_struct[[1]]$Rows)                                     # Rows
@@ -207,7 +210,7 @@ RAD.mmButo<-function() {
       
       counter<-counter+1;
     }
-    #    close(pb) 
+    
     dataStructure<<-cubeVoxelList      
   }
   # ========================================================================================
@@ -319,6 +322,19 @@ RAD.mmButo<-function() {
       arrayAR$Biopsy<<-list();  
       arrayAR$Biopsy$results<<-list()
       arrayAR$Biopsy$results<<-allPopulationVirtualBiopsy( nx=2,ny=2,nz=0, ROIName4Normalization=ROIName4Tuning, normalization=TRUE, grayTuniningValue = grayTuniningValue)
+      return();
+    }
+    # AREA/VOLUME
+    if( algorithm == "rawAreaVolume" ) { 
+      objS<-services()
+      arrayAR$AreaVolumt<<-list();  
+      arrayAR$AreaVolumt$results<<-list()
+      for ( i in names(dataStructure)) {
+        pSX<-dataStructure[[ i ]]$geometricData$pixelSpacing[[1]]
+        pSY<-dataStructure[[ i ]]$geometricData$pixelSpacing[[2]]
+        pSZ<-dataStructure[[ i ]]$geometricData$SliceThickness
+        objS$SV.rawSurface(voxelMatrix = dataStructure[[ i ]]$voxelCubes[[ROIName]], pSX = pSX, pSY=pSY,pSZ=pSZ)
+      }
       return();
     }
     # Not yet implemented NMI error

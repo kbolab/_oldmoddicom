@@ -537,3 +537,51 @@ void MeshSurface(double *X, double *Y, double *Z, int *numT, int *V1, int *V2, i
 	}
 	*Surface=0.5 * *Surface;
 }
+
+/*
+ * Function to calculate the index position of an array which refers to a 3D matrix
+ * x,y,z are the coors of the matrix you are interested in 
+ * nx,ny,nz  are the dimensions of the matrix along the 3 axes
+ *
+ */
+//int posDecod(int x, int y, int z, int nx, int ny, int nz) {
+//  return( z*ny*nx+ y*nx + x   );
+//}
+/*
+ * Function to calculate the raw surface from a 3D voxel matrix
+ + arr the input matrix, serialized
+ * nX,nY,nZ  are the dimensions of the matrix along the 3 axes
+ * pSX, pSY,pSZ are the pixelSpacing along the axec
+ * surface is the output
+ */
+
+void rawSurface(double *arr, int *nX, int *nY, int *nZ, double *pSX, double *pSY, double *pSZ, double *surface) {
+  
+  int z,y,x;
+  // reset surface value
+  *surface = 0;
+
+  // loop the 3D-matrix
+  for( z = 0 ; z < *nZ ; z++ ) {
+    for( y = 0 ; y < *nY ; y++ ) {
+      for( x = 0 ; x < *nX ; x++ ) {
+
+        if( arr[  posDecod(x,y,z,*nX,*nY,*nZ) ] !=0 ) {
+          
+          // if a non-zero voxel is on the border, surface cannot be calculated
+          if( x==0 || x==*nX || y==0 || y==*nY || z==0 || z==*nZ) {*surface = -1; return; }
+          
+          // is it a border-voxel in each possible direction?
+          if( arr[  posDecod(x,y,z+1,*nX,*nY, *nZ ) ] == 0 ) *surface+= (*pSX) * (*pSY);
+          if( arr[  posDecod(x,y,z-1,*nX,*nY, *nZ ) ] == 0 ) *surface+= (*pSX) * (*pSY);
+          if( arr[  posDecod(x,y+1,z,*nX, *nY, *nZ ) ] == 0 ) *surface+= (*pSX) * (*pSZ);
+          if( arr[  posDecod(x,y-1,z,*nX,*nY, *nZ ) ] == 0 ) *surface+= (*pSX) * (*pSZ);
+          if( arr[  posDecod(x+1,y,z, *nX, *nY, *nZ ) ] == 0 ) *surface+= (*pSY) * (*pSZ);
+          if( arr[  posDecod(x-1,y,z, *nX, *nY, *nZ ) ] == 0 ) *surface+= (*pSY) * (*pSZ);        
+        }
+        
+      }      
+    }
+  }
+  return;
+}

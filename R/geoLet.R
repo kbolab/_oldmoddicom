@@ -507,13 +507,13 @@ geoLet<-function() {
         if( ct< cutoff) {      
           if (ct == length( X ) ) {
             cat( rep(" ",level),  "└──" , i , "\n" )
-            nametree( X[[i]] , level + 1 )
+            info( X[[i]] , level + 1 )
             return;
           }
           else {
             cat( rep(" ",level), "├──" , i , "\n"  )  
           }
-          nametree( X[[i]] , level + 1 )
+          info( X[[i]] , level + 1 )
           ct <- ct + 1
         }
         else {
