@@ -332,8 +332,15 @@ RAD.mmButo<-function() {
         pSX<-dataStructure[[ i ]]$geometricData$pixelSpacing[[1]]
         pSY<-dataStructure[[ i ]]$geometricData$pixelSpacing[[2]]
         pSZ<-dataStructure[[ i ]]$geometricData$SliceThickness
-        arrayAR$AreaVolume[[i]]$Area<<-objS$SV.rawSurface(voxelMatrix = dataStructure[[ i ]]$voxelCubes[[ROIName]], pSX = pSX, pSY=pSY,pSZ=pSZ)
-        arrayAR$AreaVolume[[i]]$Volume<<-length(which(dataStructure[[ i ]]$voxelCubes[[ ROIName ]]!=0))*pSX*pSY*pSZ
+        arrayAR$AreaVolume[[ i ]]$Area<<-objS$SV.rawSurface(voxelMatrix = dataStructure[[ i ]]$voxelCubes[[ ROIName ]], pSX = pSX, pSY=pSY,pSZ=pSZ)
+        if ( arrayAR$AreaVolume[[ i ]]$Area == -1 ) {
+          arrayAR$AreaVolume[[ i ]]$Volume<<- -1
+          arrayAR$AreaVolume[[ i ]]$equivolumetricSphericAreaRadio<<- -1
+        }
+        else {
+          arrayAR$AreaVolume[[ i ]]$Volume<<-length(which(dataStructure[[ i ]]$voxelCubes[[ ROIName ]]!=0))*pSX*pSY*pSZ
+          arrayAR$AreaVolume[[ i ]]$equivolumetricSphericAreaRadio<<- 4*pi* (   (3/(4*pi))*arrayAR$AreaVolume[[ i ]]$Volume   )^(2/3)
+        }
       }
       return();
     }
@@ -642,7 +649,7 @@ RAD.setAttribute<-function(obj, attribute, value, errorHandlerParams=c() ) {
 #' @param algorithm a string indicating which algorithm should be run
 #'      \itemize{
 #'        \item \code{KDF} is a Kernel Density Function in "Toronto style". This requires the specification of the \code{ROIName}, \code{grayTuningValue} and \code{ROIName4Tuning}
-#'        \item \code{BAVA} <da documentare>
+#'        \item \code{BAVA} it overlap all the histograms, resampling and syncing them to a same x-step and x-offest, after a common normalization to an upper bound value. This requires the specification of the \code{ROIName}, \code{grayTuningValue} and \code{ROIName4Tuning}.
 #'        \item \code{virtualBiopsy} it does all the possible virtual Biopsies doable with a carrots of dimensions \code{nx},\code{ny},\code{nz} (if dimensions are not specified it uses \code{nx}=2, \code{ny}=2, \code{nz}=0 ). It provides also the computation of the mean and st.dev for all the carrots grouped for patient. This requires the specification of the \code{ROIName}, \code{grayTuningValue} and \code{ROIName4Tuning} and, optionale, \code{nx},\code{ny},\code{nz}
 #'        \item \code{rawAreaVolume}
 #'      }
