@@ -562,6 +562,116 @@ RAD.mmButo<-function() {
       ROIStats=ROIStats))
 }
 
+
+#' RAD.getAttribute - a wrapper function to retrieve an attribute from a mmButo object
+#' 
+#' @param obj an \code{mmButo} object
+#' @param attributeName a string with the name of the desired attribute:
+#'      \itemize{
+#'        \item \code{dataStorage}  contains all the loaded data (images, DICOM heder information, etc...)
+#'        \item \code{results} contains all the computed data. If no computation has been executed, no results will be returned in this attribute;
+#'      }
+#' @param errorHandlerParams is a list to indicate what to do in case of error caught by moddicom (the error caught from R are not managed). The list can be so populated:
+#'      \itemize{
+#'        \item \code{onFilePar} if set to \code{TRUE} the error/log messages will be written on a file;
+#'        \item \code{fileName} if \code{onFilePar} is set to \code{TRUE} this attribute indicate the fileName. If it is not specificed the default is './defLogHandler.txt';
+#'        \item \code{onScreenPar} if set to \code{TRUE} the error/log messages will be prompt on the screen;
+#'        \item \code{returnOnEOL} if set to \code{TRUE} once the error is written, an End Of Line is added at the end of line. 
+#'      }
+#' @description  retrieve an attribute from a \code{mmButo} object
+#' @details This is just a wrapper of the method \code{getAttribute} defined in the class \code{mmButo}
+#' @return The desired attribute, normally in form of \code{list}
+#' @export
+RAD.getAttribute<-function(obj, attributeName, errorHandlerParams=c()) {
+  errorHandler<-logHandler()
+  if(length(errorHandlerParams)>0) errorHandler$setOutput(errorHandlerParams)
+  if( !(attribute %in% c("dataStorage","results")) ) errorHandler$sendLog("the chosen attribute is not available") 
+  
+  return( obj$getAttribute( attribute = attributeName ))
+}
+
+#' RAD.openTreeMultiROIs - a wrapper function to force an mmButo object to load DICOM Studies
+#' 
+#' @param obj an \code{mmButo} object
+#' @param path the path where the DICOM studies are stored. It DOES NOT search recursively from the given path but it search only at the first level. For example: if \code{path} is "./folder" it can found folders like "./folder/pat001", "./folder/pat002", etc..
+#' @param structureList an array containing all the interested ROINames, i.e. \code{..=c("GTV","Liver")}
+#' @param errorHandlerParams is a list to indicate what to do in case of error caught by moddicom (the error caught from R are not managed). The list can be so populated:
+#'      \itemize{
+#'        \item \code{onFilePar} if set to \code{TRUE} the error/log messages will be written on a file;
+#'        \item \code{fileName} if \code{onFilePar} is set to \code{TRUE} this attribute indicate the fileName. If it is not specificed the default is './defLogHandler.txt';
+#'        \item \code{onScreenPar} if set to \code{TRUE} the error/log messages will be prompt on the screen;
+#'        \item \code{returnOnEOL} if set to \code{TRUE} once the error is written, an End Of Line is added at the end of line. 
+#'      }
+#' @description  retrieve an attribute from a \code{mmButo} object
+#' @details it's jusat a wrapper function to force an mmButo object to load DICOM Studies by the method \code{openTreeMultiROIs}
+#' @return nothing. To read the loaded data please retrieve the attribute \code{dataStorage} by the \code{getAttribute} method or by it's wrapper-function \code{RAD.getAttribute}.
+#' @export
+RAD.openTreeMultiROIs<-function(obj, path, structureList, errorHandlerParams=c()) {
+  errorHandler<-logHandler()
+  if(length(errorHandlerParams)>0) errorHandler$setOutput(errorHandlerParams)
+  obj$openTreeMultiROIs(Path = Path, structureList = structureList)
+}
+#' RAD.openTreeMultiROIs - a wrapper function to force an mmButo object to load DICOM Studies
+#' 
+#' @param obj an \code{mmButo} object
+#' @param attribute the name, as string, of the attribute you want to set
+#'      \itemize{
+#'        \item \code{verbose} set the "verbose" level of the object 
+#'      }
+#' @param value the new value for the attribute
+#' @param errorHandlerParams is a list to indicate what to do in case of error caught by moddicom (the error caught from R are not managed). The list can be so populated:
+#'      \itemize{
+#'        \item \code{onFilePar} if set to \code{TRUE} the error/log messages will be written on a file;
+#'        \item \code{fileName} if \code{onFilePar} is set to \code{TRUE} this attribute indicate the fileName. If it is not specificed the default is './defLogHandler.txt';
+#'        \item \code{onScreenPar} if set to \code{TRUE} the error/log messages will be prompt on the screen;
+#'        \item \code{returnOnEOL} if set to \code{TRUE} once the error is written, an End Of Line is added at the end of line. 
+#'      }
+#' @description  set an attribute of a \code{mmButo} object
+#' @details it's jusat a wrapper function to force an mmButo object to load DICOM Studies by the method \code{openTreeMultiROIs}
+#' @return nothing. To read the loaded data please retrieve the attribute \code{dataStorage} by the \code{getAttribute} method or by it's wrapper-function \code{RAD.getAttribute}.
+#' @export
+RAD.setAttribute<-function(obj, attribute, value, errorHandlerParams=c() ) {
+  errorHandler<-logHandler()
+  if(length(errorHandlerParams)>0) errorHandler$setOutput(errorHandlerParams)
+  
+  obj$setAttribute( attribute = attribute, value = value)
+}
+#' RAD.execAlgorithm - a wrapper function to force an mmButo object to execute calculations
+#' 
+#' @param obj an \code{mmButo} object
+#' @param algorithm a string indicating which algorithm should be run
+#'      \itemize{
+#'        \item \code{KDF} is a Kernel Density Function in "Toronto style". This requires the specification of the \code{ROIName}, \code{grayTuningValue} and \code{ROIName4Tuning}
+#'        \item \code{BAVA} <da documentare>
+#'        \item \code{virtualBiopsy} it does all the possible virtual Biopsies doable with a carrots of dimensions \code{nx},\code{ny},\code{nz} (if dimensions are not specified it uses \code{nx}=2, \code{ny}=2, \code{nz}=0 ). It provides also the computation of the mean and st.dev for all the carrots grouped for patient. This requires the specification of the \code{ROIName}, \code{grayTuningValue} and \code{ROIName4Tuning} and, optionale, \code{nx},\code{ny},\code{nz}
+#'        \item \code{rawAreaVolume}
+#'      }
+#' @param ROIName the name of the ROI you want to expose to calculus
+#' @param grayTuniningValue the "upper bound" for the normalization
+#' @param ROIName4Tuning the name of the ROI you want to use for normalization
+#' @param nx number of voxels along x axes
+#' @param ny number of voxels along y axes
+#' @param nz number of voxels along z axes
+#' @param errorHandlerParams is a list to indicate what to do in case of error caught by moddicom (the error caught from R are not managed). The list can be so populated:
+#'      \itemize{
+#'        \item \code{onFilePar} if set to \code{TRUE} the error/log messages will be written on a file;
+#'        \item \code{fileName} if \code{onFilePar} is set to \code{TRUE} this attribute indicate the fileName. If it is not specificed the default is './defLogHandler.txt';
+#'        \item \code{onScreenPar} if set to \code{TRUE} the error/log messages will be prompt on the screen;
+#'        \item \code{returnOnEOL} if set to \code{TRUE} once the error is written, an End Of Line is added at the end of line. 
+#'      }
+#' @description  run the calculus for the given algorithm, for a given ROI, for all the cases stored in un mmButo object. Further runs of the same algorithm will override the results.
+#' @details it's jusat a wrapper function of the method \code{execAlgorithm} of the \code{mmBute} class
+#' @return nothing. To read the loaded data please retrieve the attribute \code{results} by the \code{getAttribute} method or by it's wrapper-function \code{RAD.getAttribute}.
+#' @export
+RAD.execAlgorithm<-function(obj, algorithm, ROIName , grayTuniningValue, ROIName4Tuning , nx=2, ny=2, nz=0 , errorHandlerParams=c() ) {
+  errorHandler<-logHandler()
+  if(length(errorHandlerParams)>0) errorHandler$setOutput(errorHandlerParams)
+  
+  obj$setAttribute( attribute = attribute, value = value)
+}
+
+
+
 # example -- mmButo stile Toronto
 #rm(obj.positive)
 #obj.positive<-RAD.mmButo()
