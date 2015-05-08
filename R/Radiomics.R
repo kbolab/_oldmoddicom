@@ -234,7 +234,7 @@ RAD.mmButo<-function() {
   # execAlgorithm
   # execute an algorithm on the loaded DICOM studies.
   # ========================================================================================
-  execAlgorithm<-function( algorithm, ROIName , grayTuniningValue, ROIName4Tuning , additionalParams=c()) {
+  execAlgorithm<-function( algorithm, ROIName , grayTuniningValue, ROIName4Tuning , nx=2, ny=2, nz=0 ) {
     
     XmaxVal<-c() 
     YmaxVal<-c() 
@@ -321,7 +321,7 @@ RAD.mmButo<-function() {
     if( algorithm == "virtualBiopsy" ) { 
       arrayAR$Biopsy<<-list();  
       arrayAR$Biopsy$results<<-list()
-      arrayAR$Biopsy$results<<-allPopulationVirtualBiopsy( nx=2,ny=2,nz=0, ROIName4Normalization=ROIName4Tuning, normalization=TRUE, grayTuniningValue = grayTuniningValue)
+      arrayAR$Biopsy$results<<-allPopulationVirtualBiopsy( nx=nx,ny=ny,nz=nz, ROIName4Normalization=ROIName4Tuning, normalization=TRUE, grayTuniningValue = grayTuniningValue)
       return();
     }
     # AREA/VOLUME
