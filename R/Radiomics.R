@@ -247,7 +247,6 @@ RAD.mmButo<-function() {
     YmaxVal<-c() 
     array4VoxelCube<-list();
     normalizedVoxelCube<-list();
-
     # BAVA
     if( algorithm == "BAVA" ) {      
       interpolatedDensity<-list();
@@ -677,11 +676,12 @@ RAD.setAttribute<-function(obj, attribute, value, errorHandlerParams=c() ) {
 #' @details it's jusat a wrapper function of the method \code{execAlgorithm} of the \code{mmBute} class
 #' @return nothing. To read the loaded data please retrieve the attribute \code{results} by the \code{getAttribute} method or by it's wrapper-function \code{RAD.getAttribute}.
 #' @export
-RAD.execAlgorithm<-function(obj, algorithm, ROIName , grayTuniningValue, ROIName4Tuning , nx=2, ny=2, nz=0 , errorHandlerParams=c() ) {
+RAD.execAlgorithm<-function(obj, algorithm=c("KDF","BAVA","virtualBiopsy","rawAreaVolume"), ROIName , grayTuniningValue, ROIName4Tuning , nx=2, ny=2, nz=0 , errorHandlerParams=c() ) {
   errorHandler<-logHandler()
   if(length(errorHandlerParams)>0) errorHandler$setOutput(errorHandlerParams)
   
-  obj$setAttribute( attribute = attribute, value = value)
+  obj$execAlgorithm(algorithm = algorithm , ROIName = ROIName , grayTuniningValue = grayTuniningValue, ROIName4Tuning = ROIName4Tuning , nx=2, ny=2, nz=0 ) 
+
 }
 #' RAD.ROIStats - a wrapper function for getting stats about stored ROIs
 #' 
