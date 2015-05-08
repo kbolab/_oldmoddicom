@@ -116,21 +116,36 @@ geoLet<-function() {
       # get the points
       subMatrix<-matrice3[which(matrice3[,2]==i,arr.ind = TRUE),]
       # if some points exist
+      quantiElementiTrovati<--1
 
-      if( dim(subMatrix)[1] >0 ) {
+      if(is.list(subMatrix) & !is.array(subMatrix)) quantiElementiTrovati<-1
+      if(is.matrix(subMatrix) & is.array(subMatrix)) quantiElementiTrovati<-dim(subMatrix)[1]
+      if(quantiElementiTrovati==-1) stop("Minchia! Contatta Roberto perchè c'e' una nuova figata di errore nel caricamento di questo studio!");
+      
+      if( quantiElementiTrovati >0 ) {
 #      if( length(subMatrix) >0 ) {
         listaROI[[i]]<-list()
+        
         # add properly the points to the 'listaROI' structure
-        for(contatore in seq(1,dim(subMatrix)[1]) ) {
-#        for(contatore in seq(1,length(subMatrix)) ) {      
-          ROIPointStringList<-subMatrix[contatore,3][[1]]
+#        for(contatore in seq(1,dim(subMatrix)[1]) ) {
+        for(contatore in quantiElementiTrovati ) {
+#          if(i == "Urina" | i =="Vescica") browser();
+          
+          if( quantiElementiTrovati == 1) {
+            ROIPointStringList<-subMatrix[[3]]
+            SOPInstance<-subMatrix[[4]]
+          }
+          else {
+            ROIPointStringList<-subMatrix[contatore,3][[1]]
+            SOPInstance<-subMatrix[contatore,4][[1]]
+          }
           listaCoords<-strsplit(ROIPointStringList,"\\\\");
           listaCoords<-as.numeric(listaCoords[[1]])
           # if a ROI already exists for the slice, well append it to the list
-          if( !( subMatrix[contatore,4][[1]]  %in% names(listaROI[[i]])  ) )  listaROI[[i]][[   subMatrix[contatore,4][[1]]  ]]<-list()          
-          listaROI[[i]][[   subMatrix[contatore,4][[1]]  ]][[ length(listaROI[[i]][[   subMatrix[contatore,4][[1]]  ]])+1  ]]<-matrix(listaCoords,ncol=3,byrow=T)
+          if( !( SOPInstance  %in% names(listaROI[[i]])  ) )  listaROI[[i]][[   SOPInstance  ]]<-list()          
+          listaROI[[i]][[   SOPInstance  ]][[ length(listaROI[[i]][[   SOPInstance  ]])+1  ]]<-matrix(listaCoords,ncol=3,byrow=T)
           # Add the first one as last (close the loop)
-          listaROI[[i]][[   subMatrix[contatore,4][[1]]  ]][[ length(listaROI[[i]][[   subMatrix[contatore,4][[1]]  ]]) ]]<-rbind(listaROI[[i]][[   subMatrix[contatore,4][[1]]  ]][[length(listaROI[[i]][[   subMatrix[contatore,4][[1]]  ]])]],listaROI[[i]][[   subMatrix[contatore,4][[1]]  ]][[length(listaROI[[i]][[   subMatrix[contatore,4][[1]]  ]])]][1,])
+          listaROI[[i]][[   SOPInstance  ]][[ length(listaROI[[i]][[   SOPInstance  ]]) ]]<-rbind(listaROI[[i]][[   SOPInstance  ]][[length(listaROI[[i]][[   SOPInstance  ]])]],listaROI[[i]][[   SOPInstance  ]][[length(listaROI[[i]][[   SOPInstance  ]])]][1,])
         }   
       }
     }
