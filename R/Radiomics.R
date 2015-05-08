@@ -222,12 +222,19 @@ RAD.mmButo<-function() {
     res$details<-list();
     res$total<-list();
     for(i in names(dataStructure)) {
-      res$details$stdev[[i]]<-sd(dataStructure[[i]]$voxelCubes$Urina[which(dataStructure[[i]]$voxelCubes$Urina!=0)])
-      res$details$mean[[i]]<-mean(dataStructure[[i]]$voxelCubes$Urina[which(dataStructure[[i]]$voxelCubes$Urina!=0)])
+      res$details$stdev[[i]]<-sd(dataStructure[[i]]$voxelCubes[[ ROIName ]][which(dataStructure[[i]]$voxelCubes[[ ROIName ]]!=0)])
+      res$details$mean[[i]]<-mean(dataStructure[[i]]$voxelCubes[[ ROIName ]][which(dataStructure[[i]]$voxelCubes[[ ROIName ]]!=0)])
+      res$details$max[[i]]<-max(dataStructure[[i]]$voxelCubes[[ ROIName ]][which(dataStructure[[i]]$voxelCubes[[ ROIName ]]!=0)])
     }
-    res$total$mean<-mean(res$details$mean)
-    res$total$min<-min(res$details$mean)
-    res$total$max<-max(res$details$mean)
+    res$total$minmean<-min(res$details$mean)
+    res$total$meanmean<-mean(res$details$mean)
+    res$total$maxmean<-max(res$details$mean)
+    res$total$stddevmean<-sd(res$details$mean)
+    res$total$minmax<-min(res$details$max)
+    res$total$meanmax<-mean(res$details$max)
+    res$total$maxmax<-max(res$details$max)
+    res$total$stdevmax<-sd(res$details$max)    
+    # ROIStats
     return(res);    
   }
   # ========================================================================================
@@ -339,7 +346,7 @@ RAD.mmButo<-function() {
         }
         else {
           arrayAR$AreaVolume[[ i ]]$Volume<<-length(which(dataStructure[[ i ]]$voxelCubes[[ ROIName ]]!=0))*pSX*pSY*pSZ
-          arrayAR$AreaVolume[[ i ]]$equivolumetricSphericAreaRadio<<- 4*pi* (   (3/(4*pi))*arrayAR$AreaVolume[[ i ]]$Volume   )^(2/3)
+          arrayAR$AreaVolume[[ i ]]$equivolumetricSphericAreaRadio<<- ( 4*pi* (   (3/(4*pi))*arrayAR$AreaVolume[[ i ]]$Volume   )^(2/3) ) / arrayAR$AreaVolume[[ i ]]$Area
         }
       }
       return();
@@ -589,12 +596,12 @@ RAD.mmButo<-function() {
 #' @details This is just a wrapper of the method \code{getAttribute} defined in the class \code{mmButo}
 #' @return The desired attribute, normally in form of \code{list}
 #' @export
-RAD.getAttribute<-function(obj, attributeName, errorHandlerParams=c()) {
+RAD.getAttribute<-function(obj, attribute, errorHandlerParams=c()) {
   errorHandler<-logHandler()
   if(length(errorHandlerParams)>0) errorHandler$setOutput(errorHandlerParams)
   if( !(attribute %in% c("dataStorage","results")) ) errorHandler$sendLog("the chosen attribute is not available") 
   
-  return( obj$getAttribute( attribute = attributeName ))
+  return( obj$getAttribute( attribute = attribute ))
 }
 
 #' RAD.openTreeMultiROIs - a wrapper function to force an mmButo object to load DICOM Studies
@@ -676,7 +683,39 @@ RAD.execAlgorithm<-function(obj, algorithm, ROIName , grayTuniningValue, ROIName
   
   obj$setAttribute( attribute = attribute, value = value)
 }
-
+#' RAD.ROIStats - a wrapper function for getting stats about stored ROIs
+#' 
+#' @param obj an \code{mmButo} object
+#' @param ROIName the name of the ROI you want to get stats
+#' @param errorHandlerParams is a list to indicate what to do in case of error caught by moddicom (the error caught from R are not managed). The list can be so populated:
+#'      \itemize{
+#'        \item \code{onFilePar} if set to \code{TRUE} the error/log messages will be written on a file;
+#'        \item \code{fileName} if \code{onFilePar} is set to \code{TRUE} this attribute indicate the fileName. If it is not specificed the default is './defLogHandler.txt';
+#'        \item \code{onScreenPar} if set to \code{TRUE} the error/log messages will be prompt on the screen;
+#'        \item \code{returnOnEOL} if set to \code{TRUE} once the error is written, an End Of Line is added at the end of line. 
+#'      }
+#' @description  give back the stats of the chosen ROI
+#' @return a list containing the details and a recap (total) of min/mean/max/stdDev of voxel within the given ROI
+#'      \itemize{
+#'        \item \code{detail-stdev} standard deviation of grey-voxel-values into the given ROI for the indicated Patient
+#'        \item \code{detail-mean} mean of grey-voxel-values into the given ROI for the indicated Patient
+#'        \item \code{detail-max} max of grey-voxel-values into the given ROI for the indicated Patient
+#'        \item \code{total-minmean} the minimum from all the means from all the patients      
+#'        \item \code{total-meanmean} the mean of  all the means from all patients
+#'        \item \code{total-maxmean} the max value from all the means from all the patients
+#'        \item \code{total-stddevmean} the stdev value from all the means from all the patients       
+#'        \item \code{total-minmax} the min value from all the max from all the patients       
+#'        \item \code{total-meanmax} the mean value from all the max from all the patients        
+#'        \item \code{total-maxmax} the max value from all the max from all the patients      
+#'        \item \code{total-stdevmax} the stdev value from all the max from all the patients         
+#'      }
+#' @export
+RAD.ROIStats<-function(obj, ROIName, errorHandlerParams=c() ) {
+  errorHandler<-logHandler()
+  if(length(errorHandlerParams)>0) errorHandler$setOutput(errorHandlerParams)
+  
+  return(obj$ROIStats( ROIName = ROIName))
+}
 
 
 # example -- mmButo stile Toronto
