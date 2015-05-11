@@ -539,6 +539,128 @@ geoLet<-function() {
       }     
     }
   }
+  
+  getROIVoxels<-function( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) {
+    objService<-services()
+    
+    # define some variables to make more clear the code
+    numberOfRows<-as.numeric(dataStorage$info[[SeriesInstanceUID]][[1]]$Rows);
+    #numberOfRows<-as.numeric(dataStorage$info[[1]][[1]]$Rows);
+    numberOfColumns<-as.numeric(dataStorage$info[[SeriesInstanceUID]][[1]]$Columns);
+    #numberOfRows<-as.numeric(dataStorage$info[[1]][[1]]$Columns);
+    numberOfSlices<-length(dataStorage$img[[SeriesInstanceUID]]);
+    
+    # initialize the image array with the right dimension
+    image.arr<-array( data = -1, dim = c(numberOfRows, numberOfColumns, numberOfSlices ) )
+    # index values listed as characters: creates empty array of DICOM orientation matrices
+    index<-as.character(sort(as.numeric(names( dataStorage$img[[SeriesInstanceUID]]) )))  
+    
+    # create and fill the vector DOM, of DICOM orientation matrices
+    DOM<-c();  nn<-0
+    for (n in index) {
+      DOM<-c(DOM, dataStorage$info[[SeriesInstanceUID]][[n]]$orientationMatrix[c(1:3,5:7,13:15)])
+      nn<-nn+1
+      image.arr[,,nn]<-dataStorage$img[[SeriesInstanceUID]][[n]]    
+    }  
+    
+    # fills the vectors of X and Y coordinates 
+    # and other Vectors 'associatedInstanceNumberVect' and 'arrayInstanceNumberWithROI'
+    TotalX<- -10000;  TotalY<- -10000;  arrayAssociationROIandSlice<- -10000;
+    OriginX<- -10000;   OriginY<- -10000
+    associatedInstanceNumberVect<- -10000
+    
+    contatoreROI<-1; indiceDOM<-1;
+    # for each instance number
+    for (n in index) {
+      # check if there is a ROI for such slice
+      for (m in which(dataStorage$info[[SeriesInstanceUID]][[n]]$ROIList[,1]==Structure)) {
+        
+        # find the slice and gets the key for accessing at coordinates vectors
+        key<-dataStorage$info[[SeriesInstanceUID]][[n]]$ROIList[m,2]
+        
+        # calculate how many ROIs are co-planar
+        numeroROIComplanari<-length(dataStorage$structures[[Structure]][[key]])
+        
+        # for each one of them concat the array
+        for(indiceROI in seq(1,numeroROIComplanari)) {          
+          TotalX<-c(TotalX, dataStorage$structures[[Structure]][[key]][[indiceROI]][,1])
+          TotalY<-c(TotalY, dataStorage$structures[[Structure]][[key]][[indiceROI]][,2])
+          
+          # calculate how many points compose the ROI
+          numeroPunti<-length(dataStorage$structures[[Structure]][[key]][[indiceROI]][,1])
+          
+          # for each point write which is the related Slice in the cube-matrix
+          arrayAssociationROIandSlice<-c(arrayAssociationROIandSlice,rep(   which( index == n ) -1  , numeroPunti ))
+          
+          # Usa OriginX and OriginY as terminator
+          TotalX<-c(TotalX, OriginX)
+          TotalY<-c(TotalY, OriginY)      
+          arrayAssociationROIandSlice<-c(arrayAssociationROIandSlice,OriginX)
+          
+          contatoreROI<-contatoreROI+1      
+        } 
+      }      
+      indiceDOM<-indiceDOM+1;
+    }
+    
+    # ok, call the Wrapper!
+    final.array<-NewMultiPointInPolyObl(
+      # array of DICOM Orientation Matrices
+      DICOMOrientationVector = DOM, 
+      # X and Y vector Points
+      totalX = TotalX, totalY = TotalY, 
+      # association between ROIs and Slices in the 3D Matrix
+      arrayAssociationROIandSlice = arrayAssociationROIandSlice,
+      # matrices dimensions (rows and columns)
+      nX = numberOfColumns, 
+      nY = numberOfRows,
+      nZ = numberOfSlices
+    )
+    
+    final.array<-array(data = final.array, dim = c(   numberOfColumns, numberOfRows, numberOfSlices )   )
+    # In Example: 
+    #
+    # > TotalX[0:70]
+    # [1] -10000.00     -5.16     -3.28     -1.41      0.47      2.34      4.22      5.12      6.09      7.61      7.97      9.48      9.84     10.96     11.72
+    # [16]     12.14     12.93     13.59     13.61     14.19     14.70     14.85     14.23     13.59     13.45     12.68     11.72     11.11      9.84      8.78
+    # [31]      7.97      6.09      4.22      2.84      2.34      0.85      0.47      0.14     -1.41     -3.28     -3.92     -5.16     -5.73     -6.56     -7.03
+    # [46]     -8.91    -10.26    -10.78    -11.25    -11.86    -12.01    -11.83    -11.29    -10.78    -10.64     -9.88     -8.91     -8.81     -7.51     -7.03
+    # [61]     -5.46     -5.16 -10000.00     -5.16     -3.28     -1.41      0.47      2.34      4.22      5.38
+    # 
+    # > arrayAssociationROIandSlice[0:70]
+    # [1] -10000      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8
+    # [22]      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8
+    # [43]      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      8      9 -10000
+    # [64]      9      9      9      9      9      9      9
+    
+    # ROTATE THE MATRIX
+    for ( i in seq(1,dim(image.arr)[3] )) {
+      image.arr[,,i]<-objService$SV.rotateMatrix(image.arr[,,i])
+      final.array[,,i]<-t(objService$SV.rotateMatrix(final.array[,,i],rotations=3))
+    }
+    
+    #    return(list(TotalX=TotalX, TotalY=TotalY, FullZ=FullZ, Offset=Offset, 
+    #                DOM=array(DOM, dim = c(3,3,length(index))), final.array=final.array, masked.images=final.array*image.arr))
+    return(list("DOM"=array(DOM, dim = c(3,3,length(index))), "final.array"=final.array, "masked.images"=final.array*image.arr))
+  }
+  NewMultiPointInPolyObl<-function(DICOMOrientationVector,totalX,totalY,arrayAssociationROIandSlice,nX,nY,nZ ) {  
+    
+    maxX<-max(totalX)
+    minX<-min(totalX[which(totalX>-10000)])
+    maxY<-max(totalY)
+    minY<-min(totalY[which(totalY>-10000)])
+    
+    # creates the PIPvector
+    PIPvector<-rep.int(x = 0, times = nX * nY * nZ)  
+    numberOfPoints<-length(totalX);
+    result<-.C("NewMultiPIPObl", 
+               as.integer(PIPvector), as.double(totalX), as.double(totalY), as.integer(numberOfPoints), 
+               as.integer(nX), as.integer(nY), as.integer(nZ),             
+               as.integer(arrayAssociationROIandSlice), 
+               as.double(DICOMOrientationVector),as.double(minX),as.double(maxX),as.double(minY),as.double(maxY))  
+    
+    return(result[[1]])
+  }
   #=================================================================================
   # Constructor
   #=================================================================================
@@ -556,7 +678,7 @@ geoLet<-function() {
   constructor()
   return(list(openDICOMFolder=openDICOMFolder,getAttribute=getAttribute,
               getDICOMTag=getDICOMTag,getROIList=getROIList,getROIPointList=getROIPointList,
-              setAttribute=setAttribute,getFolderContent=getFolderContent,info=info))
+              setAttribute=setAttribute,getFolderContent=getFolderContent,info=info,getROIVoxels=getROIVoxels))
 }
 
 # --------------------------------------------------------------------------------------------------------------------
