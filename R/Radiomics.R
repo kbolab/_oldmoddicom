@@ -442,6 +442,9 @@ mmButo<-function() {
       ROIStats=ROIStats))
 }
 
+# ========================================================================================
+# WRAPPERS
+# ========================================================================================
 
 #' RAD.getAttribute - a wrapper function to retrieve an attribute from a mmButo object
 #' 

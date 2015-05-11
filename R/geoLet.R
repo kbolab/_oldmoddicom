@@ -514,31 +514,6 @@ geoLet<-function() {
     }
     attributeList[[ attribute ]]<<-value    
   }
-  info<-function(X, level = 1,cutoff=6) {  
-    if(X=="dataStorage") X<-dataStorage;
-    if( is.list( X ) ) {    
-      ct <- 1
-      for(i in names(X) ) {
-        if( ct< cutoff) {      
-          if (ct == length( X ) ) {
-            cat( rep(" ",level),  "└──" , i , "\n" )
-            info( X[[i]] , level + 1 )
-            return;
-          }
-          else {
-            cat( rep(" ",level), "├──" , i , "\n"  )  
-          }
-          info( X[[i]] , level + 1 )
-          ct <- ct + 1
-        }
-        else {
-          if(ct==cutoff) cat( rep(" ",level), "├──" , "...." , "\n"  )
-          ct <- ct + 1
-          return;
-        }
-      }     
-    }
-  }
   
   getROIVoxels<-function( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) {
     objService<-services()
@@ -678,43 +653,51 @@ geoLet<-function() {
   constructor()
   return(list(openDICOMFolder=openDICOMFolder,getAttribute=getAttribute,
               getDICOMTag=getDICOMTag,getROIList=getROIList,getROIPointList=getROIPointList,
-              setAttribute=setAttribute,getFolderContent=getFolderContent,info=info,getROIVoxels=getROIVoxels))
+              setAttribute=setAttribute,getFolderContent=getFolderContent,getROIVoxels=getROIVoxels))
 }
 
-# --------------------------------------------------------------------------------------------------------------------
-#  Wrappers
-# --------------------------------------------------------------------------------------------------------------------
-GL.openDICOMFolder<-function(obj,path) {
-  return(obj$openDICOMFolder(path))
+# ========================================================================================
+# WRAPPERS
+# ========================================================================================
+#' GLT.openDICOMFolder - a wrapper function to force a geoLet object to load a DICOM Study
+#' 
+#' @param obj an \code{geoLet} object
+#' @param pathToOpen the path where the DICOM study is stored. 
+#' @description  force a \code{geoLet} object to load a DICOM study
+#' @details it's jusat a wrapper function to force an mmButo object to load DICOM Studies by the method \code{openDICOMFolder}
+#' @return nothing. To read the loaded data please retrieve the attribute \code{dataStorage} by the \code{getAttribute} method or by it's wrapper-function \code{GLT.getAttribute}.
+#' @export
+GLT.openDICOMFolder<-function(obj = obj, pathToOpen = pathToOpen) {
+  obj.openDICOMFolder(pathToOpen = pathToOpen);  
 }
-GL.getAttribute<-function(obj, attrib=c("PatientName","PatientID","dataStorage"),seriesInstanceUID="",fileName="") {
-  obj$getAttribute(attribute=attrib,seriesInstanceUID=seriesInstanceUID,fileName=fileName);
+#' GLT.getAttribute - a wrapper function to get an attribute from a \code{geoLet} object
+#' 
+#' @param obj an \code{geoLet} object
+#' @param attribute the name of the attribute to be retrieved. The available attributes arE:
+#'    \itemize{
+#'      \item \code{dataStorage} is probably the most informative attribute. It stores all the information about images, ROIs, etc, archieved as a list of lists deeply nested
+#'      \item \code{PatientName} is the Patient name as stored in the DICOM study
+#'      \item \code{PatientID} is the Patient ID as stored in the DICOM study
+#'      \item \code{PatientSex} is the sex of the patient
+#'      \item \code{Rows} is the number of rows in the DICOM images
+#'      \item \code{Columns} is the number of columns in the DICOM images
+#'      \item \code{PixelSpacing} is xy dimension for each voxel
+#'      \item \code{SliceThickness} is the thickness of the interested slice
+#'      \item \code{ImagePositionPatient} is the ImagePositionPatient of the interested slice
+#'      \item \code{ImageOrientationPatient} is the ImageOrientationPatient of the interested slice
+#'      \item \code{orientationMatrix} is the complete orientationMatrix proposed as a matrix
+#'      \item \code{StudyDate} the date of the study
+#'      \item \code{Modality} the modality of the study
+#'      \item \code{SeriesInstanceUID} the SeriesInstanceUID of the serie
+#'    }
+#' @param seriesInstanceUID If the attribute is series-related, the seriesInstanceUID should be specified
+#' @param fileName If the attribute is image-related, the fileName should be specified
+#' @description  It's a wrapper to get an attribute from a \code{geoLet} obj.
+#' @return the whished attribute
+#' @export
+GLT.getAttribute<-function(obj = obj, attribute = attribute, seriesInstanceUID = seriesInstanceUID, fileName = fileName) {
+  return( getAttribute ( attribute = attribute, seriesInstanceUID = seriesInstanceUID, fileName = fileName ) )
 }
-GL.getROIList<-function(obj) {
-  return(obj$getROIList());
-}
-GL.getROIPointList<-function(obj,ROINameOrID) {
-  return( obj$getROIPointList(ROINameOrID) );
-}
-GL.getPatientName<-function(obj,seriesInstanceUID,fileName="") {
-  return( obj$getAttribute(attribute="PatientName",seriesInstanceUID=seriesInstanceUID,fileName=fileName) );
-}
-GL.getPatientID<-function(obj,seriesInstanceUID="",fileName="") {
-  return( obj$getAttribute(attribute="PatientID",seriesInstanceUID=seriesInstanceUID,fileName=fileName) );
-}
-GL.setAttribute<-function(obj,attributeName,attributeValue) {
-  return( obj$setAttribute(attributeName,attributeValue) );
-}
-GL.getDICOMTag<-function(obj,fileName,tag) {
-  return( obj$getDICOMTag(fileName,tag) )  
-}
-GL.summary<-function() {
-  return();
-}
-GL.plot<-function() {
-  return();
-}
-
 # --------------------------------------------------------------------------------------------------------------------
 #  Examples
 # --------------------------------------------------------------------------------------------------------------------
