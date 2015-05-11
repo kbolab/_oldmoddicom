@@ -104,6 +104,12 @@ services<-function() {
               ))  
 }
 
+# DPT.registry<-function{
+#   register<-function() {
+#     
+#   }
+#   return( list(  register=register  )  )
+# }
 
 
 
