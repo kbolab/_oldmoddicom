@@ -120,7 +120,7 @@ geoLet<-function() {
 
       if(is.list(subMatrix) & !is.array(subMatrix)) quantiElementiTrovati<-1
       if(is.matrix(subMatrix) & is.array(subMatrix)) quantiElementiTrovati<-dim(subMatrix)[1]
-      if(quantiElementiTrovati==-1) stop("Minchia! Contatta Roberto perchè c'e' una nuova figata di errore nel caricamento di questo studio!");
+      if(quantiElementiTrovati==-1) stop("Errore inatteso nel caricamento delle slides. Error code:#0001");
       
       if( quantiElementiTrovati >0 ) {
 #      if( length(subMatrix) >0 ) {
@@ -128,7 +128,7 @@ geoLet<-function() {
         
         # add properly the points to the 'listaROI' structure
 #        for(contatore in seq(1,dim(subMatrix)[1]) ) {
-        for(contatore in quantiElementiTrovati ) {
+        for(contatore in seq(1,quantiElementiTrovati) ) {
 #          if(i == "Urina" | i =="Vescica") browser();
           
           if( quantiElementiTrovati == 1) {
