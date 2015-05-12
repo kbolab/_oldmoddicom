@@ -107,7 +107,7 @@ mmButo<-function() {
   # execAlgorithm
   # execute an algorithm on the loaded DICOM studies.
   # ========================================================================================
-  execAlgorithm<-function( algorithm, ROIName , grayTuniningValue, ROIName4Tuning , nx=2, ny=2, nz=0 ) {
+  execAlgorithm<-function( algorithm, ROIName , grayTuningValue, ROIName4Tuning , nx=2, ny=2, nz=0 ) {
     
     XmaxVal<-c() 
     YmaxVal<-c() 
@@ -116,7 +116,7 @@ mmButo<-function() {
     # BAVA
     if( algorithm == "BAVA" ) {      
       interpolatedDensity<-list();
-      if(length(grayTuniningValue)==0) logObj$sendLog("'grayTuniningValue' is missing", NMI = TRUE)
+      if(length(grayTuningValue)==0) logObj$sendLog("'grayTuningValue' is missing", NMI = TRUE)
       if(length(ROIName4Tuning)==0) logObj$sendLog("'ROIName4Tuning' is missing", NMI = TRUE)
       
       # massimo valore di grigio della ROI di tutti i pazienti 
@@ -131,7 +131,7 @@ mmButo<-function() {
         # Prendi il valore medio della vescita del paziente in esame
         maxSpecificROI4Tuning<-mean(dataStructure[[i]]$voxelCubes[[ROIName4Tuning]][which(dataStructure[[i]]$voxelCubes[[ROIName4Tuning]]!=0)])
         # Normalizza
-        normalizedVoxelCube[[i]] <- dataStructure[[i]]$voxelCubes[[ROIName]] * ( grayTuniningValue / maxSpecificROI4Tuning)
+        normalizedVoxelCube[[i]] <- dataStructure[[i]]$voxelCubes[[ROIName]] * ( grayTuningValue / maxSpecificROI4Tuning)
         
         #voxelCube <- dataStructure[[i]]$voxelCubes[[ROIName]]
         voxelCube <- normalizedVoxelCube[[i]]
@@ -530,7 +530,7 @@ RAD.setAttribute<-function(obj, attribute, value, errorHandlerParams=c() ) {
 #'        \item \code{rawAreaVolume}
 #'      }
 #' @param ROIName the name of the ROI you want to expose to calculus
-#' @param grayTuniningValue the "upper bound" for the normalization
+#' @param grayTuningValue the "upper bound" for the normalization
 #' @param ROIName4Tuning the name of the ROI you want to use for normalization
 #' @param nx number of voxels along x axes
 #' @param ny number of voxels along y axes
@@ -546,11 +546,11 @@ RAD.setAttribute<-function(obj, attribute, value, errorHandlerParams=c() ) {
 #' @details it's jusat a wrapper function of the method \code{execAlgorithm} of the \code{mmBute} class
 #' @return nothing. To read the loaded data please retrieve the attribute \code{results} by the \code{getAttribute} method or by it's wrapper-function \code{RAD.getAttribute}.
 #' @export
-RAD.execAlgorithm<-function(obj, algorithm=c("KDF","BAVA","virtualBiopsy","rawAreaVolume"), ROIName , grayTuniningValue, ROIName4Tuning , nx=2, ny=2, nz=0 , errorHandlerParams=c() ) {
+RAD.execAlgorithm<-function(obj, algorithm=c("KDF","BAVA","virtualBiopsy","rawAreaVolume"), ROIName , grayTuningValue, ROIName4Tuning , nx=2, ny=2, nz=0 , errorHandlerParams=c() ) {
   errorHandler<-logHandler()
   if(length(errorHandlerParams)>0) errorHandler$setOutput(errorHandlerParams)
   
-  obj$execAlgorithm(algorithm = algorithm , ROIName = ROIName , grayTuniningValue = grayTuniningValue, ROIName4Tuning = ROIName4Tuning , nx=2, ny=2, nz=0 ) 
+  obj$execAlgorithm(algorithm = algorithm , ROIName = ROIName , grayTuningValue = grayTuningValue, ROIName4Tuning = ROIName4Tuning , nx=2, ny=2, nz=0 ) 
 
 }
 #' RAD.ROIStats - a wrapper function for getting stats about stored ROIs
