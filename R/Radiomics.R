@@ -29,6 +29,7 @@ mmButo<-function() {
     for( folderName in listaFolders[2:length(listaFolders)] ) {
       #      setTxtProgressBar(pb, counter)
       # Instantiate the object
+      objService<-services();
       obj<-geoLet()
       obj$openDICOMFolder( folderName )      
       listaROI<-obj$getROIList();
@@ -55,7 +56,7 @@ mmButo<-function() {
           cubeVoxelList[[ folderName ]][["geometricData"]]$pixelSpacing<-ds$info[[1]][[1]]$pixelSpacing
           cubeVoxelList[[ folderName ]][["geometricData"]]$SliceThickness<-as.numeric(ds$info[[1]][[1]]$SliceThickness)
           cubeVoxelList[[ folderName ]][["ROIPointList"]][[ ROIName ]]<-ROIPointList
-                  
+
           info_struct<-ds$info[[SS]]                            # structure which contains information
           img_struct<-ds$img[[SS]]                              # structure which contains images
           nnRows<-as.numeric(info_struct[[1]]$Rows)                                     # Rows
@@ -69,7 +70,8 @@ mmButo<-function() {
             nn<-nn+1
             image.arr[,,nn]<-img_struct[[n]]    
           }
-          image.arr=aperm(a = image.arr, perm = c(2,1,3))[,nnColumns:1,]
+
+#          image.arr=aperm(a = image.arr, perm = c(2,1,3))[,nnColumns:1,]
           cubeVoxelList[[ folderName ]][["image.arr"]]<-image.arr
         }
       }  

@@ -200,27 +200,41 @@ geoLet<-function() {
   #=================================================================================  
   loadCTRMNRDScans<-function(SOPClassUIDList) {   
     imageSerie<-list()
+    objServ<-services()
 
     # loop over the list    
     for(i in names(SOPClassUIDList)) {
 #      if(SOPClassUIDList[[i]]$kind=="RTDoseStorage" | 
        if(  SOPClassUIDList[[i]]$kind=="CTImageStorage" |
            SOPClassUIDList[[i]]$kind=="MRImageStorage" ) {
+         
+              
               # get the Series number
               seriesInstanceUID<-getDICOMTag(i,"0020,000e")
               # get the Instance number (number of CT in the serie)
-              instanceNumber<-getDICOMTag(i,"0020,0013")
+              instanceNumber<-getDICOMTag(i,"0020,0013")              
+              imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]]<-list()
+              # get the Patient Position
+              imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]]<-getAttribute(attribute<-"PatientPosition",fileName=i)
               # get the image data
               immagine<-getDICOMTag(i,"7fe0,0010");
+              
+              # Do I have to rotate the image?
+              imageToBeRotated <- -1
+              if( imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "HFS" ) imageToBeRotated<-1
+              if( imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "FFS" ) imageToBeRotated<-1
+              if ( imageToBeRotated != -1 ) {
+                immagine <- objServ$SV.rotateMatrix( immagine, imageToBeRotated )
+              }
+              
               # now update the structure in memory
-              imageSerie[["img"]][[seriesInstanceUID]][[instanceNumber]]<-immagine
-              imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]]<-list()
+              imageSerie[["img"]][[seriesInstanceUID]][[instanceNumber]]<-immagine              
               imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["SOPClassUID"]]<-SOPClassUIDList[[i]]$kind
               imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["SOPInstanceUID"]]<-getDICOMTag(i,"0008,0018")
               imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["fileName"]]<-i
               pixelSpacing<-getAttribute(attribute<-"PixelSpacing",fileName=i)
               #pixelSpacing<-getDICOMTag(i,"0028,0030")
-              oM<-getAttribute(attribute<-"orientationMatrix",fileName=i)
+              oM<-getAttribute(attribute<-"orientationMatrix",fileName=i)              
               imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["ImagePositionPatient"]]<-getAttribute(attribute<-"ImagePositionPatient",fileName=i)
               imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["ImageOrientationPatient"]]<-getAttribute(attribute<-"ImageOrientationPatient",fileName=i)
               oM[1,1]<-oM[1,1]*pixelSpacing[1]
@@ -236,7 +250,6 @@ geoLet<-function() {
               imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["SliceThickness"]]<-getDICOMTag(i,"0018,0050")
               instanceNumber<-getDICOMTag(i,"0020,0013")
               
-              immagine<-getDICOMTag(i,"7fe0,0010");
               # three points to find out plane equation
               Pa<-c(oM[1,4],oM[2,4],oM[3,4])  
               Pb<-objServ$SV.get3DPosFromNxNy(1000,0,oM)
@@ -257,12 +270,14 @@ geoLet<-function() {
         imagePositionPatient<-getAttribute("ImagePositionPatient",fileName=i)
         ImageOrientationPatient<-getAttribute("ImageOrientationPatient",fileName=i)
         GridFrameOffsetVector<-getAttribute("GridFrameOffsetVector",fileName=i)
+        PatientPosition<-getAttribute(attribute<-"PatientPosition",fileName=i)
         Rows<-getDICOMTag(i,"0028,0010");
         Columns<-getDICOMTag(i,"0028,0011")
         
         pixelSpacing<-getAttribute(attribute<-"PixelSpacing",fileName=i)
         imageSerie[["info"]][[seriesInstanceUID]][["imagePositionPatient"]]<-imagePositionPatient
         imageSerie[["info"]][[seriesInstanceUID]][["ImageOrientationPatient"]]<-ImageOrientationPatient
+        imageSerie[["info"]][[seriesInstanceUID]][["PatientPosition"]]<-PatientPosition
         imageSerie[["info"]][[seriesInstanceUID]][["Rows"]]<-Rows
         imageSerie[["info"]][[seriesInstanceUID]][["Columns"]]<-Columns
         imageSerie[["info"]][[seriesInstanceUID]][["pixelSpacing"]]<-pixelSpacing
@@ -409,6 +424,7 @@ geoLet<-function() {
     if(attribute=="SeriesInstanceUID" | attribute=="(0020,000e)")  return(getDICOMTag(fileName,"0020,000e"))      
     if(attribute=="ImagePositionPatient" | attribute=="(0020,0032)")  return(  splittaTAG(getDICOMTag(fileName,"0020,0032"))   )      
     if(attribute=="ImageOrientationPatient" | attribute=="(0020,0037)")  return(   splittaTAG(getDICOMTag(fileName,"0020,0037"))  )
+    if(attribute=="PatientPosition" | attribute=="(0018,5100)")  return(  getDICOMTag(fileName,"0018,5100")   )      
     if(attribute=="PixelSpacing" | attribute=="(0028,0030)")  return(splittaTAG(getDICOMTag(fileName,"0028,0030")))
     if(attribute=="PixelSpacing" | attribute=="(0028,0030)")  return(splittaTAG(getDICOMTag(fileName,"0028,0030")))
     if(attribute=="GridFrameOffsetVector" | attribute=="(3004,000c)")  return(splittaTAG(getDICOMTag(fileName,"3004,000c")))
@@ -524,7 +540,7 @@ geoLet<-function() {
     numberOfColumns<-as.numeric(dataStorage$info[[SeriesInstanceUID]][[1]]$Columns);
     #numberOfRows<-as.numeric(dataStorage$info[[1]][[1]]$Columns);
     numberOfSlices<-length(dataStorage$img[[SeriesInstanceUID]]);
-    
+
     # initialize the image array with the right dimension
     image.arr<-array( data = -1, dim = c(numberOfRows, numberOfColumns, numberOfSlices ) )
     # index values listed as characters: creates empty array of DICOM orientation matrices
@@ -537,13 +553,12 @@ geoLet<-function() {
       nn<-nn+1
       image.arr[,,nn]<-dataStorage$img[[SeriesInstanceUID]][[n]]    
     }  
-    
     # fills the vectors of X and Y coordinates 
     # and other Vectors 'associatedInstanceNumberVect' and 'arrayInstanceNumberWithROI'
     TotalX<- -10000;  TotalY<- -10000;  arrayAssociationROIandSlice<- -10000;
     OriginX<- -10000;   OriginY<- -10000
     associatedInstanceNumberVect<- -10000
-    
+
     contatoreROI<-1; indiceDOM<-1;
     # for each instance number
     for (n in index) {
@@ -577,7 +592,6 @@ geoLet<-function() {
       }      
       indiceDOM<-indiceDOM+1;
     }
-    
     # ok, call the Wrapper!
     final.array<-NewMultiPointInPolyObl(
       # array of DICOM Orientation Matrices
@@ -591,7 +605,6 @@ geoLet<-function() {
       nY = numberOfRows,
       nZ = numberOfSlices
     )
-    
     final.array<-array(data = final.array, dim = c(   numberOfColumns, numberOfRows, numberOfSlices )   )
     # In Example: 
     #
@@ -609,10 +622,13 @@ geoLet<-function() {
     # [64]      9      9      9      9      9      9      9
     
     # ROTATE THE MATRIX
+    
+    
     for ( i in seq(1,dim(image.arr)[3] )) {
-      image.arr[,,i]<-objService$SV.rotateMatrix(image.arr[,,i])
+#      image.arr[,,i]<-objService$SV.rotateMatrix(image.arr[,,i])
       final.array[,,i]<-t(objService$SV.rotateMatrix(final.array[,,i],rotations=3))
     }
+    
     
     #    return(list(TotalX=TotalX, TotalY=TotalY, FullZ=FullZ, Offset=Offset, 
     #                DOM=array(DOM, dim = c(3,3,length(index))), final.array=final.array, masked.images=final.array*image.arr))
