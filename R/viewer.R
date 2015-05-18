@@ -6,16 +6,16 @@
 #' @export
 viewer<-function() {
   
-  isosurface<-function( matrice , lower , method= "wired3d", percent = 0.5 ) {
+  isosurface<-function( matrice , lower , metodo= "wired", percent = 0.5 ) {
     x<-seq(0, dim(matrice)[1] )
     y<-seq(0, dim(matrice)[2] )
     z<-seq(0, dim(matrice)[3] )
     g<-expand.grid(x,y,z)
-    v<-as.array( ptv )
+    v<-as.array( matrice )
     storage.mode(v) <- "integer"
     mesh <- vcgIsosurface(v,lower=1)
     decimface <- vcgQEdecim( mesh, percent = percent)
-    if( method == "method" ) wire3d(mesh,col="red")        
+    if(metodo == "wired" ) wire3d(mesh,col="red")        
   }
 
   return( list( isosurface = isosurface )  )
