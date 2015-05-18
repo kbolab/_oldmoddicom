@@ -440,7 +440,6 @@ mmButo<-function() {
       getAttribute=getAttribute,
       execAlgorithm=execAlgorithm,
       plotResults=plotResults,
-      
       ROIStats=ROIStats))
 }
 
