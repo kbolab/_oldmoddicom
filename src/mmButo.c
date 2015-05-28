@@ -163,3 +163,8 @@ void trilinearInterpolator(int *xNVoxel, int *yNVoxel,int *zNVoxel,
   free(punt);
 }
 
+
+
+
+
+

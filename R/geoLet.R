@@ -275,17 +275,18 @@ geoLet<-function() {
         Columns<-getDICOMTag(i,"0028,0011")
         
         pixelSpacing<-getAttribute(attribute<-"PixelSpacing",fileName=i)
-        imageSerie[["info"]][[seriesInstanceUID]][["imagePositionPatient"]]<-imagePositionPatient
-        imageSerie[["info"]][[seriesInstanceUID]][["ImageOrientationPatient"]]<-ImageOrientationPatient
-        imageSerie[["info"]][[seriesInstanceUID]][["PatientPosition"]]<-PatientPosition
-        imageSerie[["info"]][[seriesInstanceUID]][["Rows"]]<-Rows
-        imageSerie[["info"]][[seriesInstanceUID]][["Columns"]]<-Columns
-        imageSerie[["info"]][[seriesInstanceUID]][["pixelSpacing"]]<-pixelSpacing
-        imageSerie[["info"]][[seriesInstanceUID]][["doseType"]]<-getDICOMTag(i,"0020,000d") 
-        imageSerie[["info"]][[seriesInstanceUID]][["GridFrameOffsetVector"]]<-GridFrameOffsetVector
-        imageSerie[["info"]][[seriesInstanceUID]][["DoseGridScaling"]]<-getDICOMTag(i,"3004,000e") 
+        imageSerie[["info"]][[seriesInstanceUID]][["1"]][["imagePositionPatient"]]<-imagePositionPatient
+        imageSerie[["info"]][[seriesInstanceUID]][["1"]][["ImageOrientationPatient"]]<-ImageOrientationPatient
+        imageSerie[["info"]][[seriesInstanceUID]][["1"]][["PatientPosition"]]<-PatientPosition
+        imageSerie[["info"]][[seriesInstanceUID]][["1"]][["Rows"]]<-Rows
+        imageSerie[["info"]][[seriesInstanceUID]][["1"]][["Columns"]]<-Columns
+        imageSerie[["info"]][[seriesInstanceUID]][["1"]][["pixelSpacing"]]<-pixelSpacing
+        imageSerie[["info"]][[seriesInstanceUID]][["1"]][["doseType"]]<-getDICOMTag(i,"0020,000d") 
+        imageSerie[["info"]][[seriesInstanceUID]][["1"]][["GridFrameOffsetVector"]]<-GridFrameOffsetVector
+        imageSerie[["info"]][[seriesInstanceUID]][["1"]][["DoseGridScaling"]]<-getDICOMTag(i,"3004,000e") 
+        imageSerie[["info"]][[seriesInstanceUID]][["1"]][["SOPClassUID"]]<-SOPClassUIDList[[i]]$kind
         immagine<-getDICOMTag(i,"7fe0,0010");
-        imageSerie[["dose"]][[seriesInstanceUID]]<-immagine * as.numeric( imageSerie[["info"]][[seriesInstanceUID]][["DoseGridScaling"]] )
+        imageSerie[["dose"]][[seriesInstanceUID]]<-immagine * as.numeric( imageSerie[["info"]][[seriesInstanceUID]][["1"]][["DoseGridScaling"]] )
       }      
     }
     return(imageSerie);
@@ -296,11 +297,29 @@ geoLet<-function() {
   # into memory (using DCMTK)
   #================================================================================= 
   getStructuresFromXML<-function(fileName) {    
+    
+
     fileNameXML<-paste(fileName,".xml")    
     fileNameXML<-str_replace_all(string = fileNameXML , pattern = " .xml",replacement = ".xml")
     pathToStore<-substr(fileName,1,tail(which(strsplit(fileName, '')[[1]]=='/'),1)-1)
     
+    # dcmodify -i "(0008,0005)=ISO_IR 100" ./RTSTRUCT999.61977.8337.20150525122026787.dcm
+    
     if(!file.exists( fileNameXML )) {
+      # now check the problem of viewRAY is the 0008,0005 present?
+      stringa1<-"dcmdump";
+      stringa2<-paste(" ",fileName," | grep '0008,0005'",collapse='')
+      options(warn=-1)
+      aTMPa<-system2( stringa1,stringa2,stdout=TRUE )
+      options(warn=0)
+      if(length(aTMPa)==0) {
+        stringa1<-"dcmodify";
+        stringa2<-paste(" -i '(0008,0005)=ISO_IR 100'  ",fileName,collapse='')
+        options(warn=-1)
+        system2(stringa1,stringa2,stdout=NULL)
+        options(warn=0)        
+      }
+      
       stringa1<-"dcm2xml";
       stringa2<-paste(" +M  ",fileName,fileNameXML,collapse='')
       options(warn=-1)
@@ -324,7 +343,7 @@ geoLet<-function() {
       matrice2<-rbind(matrice2,c(ROINumber,ROIName))
     }
     matrice2<-t(matrice2)
-    
+
     # ROI Point list
     matrice3<-c()
     for(i in n3XML) {
@@ -379,7 +398,7 @@ geoLet<-function() {
           for(x in seq(1,rowsDICOM)) {
             for(y in seq(1,columnsDICOM)) {
               matRN[x,columnsDICOM-y,z]<-rn[ct]
-              ct<-ct+1
+              ct<-ct+1 
             }
           }
         }        
@@ -388,7 +407,26 @@ geoLet<-function() {
           new_atRN[,,ct]<-t(objSV$SV.rotateMatrix( matRN[,,ct], rotations=2 ))
         }
         rn<-new_atRN
-      } else stop("RTDose must have 32 bit words!")
+      } else  {
+        numberOfFrames<-as.numeric(getDICOMTag(fileName,'0028,0008'))
+        rn<-readBin(con = fileNameRAW, what="integer", size=2, endian="little",n=rowsDICOM*columnsDICOM*numberOfFrames)
+        matRN<-array(0,c(rowsDICOM,columnsDICOM,numberOfFrames))
+        ct<-1
+        for( z in seq(1,numberOfFrames)) {
+          for(x in seq(1,rowsDICOM)) {
+            for(y in seq(1,columnsDICOM)) {
+              matRN[x,columnsDICOM-y,z]<-rn[ct]
+              ct<-ct+1 
+            }
+          }
+        }        
+        new_atRN<-array(0,c(columnsDICOM,rowsDICOM,numberOfFrames))
+        for(ct in seq(1:dim(matRN)[3]  )) {
+          new_atRN[,,ct]<-t(objSV$SV.rotateMatrix( matRN[,,ct], rotations=2 ))
+        }
+        rn<-new_atRN        
+      }
+        #stop("RTDose must have 32 bit words!")
     }    
     return(rn)
   }
@@ -530,10 +568,39 @@ geoLet<-function() {
     }
     attributeList[[ attribute ]]<<-value    
   }
-  
+
   getROIVoxels<-function( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) {
-    objService<-services()
+    SOPClassUID<- dataStorage$info[[SeriesInstanceUID]][[1]]$SOPClassUID
+
+    if (SOPClassUID == "CTImageStorage" | SOPClassUID == "MRImageStorage") {
+      return (getROIVoxelsFromCTRMN( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID))
+    }
+    if (SOPClassUID == "RTDoseStorage" ) {
+      return (getROIVoxelsFromRTDose( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID))
+    }
+    print("SOPClassUID not yet prevista");
+    stop();
+  }
+  getROIVoxelsFromRTDose<-function( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) {
+    # define some variables to make more clear the code
+    numberOfRows<-as.numeric(dataStorage$info[[SeriesInstanceUID]][[1]]$Rows);
+    #numberOfRows<-as.numeric(dataStorage$info[[1]][[1]]$Rows);
+    numberOfColumns<-as.numeric(dataStorage$info[[SeriesInstanceUID]][[1]]$Columns);
+    #numberOfRows<-as.numeric(dataStorage$info[[1]][[1]]$Columns);
+    numberOfSlices<-dim(dataStorage$dose[[1]])[3]
+    # initialize the image array with the right dimension
+    image.arr<-array( data = -1, dim = c(numberOfRows, numberOfColumns, numberOfSlices ) )    
     
+    stop("now I'm here");    
+  }
+#   getROIVoxelsFromCTRMN<-function( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) {
+#     # define some variables to make more clear the code
+#     numberOfRows<-as.numeric(dataStorage$info[[SeriesInstanceUID]][[1]]$Rows);
+#     #numberOfRows<-as.numeric(dataStorage$info[[1]][[1]]$Rows);
+#     numberOfColumns<-as.numeric(dataStorage$info[[SeriesInstanceUID]][[1]]$Columns);    
+#   }
+  getROIVoxelsFromCTRMN<-function( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) {
+    objService<-services()    
     # define some variables to make more clear the code
     numberOfRows<-as.numeric(dataStorage$info[[SeriesInstanceUID]][[1]]$Rows);
     #numberOfRows<-as.numeric(dataStorage$info[[1]][[1]]$Rows);
@@ -558,7 +625,6 @@ geoLet<-function() {
     TotalX<- -10000;  TotalY<- -10000;  arrayAssociationROIandSlice<- -10000;
     OriginX<- -10000;   OriginY<- -10000
     associatedInstanceNumberVect<- -10000
-
     contatoreROI<-1; indiceDOM<-1;
     # for each instance number
     for (n in index) {
@@ -570,7 +636,6 @@ geoLet<-function() {
         
         # calculate how many ROIs are co-planar
         numeroROIComplanari<-length(dataStorage$structures[[Structure]][[key]])
-        
         # for each one of them concat the array
         for(indiceROI in seq(1,numeroROIComplanari)) {          
           TotalX<-c(TotalX, dataStorage$structures[[Structure]][[key]][[indiceROI]][,1])
@@ -592,6 +657,10 @@ geoLet<-function() {
       }      
       indiceDOM<-indiceDOM+1;
     }
+#    browser();
+    indiceDOM<-indiceDOM+1;
+    indiceDOM<-indiceDOM-1;
+#    browser();
     # ok, call the Wrapper!
     final.array<-NewMultiPointInPolyObl(
       # array of DICOM Orientation Matrices
@@ -713,6 +782,9 @@ GLT.openDICOMFolder<-function(obj = obj, pathToOpen = pathToOpen) {
 #' @export
 GLT.getAttribute<-function(obj = obj, attribute = attribute, seriesInstanceUID = seriesInstanceUID, fileName = fileName) {
   return( getAttribute ( attribute = attribute, seriesInstanceUID = seriesInstanceUID, fileName = fileName ) )
+}
+GLT.getROIVoxels<-function( obj = obj, Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) {
+  return( obj$getROIVoxels( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) )
 }
 # --------------------------------------------------------------------------------------------------------------------
 #  Examples

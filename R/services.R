@@ -62,6 +62,15 @@ services<-function() {
     
     return( array( res[[11]] , dim=c(newNx,newNy,newNz) ) )    
   }  
+  triangle2mesh <- function(x) {
+    v <- list()
+    n <- nrow(x$v1)
+    nit <- 1:n
+    v$vb <- t(cbind(rbind(x$v1,x$v2,x$v3),1))
+    v$it <- rbind(nit,nit+n,nit+2*n)
+    class(v) <- "mesh3d"
+    return(v)
+  }  
   elaboraCarlottaggio<-function( ds.n ,nx=2,ny=2,nz=0) {
     
     UpperBoundDiNormalizzazione<-max(c(obj.n$ROIStats("Urina")$total$max,obj.p$ROIStats("Urina")$total$max))
@@ -112,7 +121,8 @@ services<-function() {
               SV.rotateMatrix = SV.rotateMatrix,
               SV.LoadAccordingOSType = SV.LoadAccordingOSType,
               SV.rotateMatrix = SV.rotateMatrix,
-              SV.rawSurface = SV.rawSurface
+              SV.rawSurface = SV.rawSurface,
+              triangle2mesh = triangle2mesh
               ))  
 }
 

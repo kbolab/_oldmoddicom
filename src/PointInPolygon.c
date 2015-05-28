@@ -223,8 +223,8 @@ int isThePointInsideThePoly(int nvert, double *vertx, double *verty, double test
  *      minX,maxX,minY,maxY: min, max values of coords in order to preserve time. In future they will be calculated directly into this C code...
  */
 void NewMultiPIPObl (int *PIPvector, double *totalX, double *totalY, int *numberOfPoints,
-                 int *nX, int *nY, int *nZ,
-		int *arrayAssociationROIandSlice, 
+                int *nX, int *nY, int *nZ,
+		            int *arrayAssociationROIandSlice, 
                 double *arrayDOM,
                 double *minX, double *maxX, double *minY, double *maxY) {
 	int x, y, z, c, fromPosition, toPosition;
