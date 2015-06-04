@@ -6,7 +6,7 @@
 #' @export
 viewer<-function() {
   
-  isosurface<-function( matrice , lower , metodo= "wired", percent = 0.5, pixelSpacing, ... ) {
+  isosurface<-function( matrice , lower=lower , metodo= "wired", percent = 0.5, pixelSpacing, ... ) {
     parametri<-list(...)
     x<-seq(0, dim(matrice)[1] )
     y<-seq(0, dim(matrice)[2] )
@@ -14,7 +14,7 @@ viewer<-function() {
     g<-expand.grid(x,y,z)
     v<-as.array( matrice )
     storage.mode(v) <- "integer"
-    mesh <- vcgIsosurface( v, lower = lower, spacing = pixelSpacing)
+    mesh <- vcgIsosurface( v, threshold = lower, spacing = pixelSpacing)
     decimface <- vcgQEdecim( mesh, percent = percent)
     if(metodo == "noPlot" ) {
       return(mesh)
