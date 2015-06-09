@@ -1,59 +1,8 @@
-#' class for loading and presenting DICOM data
-#' 
-#' @description  Instantiate an object of the class \code{geoLet}.This represents just the classname, 
-#'               for each instantiated object many methods are available, not in canonical S3 or S4.
-#'               
-#'               The available methods are:
-#'               \itemize{
-#'               \item \code{void openDICOMFolder(string pathToOpen)} 
-#'               is a method used to open a chosen folder. This method loads all the DICOM objects into
-#'               the indicated folder (without recursion) as attribute of the object.
-#'               Information can be retrieved using \code{getAttribute} method or 
-#'               more specific methods.
-#'               \item \code{list/string/array getAttribute(string attribute,string seriesInstanceUID="",string fileName="")} 
-#'               Is a method used to get internal attributes. Allowed values fot \code{attributes} are:
-#'               
-#'               \itemize{
-#'                 \item \code{dataStorage} : return a structured list with all the information retrieved from the 
-#'                 DICOM object in the folder. More detailed information about the structur of the returned list
-#'                 are available at <inserire link>
-#'                 \item \code{ROIPointList} : return the ROI point List for all the stored ROIs;
-#'                 \item \code{PatientName} : return the content of the (0010,0010) DICOM tag(*);
-#'                 \item \code{PatientID} : return the content of the (0010,0020) DICOM tag(*);
-#'                 \item \code{Rows} : return the content of the (0028,0010) DICOM tag(*);
-#'                 \item \code{Columns} : return the content of the (0028,0011) DICOM tag(*);
-#'                 \item \code{StudyDate} : return the content of the (0028,0011) DICOM tag(*);
-#'                 \item \code{Modality} : return the content of the (0008,0060) DICOM tag(*);
-#'                 \item \code{PatientSex} : return the content of the (0010,0040) DICOM tag(*);
-#'                 \item \code{SeriesInstanceUID} : return the content of the (0020,000e) DICOM tag(*);
-#'                 \item \code{SliceThickness} : return the content of the (0018,0050) DICOM tag(*);
-#'                 \item \code{ImagePositionPatient} : return the content of the (0020,0032) DICOM tag(*);
-#'                 \item \code{ImageOrientationPatient} : return the content of the (0020,0037) DICOM tag(*);
-#'                 \item \code{PixelSpacing} : return the content of the (0028,0030) DICOM tag(*);
-#'               }
-#'               
-#'               (*) If no \code{seriesInstanceUID} or \code{filename} are provided, it returns the tag found in 
-#'               what seems to be the referencing CT or RMN scan. Pay attention to this point: in case of doubt about the
-#'               content of the folder this can lead to errors.
-#'               \item \code{string getDICOMTag(string fileName="",string tag) }
-#'               it allows to retrieve the value of a specific DICOM tag on a specified DICOM filename. If the name is not
-#'               indicated the method gets the first DICOM file he can find. 
-#'               \item  \code{matrix getROIList() }
-#'               returns the list of the available ROIs
-#'               \item \code{list getROIPointList(string ROINumber) }
-#'               returns the list of the points which define the indicated ROI. 
-#'               \item \code{ void setAttribute(string attributeName,string attributeValue) }
-#'               it sets the value of the specified attribute. The list of the availeable attributes is the following:
-#'                  \itemize{
-#'                    \item \code{verbose} : it define the policy adopted to print warnings and logs during computation. It is handled using an \code{errorHandler} object and works with three different levels. A list indicating the behaviour for each level should be provided.
-#'                  }
-#'               \item \code{list getFolderContent(string pathToOpen="") }
-#'               explores the content of the given folder and returns informarion about the stored DICOM objects
-#'               }
-#' @export
-#' @import stringr XML 
-geoLet<-function() {
 
+
+
+dcmLoader<-function() {
+  
   dataStorage<-list();          # Attribute with ALL the data
   dataChache<-list();           # Cache (internal use)
   SOPClassUIDList<-list();      # SOPClassUIDList
@@ -67,7 +16,7 @@ geoLet<-function() {
   #=================================================================================
   #' Open a folder and load the content
   openDICOMFolder<-function(pathToOpen) {
-
+    
     if( attributeList$verbose$lv1 == TRUE ) logObj$sendLog(pathToOpen)
     # get the dcm file type
     SOPClassUIDList<<-getFolderContent(pathToOpen);
@@ -104,11 +53,11 @@ geoLet<-function() {
         TMP<-getStructuresFromXML( i );
       }
     }
-
+    
     # now let me use some more easy to handle variable names
     matrice2<-TMP$IDROINameAssociation;
     matrice3<-TMP$tableROIPointList;
-
+    
     listaROI<-list()
     
     # for each ROI
@@ -117,19 +66,19 @@ geoLet<-function() {
       subMatrix<-matrice3[which(matrice3[,2]==i,arr.ind = TRUE),]
       # if some points exist
       quantiElementiTrovati<--1
-
+      
       if(is.list(subMatrix) & !is.array(subMatrix)) quantiElementiTrovati<-1
       if(is.matrix(subMatrix) & is.array(subMatrix)) quantiElementiTrovati<-dim(subMatrix)[1]
       if(quantiElementiTrovati==-1) stop("Errore inatteso nel caricamento delle slides. Error code:#0001");
       
       if( quantiElementiTrovati >0 ) {
-#      if( length(subMatrix) >0 ) {
+        #      if( length(subMatrix) >0 ) {
         listaROI[[i]]<-list()
         
         # add properly the points to the 'listaROI' structure
-#        for(contatore in seq(1,dim(subMatrix)[1]) ) {
+        #        for(contatore in seq(1,dim(subMatrix)[1]) ) {
         for(contatore in seq(1,quantiElementiTrovati) ) {
-#          if(i == "Urina" | i =="Vescica") browser();
+          #          if(i == "Urina" | i =="Vescica") browser();
           
           if( quantiElementiTrovati == 1) {
             ROIPointStringList<-subMatrix[[3]]
@@ -149,7 +98,7 @@ geoLet<-function() {
         }   
       }
     }
-
+    
     return(listaROI); 
   }  
   #=================================================================================
@@ -172,7 +121,7 @@ geoLet<-function() {
     for(i in names(lista)) {
       planes[[i]]<-dataStorage$info[[1]][[i]]$planeEquation
       dataStorage$info[[1]][[i]][["ROIList"]]<<-matrix("",ncol=2);
-
+      
       for(k in names(dataStorage$structures)) {
         for(t in names(dataStorage$structures[[k]])) {
           punto<-dataStorage$structures[[k]][[t]][[1]][1,]
@@ -190,7 +139,7 @@ geoLet<-function() {
         }
       }      
     }  
-
+    
     # now check if it has assigned all the ROIs
     for( i in names(dataStorage$structures) )  {
       lunghezzaAssegnate<-length(which(assignedSCANSandROI[,2]==i))
@@ -208,66 +157,66 @@ geoLet<-function() {
   loadCTRMNRDScans<-function(SOPClassUIDList) {   
     imageSerie<-list()
     objServ<-services()
-
+    
     # loop over the list    
     for(i in names(SOPClassUIDList)) {
-#      if(SOPClassUIDList[[i]]$kind=="RTDoseStorage" | 
-       if(  SOPClassUIDList[[i]]$kind=="CTImageStorage" |
-           SOPClassUIDList[[i]]$kind=="MRImageStorage" ) {
-         
-              
-              # get the Series number
-              seriesInstanceUID<-getDICOMTag(i,"0020,000e")
-              # get the Instance number (number of CT in the serie)
-              instanceNumber<-getDICOMTag(i,"0020,0013")              
-              imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]]<-list()
-              # get the Patient Position
-              imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]]<-getAttribute(attribute<-"PatientPosition",fileName=i)
-              # get the image data
-              immagine<-getDICOMTag(i,"7fe0,0010");
-              
-              # Do I have to rotate the image?
-              imageToBeRotated <- -1
-              if( imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "HFS" ) imageToBeRotated<-1
-              if( imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "FFS" ) imageToBeRotated<-1
-              if ( imageToBeRotated != -1 ) {
-                immagine <- objServ$SV.rotateMatrix( immagine, imageToBeRotated )
-              }
-              
-              # now update the structure in memory
-              imageSerie[["img"]][[seriesInstanceUID]][[instanceNumber]]<-immagine              
-              imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["SOPClassUID"]]<-SOPClassUIDList[[i]]$kind
-              imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["SOPInstanceUID"]]<-getDICOMTag(i,"0008,0018")
-              imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["fileName"]]<-i
-              pixelSpacing<-getAttribute(attribute<-"PixelSpacing",fileName=i)
-              #pixelSpacing<-getDICOMTag(i,"0028,0030")
-              oM<-getAttribute(attribute<-"orientationMatrix",fileName=i)              
-              imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["ImagePositionPatient"]]<-getAttribute(attribute<-"ImagePositionPatient",fileName=i)
-              imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["ImageOrientationPatient"]]<-getAttribute(attribute<-"ImageOrientationPatient",fileName=i)
-              oM[1,1]<-oM[1,1]*pixelSpacing[1]
-              oM[2,1]<-oM[2,1]*pixelSpacing[1]
-              oM[3,1]<-oM[3,1]*pixelSpacing[1]
-              oM[1,2]<-oM[1,2]*pixelSpacing[2]
-              oM[2,2]<-oM[2,2]*pixelSpacing[2]
-              oM[3,2]<-oM[3,2]*pixelSpacing[2]
-              imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["orientationMatrix"]]<-oM
-              imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["pixelSpacing"]]<-pixelSpacing
-              imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["Rows"]]<-getDICOMTag(i,"0028,0010")
-              imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["Columns"]]<-getDICOMTag(i,"0028,0011")
-              imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["SliceThickness"]]<-getDICOMTag(i,"0018,0050")
-              instanceNumber<-getDICOMTag(i,"0020,0013")
-              
-              # three points to find out plane equation
-              Pa<-c(oM[1,4],oM[2,4],oM[3,4])  
-              Pb<-objServ$SV.get3DPosFromNxNy(1000,0,oM)
-              Pc<-objServ$SV.get3DPosFromNxNy(0,1000,oM)
-
-              abcd<-objServ$SV.getPlaneEquationBetween3Points(Pa,Pb,Pc) 
-                
-              piano<-matrix(abcd,nrow=1)
-              colnames(piano)<-c("a","b","c","d")
-              imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["planeEquation"]]<-piano
-              if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog(i)
+      #      if(SOPClassUIDList[[i]]$kind=="RTDoseStorage" | 
+      if(  SOPClassUIDList[[i]]$kind=="CTImageStorage" |
+             SOPClassUIDList[[i]]$kind=="MRImageStorage" ) {
+        
+        
+        # get the Series number
+        seriesInstanceUID<-getDICOMTag(i,"0020,000e")
+        # get the Instance number (number of CT in the serie)
+        instanceNumber<-getDICOMTag(i,"0020,0013")              
+        imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]]<-list()
+        # get the Patient Position
+        imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]]<-getAttribute(attribute<-"PatientPosition",fileName=i)
+        # get the image data
+        immagine<-getDICOMTag(i,"7fe0,0010");
+        
+        # Do I have to rotate the image?
+        imageToBeRotated <- -1
+        if( imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "HFS" ) imageToBeRotated<-1
+        if( imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "FFS" ) imageToBeRotated<-1
+        if ( imageToBeRotated != -1 ) {
+          immagine <- objServ$SV.rotateMatrix( immagine, imageToBeRotated )
+        }
+        
+        # now update the structure in memory
+        imageSerie[["img"]][[seriesInstanceUID]][[instanceNumber]]<-immagine              
+        imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["SOPClassUID"]]<-SOPClassUIDList[[i]]$kind
+        imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["SOPInstanceUID"]]<-getDICOMTag(i,"0008,0018")
+        imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["fileName"]]<-i
+        pixelSpacing<-getAttribute(attribute<-"PixelSpacing",fileName=i)
+        #pixelSpacing<-getDICOMTag(i,"0028,0030")
+        oM<-getAttribute(attribute<-"orientationMatrix",fileName=i)              
+        imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["ImagePositionPatient"]]<-getAttribute(attribute<-"ImagePositionPatient",fileName=i)
+        imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["ImageOrientationPatient"]]<-getAttribute(attribute<-"ImageOrientationPatient",fileName=i)
+        oM[1,1]<-oM[1,1]*pixelSpacing[1]
+        oM[2,1]<-oM[2,1]*pixelSpacing[1]
+        oM[3,1]<-oM[3,1]*pixelSpacing[1]
+        oM[1,2]<-oM[1,2]*pixelSpacing[2]
+        oM[2,2]<-oM[2,2]*pixelSpacing[2]
+        oM[3,2]<-oM[3,2]*pixelSpacing[2]
+        imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["orientationMatrix"]]<-oM
+        imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["pixelSpacing"]]<-pixelSpacing
+        imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["Rows"]]<-getDICOMTag(i,"0028,0010")
+        imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["Columns"]]<-getDICOMTag(i,"0028,0011")
+        imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["SliceThickness"]]<-getDICOMTag(i,"0018,0050")
+        instanceNumber<-getDICOMTag(i,"0020,0013")
+        
+        # three points to find out plane equation
+        Pa<-c(oM[1,4],oM[2,4],oM[3,4])  
+        Pb<-objServ$SV.get3DPosFromNxNy(1000,0,oM)
+        Pc<-objServ$SV.get3DPosFromNxNy(0,1000,oM)
+        
+        abcd<-objServ$SV.getPlaneEquationBetween3Points(Pa,Pb,Pc) 
+        
+        piano<-matrix(abcd,nrow=1)
+        colnames(piano)<-c("a","b","c","d")
+        imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["planeEquation"]]<-piano
+        if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog(i)
       }
       
       if(  SOPClassUIDList[[i]]$kind=="RTDoseStorage") {
@@ -305,7 +254,7 @@ geoLet<-function() {
   #================================================================================= 
   getStructuresFromXML<-function(fileName) {    
     
-
+    
     fileNameXML<-paste(fileName,".xml")    
     fileNameXML<-str_replace_all(string = fileNameXML , pattern = " .xml",replacement = ".xml")
     pathToStore<-substr(fileName,1,tail(which(strsplit(fileName, '')[[1]]=='/'),1)-1)
@@ -333,7 +282,7 @@ geoLet<-function() {
       system2(stringa1,stringa2,stdout=NULL)
       options(warn=0)
     }
-  
+    
     # Load the XML file
     doc = xmlInternalTreeParse(fileNameXML)
     
@@ -350,7 +299,7 @@ geoLet<-function() {
       matrice2<-rbind(matrice2,c(ROINumber,ROIName))
     }
     matrice2<-t(matrice2)
-
+    
     # ROI Point list
     matrice3<-c()
     for(i in n3XML) {
@@ -387,7 +336,7 @@ geoLet<-function() {
     columnsDICOM<-as.numeric(getDICOMTag(fileName,'0028,0011'))
     
     bitsAllocated<-as.numeric(getDICOMTag(fileName,'0028,0100'))
-
+    
     if(SOPClassUIDList[[fileName]]$kind!="RTDoseStorage"){
       if(bitsAllocated!=16) stop("16bit pixel are allowed only for non-RTDoseStorage")
       rn<-readBin(con = fileNameRAW, what="integer", size=2, endian="little",n=rowsDICOM*columnsDICOM)    
@@ -433,7 +382,7 @@ geoLet<-function() {
         }
         rn<-new_atRN        
       }
-        #stop("RTDose must have 32 bit words!")
+      #stop("RTDose must have 32 bit words!")
     }    
     return(rn)
   }
@@ -444,15 +393,73 @@ geoLet<-function() {
   getROIPointList<-function(ROINumber) {    
     return(dataStorage$structures[ROINumber][[names(dataStorage$structures[ROINumber])]])
   }
+  getAssociationTable<-function( tipoTabella, ROIName ) {
+    
+    if(tipoTabella=="SOPInstance_vs_SliceLocation") {
+      matrice<-c()
+      involvedCT<-names(dataStorage$structures$GTV);
+      
+      for(index in names(dataStorage$info[[1]]) ) {
+        matrice<-rbind(matrice,cbind(dataStorage$info[[1]][[index]]$ROIList,index) );
+      }
+      matrice<-matrice[which(matrice[,1]==ROIName),]
+      return(matrice)
+    }
+  }  
+  rotateToAlign<-function(ROIName) {
+    tabella1<-getAssociationTable( "SOPInstance_vs_SliceLocation" , ROIName )
+    pointList<-getROIPointList( ROIName )
+    newPointList<-pointList
+    iterazione<-1
+    
+    for(index in names( pointList )) {
+      for(internalIndex in seq(1,length(pointList[[index]]))) {
+        
+#         if(iterazione==2) {       
+#           return( list()   )
+#           print(c(index,internalIndex))
+#           print(IMGsliceInfo)
+#           stop()
+#         }        
+        
+        IMGsliceInfo<-dataStorage$info[[1]][[ tabella1[ which(tabella1[,2]==index)  ,3  ]  ]]
+        sliceLocation<-as.numeric(tabella1[which(tabella1[,2]==index),3])
+        DOM<-IMGsliceInfo$orientationMatrix
+        
+        m<-pointList[[index]][[internalIndex]];
+
+        numeroRighe<-dim(m)[1]
+        for(i in seq(1,numeroRighe)) {
+          valori<-calcolaNX(m[i,],DOM )
+          newPointList[[index]][[internalIndex]][i,1]<-valori$Nx
+          newPointList[[index]][[internalIndex]][i,2]<-valori$Ny
+          newPointList[[index]][[internalIndex]][i,3]<-sliceLocation
+        }
+      }
+      iterazione<-iterazione+1
+    }
+    return( list("pointList"=newPointList) ) 
+    #dataStorage$info[[1]][[ sliceNumber ]]$orientationMatrix
+  }
+  calcolaNX<-function(riga,DOM) {
+    Px<-riga[1];    Py<-riga[2];
+    a11<-DOM[1,1];    a21<-DOM[2,1];    a31<-DOM[3,1];    a12<-DOM[1,2];
+    a22<-DOM[2,2];    a32<-DOM[3,2];    Sx<-DOM[1,4];     Sy<-DOM[2,4];     Sz<-DOM[3,4]; 
+    Nx<-(a22*Px-a12*Py-a22*Sx+a12*Sy)/(a11*a22-a21*a12);
+    Ny<-(a11*Py-a21*Px+a21*Sx-a11*Sy)/(a22*a11-a21*a12);
+    Nz<-Sz;
+    return(list("Nx"=Nx,"Ny"=Ny,"Nz"=Nz))
+  }
+  
   #=================================================================================
   # getAttribute
   # getAttribute: what else?
   #=================================================================================
-
+  
   getAttribute<-function(attribute,seriesInstanceUID="",fileName="") {
-
+    
     if(fileName == "" ) fileName<-getDefaultFileName(seriesInstanceUID)    
-
+    
     # internal DATA
     if(attribute=="dataStorage")  return(dataStorage)  
     # DICOM TAGS
@@ -510,7 +517,7 @@ geoLet<-function() {
   #=================================================================================
   getDICOMTag<-function(fileName="",tag=tag) {
     stringa1<-"dcmdump"
- 
+    
     # if he want an image, grab it by a raw dump
     if(tag == "7fe0,0010") return( getImageFromRAW(fileName) );
     
@@ -575,10 +582,10 @@ geoLet<-function() {
     }
     attributeList[[ attribute ]]<<-value    
   }
-
+  
   getROIVoxels<-function( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) {
     SOPClassUID<- dataStorage$info[[SeriesInstanceUID]][[1]]$SOPClassUID
-
+    
     if (SOPClassUID == "CTImageStorage" | SOPClassUID == "MRImageStorage") {
       return (getROIVoxelsFromCTRMN( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID))
     }
@@ -600,12 +607,12 @@ geoLet<-function() {
     
     stop("now I'm here");    
   }
-#   getROIVoxelsFromCTRMN<-function( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) {
-#     # define some variables to make more clear the code
-#     numberOfRows<-as.numeric(dataStorage$info[[SeriesInstanceUID]][[1]]$Rows);
-#     #numberOfRows<-as.numeric(dataStorage$info[[1]][[1]]$Rows);
-#     numberOfColumns<-as.numeric(dataStorage$info[[SeriesInstanceUID]][[1]]$Columns);    
-#   }
+  #   getROIVoxelsFromCTRMN<-function( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) {
+  #     # define some variables to make more clear the code
+  #     numberOfRows<-as.numeric(dataStorage$info[[SeriesInstanceUID]][[1]]$Rows);
+  #     #numberOfRows<-as.numeric(dataStorage$info[[1]][[1]]$Rows);
+  #     numberOfColumns<-as.numeric(dataStorage$info[[SeriesInstanceUID]][[1]]$Columns);    
+  #   }
   getROIVoxelsFromCTRMN<-function( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) {
     objService<-services()    
     # define some variables to make more clear the code
@@ -614,7 +621,7 @@ geoLet<-function() {
     numberOfColumns<-as.numeric(dataStorage$info[[SeriesInstanceUID]][[1]]$Columns);
     #numberOfRows<-as.numeric(dataStorage$info[[1]][[1]]$Columns);
     numberOfSlices<-length(dataStorage$img[[SeriesInstanceUID]]);
-
+    
     # initialize the image array with the right dimension
     image.arr<-array( data = -1, dim = c(numberOfRows, numberOfColumns, numberOfSlices ) )
     # index values listed as characters: creates empty array of DICOM orientation matrices
@@ -664,10 +671,10 @@ geoLet<-function() {
       }      
       indiceDOM<-indiceDOM+1;
     }
-#    browser();
+    #    browser();
     indiceDOM<-indiceDOM+1;
     indiceDOM<-indiceDOM-1;
-#    browser();
+    #    browser();
     # ok, call the Wrapper!
     final.array<-NewMultiPointInPolyObl(
       # array of DICOM Orientation Matrices
@@ -701,7 +708,7 @@ geoLet<-function() {
     
     
     for ( i in seq(1,dim(image.arr)[3] )) {
-#      image.arr[,,i]<-objService$SV.rotateMatrix(image.arr[,,i])
+      #      image.arr[,,i]<-objService$SV.rotateMatrix(image.arr[,,i])
       final.array[,,i]<-t(objService$SV.rotateMatrix(final.array[,,i],rotations=3))
     }
     
@@ -745,58 +752,6 @@ geoLet<-function() {
   constructor()
   return(list(openDICOMFolder=openDICOMFolder,getAttribute=getAttribute,
               getDICOMTag=getDICOMTag,getROIList=getROIList,getROIPointList=getROIPointList,
-              setAttribute=setAttribute,getFolderContent=getFolderContent,getROIVoxels=getROIVoxels))
+              setAttribute=setAttribute,getFolderContent=getFolderContent,getROIVoxels=getROIVoxels,
+              getAssociationTable=getAssociationTable,rotateToAlign=rotateToAlign))
 }
-
-# ========================================================================================
-# WRAPPERS
-# ========================================================================================
-#' GLT.openDICOMFolder - a wrapper function to force a geoLet object to load a DICOM Study
-#' 
-#' @param obj an \code{geoLet} object
-#' @param pathToOpen the path where the DICOM study is stored. 
-#' @description  force a \code{geoLet} object to load a DICOM study
-#' @details it's jusat a wrapper function to force an mmButo object to load DICOM Studies by the method \code{openDICOMFolder}
-#' @return nothing. To read the loaded data please retrieve the attribute \code{dataStorage} by the \code{getAttribute} method or by it's wrapper-function \code{GLT.getAttribute}.
-#' @export
-GLT.openDICOMFolder<-function(obj = obj, pathToOpen = pathToOpen) {
-  obj.openDICOMFolder(pathToOpen = pathToOpen);  
-}
-#' GLT.getAttribute - a wrapper function to get an attribute from a \code{geoLet} object
-#' 
-#' @param obj an \code{geoLet} object
-#' @param attribute the name of the attribute to be retrieved. The available attributes arE:
-#'    \itemize{
-#'      \item \code{dataStorage} is probably the most informative attribute. It stores all the information about images, ROIs, etc, archieved as a list of lists deeply nested
-#'      \item \code{PatientName} is the Patient name as stored in the DICOM study
-#'      \item \code{PatientID} is the Patient ID as stored in the DICOM study
-#'      \item \code{PatientSex} is the sex of the patient
-#'      \item \code{Rows} is the number of rows in the DICOM images
-#'      \item \code{Columns} is the number of columns in the DICOM images
-#'      \item \code{PixelSpacing} is xy dimension for each voxel
-#'      \item \code{SliceThickness} is the thickness of the interested slice
-#'      \item \code{ImagePositionPatient} is the ImagePositionPatient of the interested slice
-#'      \item \code{ImageOrientationPatient} is the ImageOrientationPatient of the interested slice
-#'      \item \code{orientationMatrix} is the complete orientationMatrix proposed as a matrix
-#'      \item \code{StudyDate} the date of the study
-#'      \item \code{Modality} the modality of the study
-#'      \item \code{SeriesInstanceUID} the SeriesInstanceUID of the serie
-#'    }
-#' @param seriesInstanceUID If the attribute is series-related, the seriesInstanceUID should be specified
-#' @param fileName If the attribute is image-related, the fileName should be specified
-#' @description  It's a wrapper to get an attribute from a \code{geoLet} obj.
-#' @return the whished attribute
-#' @export
-GLT.getAttribute<-function(obj = obj, attribute = attribute, seriesInstanceUID = seriesInstanceUID, fileName = fileName) {
-  return( getAttribute ( attribute = attribute, seriesInstanceUID = seriesInstanceUID, fileName = fileName ) )
-}
-GLT.getROIVoxels<-function( obj = obj, Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) {
-  return( obj$getROIVoxels( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) )
-}
-# --------------------------------------------------------------------------------------------------------------------
-#  Examples
-# --------------------------------------------------------------------------------------------------------------------
-
-#obj<-geoLet()
-#obj$setAttribute(attribute="verbose",value=list("lv1"=TRUE,"lv2"=TRUE,"onFilePar"=TRUE))
-#obj$openDICOMFolder("/progetti/immagini/Positive/POST/DAgostini")
