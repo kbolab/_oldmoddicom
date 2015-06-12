@@ -187,6 +187,7 @@ dcmLoader<-function() {
         imageSerie[["img"]][[seriesInstanceUID]][[instanceNumber]]<-immagine              
         imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["SOPClassUID"]]<-SOPClassUIDList[[i]]$kind
         imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["SOPInstanceUID"]]<-getDICOMTag(i,"0008,0018")
+        imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["FrameOfReferenceUID"]]<-getDICOMTag(i,"0020,0052")
         imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["fileName"]]<-i
         pixelSpacing<-getAttribute(attribute<-"PixelSpacing",fileName=i)
         #pixelSpacing<-getDICOMTag(i,"0028,0030")
@@ -241,6 +242,7 @@ dcmLoader<-function() {
         imageSerie[["info"]][[seriesInstanceUID]][["1"]][["GridFrameOffsetVector"]]<-GridFrameOffsetVector
         imageSerie[["info"]][[seriesInstanceUID]][["1"]][["DoseGridScaling"]]<-getDICOMTag(i,"3004,000e") 
         imageSerie[["info"]][[seriesInstanceUID]][["1"]][["SOPClassUID"]]<-SOPClassUIDList[[i]]$kind
+        imageSerie[["info"]][[seriesInstanceUID]][["1"]][["FrameOfReferenceUID"]]<-getDICOMTag(i,"0020,0052")
         immagine<-getDICOMTag(i,"7fe0,0010");
         imageSerie[["dose"]][[seriesInstanceUID]]<-immagine * as.numeric( imageSerie[["info"]][[seriesInstanceUID]][["1"]][["DoseGridScaling"]] )
       }      
@@ -307,6 +309,8 @@ dcmLoader<-function() {
       ROIName<-matrice2[2,which(matrice2[1,]==ROINumber)]
       listaPuntiDaRavanare<-getNodeSet(xmlDoc(i),'/item/sequence/item')
       for(i2 in listaPuntiDaRavanare)   {
+#         print("intervenire qui")
+#         stop()
         ReferencedSOPInstanceUID<-xpathApply(xmlDoc(i2),'//element[@tag="0008,1155"]',xmlValue)[[1]]
         ROIPointList<-xpathApply(xmlDoc(i2),'/item/element[@tag="3006,0050"]',xmlValue)
         matrice3<-rbind(matrice3,c(ROINumber,ROIName,ROIPointList,ReferencedSOPInstanceUID))
@@ -414,14 +418,6 @@ dcmLoader<-function() {
     
     for(index in names( pointList )) {
       for(internalIndex in seq(1,length(pointList[[index]]))) {
-        
-#         if(iterazione==2) {       
-#           return( list()   )
-#           print(c(index,internalIndex))
-#           print(IMGsliceInfo)
-#           stop()
-#         }        
-        
         IMGsliceInfo<-dataStorage$info[[1]][[ tabella1[ which(tabella1[,2]==index)  ,3  ]  ]]
         sliceLocation<-as.numeric(tabella1[which(tabella1[,2]==index),3])
         DOM<-IMGsliceInfo$orientationMatrix
@@ -433,14 +429,18 @@ dcmLoader<-function() {
           valori<-calcolaNX(m[i,],DOM )
           newPointList[[index]][[internalIndex]][i,1]<-valori$Nx
           newPointList[[index]][[internalIndex]][i,2]<-valori$Ny
-          newPointList[[index]][[internalIndex]][i,3]<-sliceLocation
+          #newPointList[[index]][[internalIndex]][i,3]<-sliceLocation
+          newPointList[[index]][[internalIndex]][i,3]<-valori$Nz
         }
       }
       iterazione<-iterazione+1
     }
     return( list("pointList"=newPointList) ) 
-    #dataStorage$info[[1]][[ sliceNumber ]]$orientationMatrix
   }
+  grid.matrixForExtraction<-function( ROIName , SeriesInstanceUIDToBeMapped) {
+    
+  }
+  
   calcolaNX<-function(riga,DOM) {
     Px<-riga[1];    Py<-riga[2];
     a11<-DOM[1,1];    a21<-DOM[2,1];    a31<-DOM[3,1];    a12<-DOM[1,2];

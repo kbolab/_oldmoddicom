@@ -123,14 +123,11 @@ geoLet<-function() {
       if(quantiElementiTrovati==-1) stop("Errore inatteso nel caricamento delle slides. Error code:#0001");
       
       if( quantiElementiTrovati >0 ) {
-#      if( length(subMatrix) >0 ) {
         listaROI[[i]]<-list()
         
         # add properly the points to the 'listaROI' structure
-#        for(contatore in seq(1,dim(subMatrix)[1]) ) {
         for(contatore in seq(1,quantiElementiTrovati) ) {
-#          if(i == "Urina" | i =="Vescica") browser();
-          
+        
           if( quantiElementiTrovati == 1) {
             ROIPointStringList<-subMatrix[[3]]
             SOPInstance<-subMatrix[[4]]
@@ -164,29 +161,46 @@ geoLet<-function() {
   # Create the association between ROI and images
   #=================================================================================
   associateROIandImageSlices<-function() {
+    
+    # trova la slice che sia una CT o una risonanza per associarvi RTStruct (ad es: una dose non va bene)
+    list.index<-''
+    for(whichIdentifier in seq(1,length(dataStorage$info) )) {
+      if(dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'CTImageStorage' ||
+           dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'MRImageStorage' ) list.index<-whichIdentifier
+    }
+    if(list.index=='') stop("list.index is empty!")
+    
     # ok now try to find out which is the RMN plane
-    lista<-dataStorage$info[[1]]
+    lista<-dataStorage$info[[list.index]]
     planes<-list()
     assignedSCANSandROI<-matrix(NA,ncol=3,nrow=1)
-    
+    massimo<-0
     for(i in names(lista)) {
-      planes[[i]]<-dataStorage$info[[1]][[i]]$planeEquation
-      dataStorage$info[[1]][[i]][["ROIList"]]<<-matrix("",ncol=2);
+      
+      planes[[i]]<-dataStorage$info[[list.index]][[i]]$planeEquation
+      dataStorage$info[[list.index]][[i]][["ROIList"]]<<-matrix("",ncol=2);
 
       for(k in names(dataStorage$structures)) {
         for(t in names(dataStorage$structures[[k]])) {
-          punto<-dataStorage$structures[[k]][[t]][[1]][1,]
-          distanza<-objServ$SV.getPointPlaneDistance(Punto=punto, Piano=planes[[i]])
-          
-          if( abs(distanza)<0.1 ) {
-            if(dataStorage$info[[1]][[i]][["ROIList"]][1]==''  ) {
-              dataStorage$info[[1]][[i]][["ROIList"]]<<-matrix(c(k,t),ncol=2)
-            }
-            else {
-              dataStorage$info[[1]][[i]][["ROIList"]]<<-rbind(dataStorage$info[[1]][[i]][["ROIList"]],c(k,t))   #   <<
-            }
+          # se non trovi nulla (ROI non associata ad alcuna lisce)
+          if(t=='') {
             assignedSCANSandROI<-rbind(assignedSCANSandROI,c(i,k,t))
           }
+          else # se invece c'è una slice cui associare la ROI
+            {          
+              punto<-dataStorage$structures[[k]][[t]][[1]][1,]
+              distanza<-objServ$SV.getPointPlaneDistance(Punto=punto, Piano=planes[[i]])
+              
+              if( abs(distanza)<0.1 ) {
+                if(dataStorage$info[[list.index]][[i]][["ROIList"]][1]==''  ) {
+                  dataStorage$info[[list.index]][[i]][["ROIList"]]<<-matrix(c(k,t),ncol=2)
+                }
+                else {
+                  dataStorage$info[[list.index]][[i]][["ROIList"]]<<-rbind(dataStorage$info[[list.index]][[i]][["ROIList"]],c(k,t))   #   <<
+                }
+                assignedSCANSandROI<-rbind(assignedSCANSandROI,c(i,k,t))
+              }
+            }
         }
       }      
     }  
@@ -197,7 +211,7 @@ geoLet<-function() {
       lunghezzaCaricate<-length(dataStorage$structures[[i]])
       if(lunghezzaAssegnate!=  lunghezzaCaricate) { 
         
-        cat("\n ROI NON CARICATE CORRETTAMENTE: ",i,"\n"); 
+        cat("\nWARNING: ROI NON CARICATE CORRETTAMENTE: ",i,"\n"); 
       }
     }
   }
@@ -304,8 +318,8 @@ geoLet<-function() {
   # into memory (using DCMTK)
   #================================================================================= 
   getStructuresFromXML<-function(fileName) {    
-    
-
+    obj.S<-services();
+    massimo<-0
     fileNameXML<-paste(fileName,".xml")    
     fileNameXML<-str_replace_all(string = fileNameXML , pattern = " .xml",replacement = ".xml")
     pathToStore<-substr(fileName,1,tail(which(strsplit(fileName, '')[[1]]=='/'),1)-1)
@@ -350,22 +364,107 @@ geoLet<-function() {
       matrice2<-rbind(matrice2,c(ROINumber,ROIName))
     }
     matrice2<-t(matrice2)
-
     # ROI Point list
+    massimo<-0
+
     matrice3<-c()
     for(i in n3XML) {
       ROINumber<-xpathApply(xmlDoc(i),'/item/element[@tag="3006,0084"]',xmlValue)[[1]]
       ROIName<-matrice2[2,which(matrice2[1,]==ROINumber)]
       listaPuntiDaRavanare<-getNodeSet(xmlDoc(i),'/item/sequence/item')
+
       for(i2 in listaPuntiDaRavanare)   {
-        ReferencedSOPInstanceUID<-xpathApply(xmlDoc(i2),'//element[@tag="0008,1155"]',xmlValue)[[1]]
-        ROIPointList<-xpathApply(xmlDoc(i2),'/item/element[@tag="3006,0050"]',xmlValue)
+        # ReferencedSOPInstanceUID<-xpathApply(xmlDoc(i2),'//element[@tag="0008,1155"]',xmlValue)[[1]]
+              
+        ROIPointList<-xpathApply(xmlDoc(i2),'/item/element[@tag="3006,0050"]',xmlValue)        
+        splittedROIPointList<-as.numeric(strsplit(ROIPointList[[1]],split = "\\\\")[[1]])
+        fPoint.x<-splittedROIPointList[1]
+        fPoint.y<-splittedROIPointList[2]
+        fPoint.z<-splittedROIPointList[3]
+        
+        assegnato<-FALSE
+        ReferencedSOPInstanceUID<-''
+        list.index<-''
+        for(whichIdentifier in seq(1,length(dataStorage$info) )) {
+          if(dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'CTImageStorage' ||
+               dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'MRImageStorage' ) list.index<-whichIdentifier
+        }
+        if(list.index=='') stop("list.index is empty!")
+        for(slice.index in seq(1,length(dataStorage$info[[list.index]]))) {
+          distanza<-obj.S$SV.getPointPlaneDistance(c(fPoint.x,fPoint.y,fPoint.z),dataStorage$info[[list.index]][[slice.index]]$planeEquation)
+          if( abs(distanza)<0.2 ) {
+            ReferencedSOPInstanceUID<-dataStorage$info[[list.index]][[slice.index]]$SOPInstanceUID
+            assegnato<-TRUE
+          }
+        }
+        if( assegnato == FALSE ) cat("WARNING: ROI ",ROIName,": the point (",fPoint.x,",",fPoint.y,",",fPoint.z,") has no image slice!\n"); 
         matrice3<-rbind(matrice3,c(ROINumber,ROIName,ROIPointList,ReferencedSOPInstanceUID))
       }
     }
-    
     return(list("IDROINameAssociation"=matrice2,"tableROIPointList"=matrice3))
   }
+old_getStructuresFromXML<-function(fileName) {    
+  
+  
+  fileNameXML<-paste(fileName,".xml")    
+  fileNameXML<-str_replace_all(string = fileNameXML , pattern = " .xml",replacement = ".xml")
+  pathToStore<-substr(fileName,1,tail(which(strsplit(fileName, '')[[1]]=='/'),1)-1)
+  
+  # dcmodify -i "(0008,0005)=ISO_IR 100" ./RTSTRUCT999.61977.8337.20150525122026787.dcm
+  
+  if(!file.exists( fileNameXML )) {
+    # now check the problem of viewRAY is the 0008,0005 present?
+    stringa1<-"dcmdump";
+    stringa2<-paste(" ",fileName," | grep '0008,0005'",collapse='')
+    options(warn=-1)
+    aTMPa<-system2( stringa1,stringa2,stdout=TRUE )
+    options(warn=0)
+    if(length(aTMPa)==0) {
+      stringa1<-"dcmodify";
+      stringa2<-paste(" -i '(0008,0005)=ISO_IR 100'  ",fileName,collapse='')
+      options(warn=-1)
+      system2(stringa1,stringa2,stdout=NULL)
+      options(warn=0)        
+    }
+    
+    stringa1<-"dcm2xml";
+    stringa2<-paste(" +M  ",fileName,fileNameXML,collapse='')
+    options(warn=-1)
+    system2(stringa1,stringa2,stdout=NULL)
+    options(warn=0)
+  }
+  
+  # Load the XML file
+  doc = xmlInternalTreeParse(fileNameXML)
+  
+  # SEQUENCES: the one with the attribute  tag="3006,0020"  and name="StructureSetROISequence" is the one with association NAME<->ID
+  n2XML<-getNodeSet(doc,'/file-format/data-set/sequence[@tag="3006,0020" and @name="StructureSetROISequence"]/item')
+  # SEQUENCES: now get the true coords
+  n3XML<-getNodeSet(doc,'/file-format/data-set/sequence[@tag="3006,0039" and @name="ROIContourSequence"]/item')
+  
+  # ROI Names
+  matrice2<-c()
+  for(i in n2XML) {
+    ROINumber<-xpathApply(xmlDoc(i),'/item/element[@tag="3006,0022"]',xmlValue)[[1]]
+    ROIName<-xpathApply(xmlDoc(i),'/item/element[@tag="3006,0026"]',xmlValue)[[1]]
+    matrice2<-rbind(matrice2,c(ROINumber,ROIName))
+  }
+  matrice2<-t(matrice2)
+  # ROI Point list
+  matrice3<-c()
+  for(i in n3XML) {
+    ROINumber<-xpathApply(xmlDoc(i),'/item/element[@tag="3006,0084"]',xmlValue)[[1]]
+    ROIName<-matrice2[2,which(matrice2[1,]==ROINumber)]
+    listaPuntiDaRavanare<-getNodeSet(xmlDoc(i),'/item/sequence/item')
+    for(i2 in listaPuntiDaRavanare)   {
+      ReferencedSOPInstanceUID<-xpathApply(xmlDoc(i2),'//element[@tag="0008,1155"]',xmlValue)[[1]]
+      ROIPointList<-xpathApply(xmlDoc(i2),'/item/element[@tag="3006,0050"]',xmlValue)
+      matrice3<-rbind(matrice3,c(ROINumber,ROIName,ROIPointList,ReferencedSOPInstanceUID))
+    }
+  }
+  
+  return(list("IDROINameAssociation"=matrice2,"tableROIPointList"=matrice3))
+}
   #=================================================================================
   # getImageFromRAW
   # build a row data from a DICOM file stored on filesystem and load it 
@@ -664,10 +763,7 @@ geoLet<-function() {
       }      
       indiceDOM<-indiceDOM+1;
     }
-#    browser();
-    indiceDOM<-indiceDOM+1;
-    indiceDOM<-indiceDOM-1;
-#    browser();
+
     # ok, call the Wrapper!
     final.array<-NewMultiPointInPolyObl(
       # array of DICOM Orientation Matrices
