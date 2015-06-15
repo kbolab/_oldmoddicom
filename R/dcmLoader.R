@@ -401,7 +401,7 @@ dcmLoader<-function() {
     
     if(tipoTabella=="SOPInstance_vs_SliceLocation") {
       matrice<-c()
-      involvedCT<-names(dataStorage$structures$GTV);
+      involvedCT<-names(dataStorage$structures[[ROIName]]);
       
       for(index in names(dataStorage$info[[1]]) ) {
         matrice<-rbind(matrice,cbind(dataStorage$info[[1]][[index]]$ROIList,index) );
