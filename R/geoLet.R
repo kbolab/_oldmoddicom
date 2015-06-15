@@ -675,35 +675,19 @@ old_getStructuresFromXML<-function(fileName) {
     attributeList[[ attribute ]]<<-value    
   }
 
-  getROIVoxels<-function( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) {
-    SOPClassUID<- dataStorage$info[[SeriesInstanceUID]][[1]]$SOPClassUID
-
-    if (SOPClassUID == "CTImageStorage" | SOPClassUID == "MRImageStorage") {
-      return (getROIVoxelsFromCTRMN( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID))
-    }
-    if (SOPClassUID == "RTDoseStorage" ) {
-      return (getROIVoxelsFromRTDose( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID))
-    }
-    print("SOPClassUID not yet prevista");
-    stop();
+  getROIVoxels<-function( Structure = Structure ) {
+    # try to find out which Series is the CT/MR serie
+    CTMRSeriesInstanceUID<-''
+    for(i in seq(1,length(dataStorage$info) ) ) {
+      SOPClassUID2Check<- dataStorage$info[[i]][[1]]$SOPClassUID
+      if (SOPClassUID2Check == "CTImageStorage" | SOPClassUID2Check == "MRImageStorage") {
+        CTMRSeriesInstanceUID<-i
+      } 
+    }    
+    SeriesInstanceUID<-CTMRSeriesInstanceUID
+    if(SeriesInstanceUID == '' ) stop("ERROR: missing CT/MR series")
+    return( getROIVoxelsFromCTRMN( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) )
   }
-  getROIVoxelsFromRTDose<-function( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) {
-    # define some variables to make more clear the code
-    numberOfRows<-as.numeric(dataStorage$info[[SeriesInstanceUID]][[1]]$Rows);
-    #numberOfRows<-as.numeric(dataStorage$info[[1]][[1]]$Rows);
-    numberOfColumns<-as.numeric(dataStorage$info[[SeriesInstanceUID]][[1]]$Columns);
-    #numberOfRows<-as.numeric(dataStorage$info[[1]][[1]]$Columns);
-    numberOfSlices<-dim(dataStorage$dose[[1]])[3]
-    # initialize the image array with the right dimension
-    image.arr<-array( data = -1, dim = c(numberOfRows, numberOfColumns, numberOfSlices ) )        
-    stop("now I'm here");    
-  }
-#   getROIVoxelsFromCTRMN<-function( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) {
-#     # define some variables to make more clear the code
-#     numberOfRows<-as.numeric(dataStorage$info[[SeriesInstanceUID]][[1]]$Rows);
-#     #numberOfRows<-as.numeric(dataStorage$info[[1]][[1]]$Rows);
-#     numberOfColumns<-as.numeric(dataStorage$info[[SeriesInstanceUID]][[1]]$Columns);    
-#   }
   getROIVoxelsFromCTRMN<-function( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) {
     objService<-services()    
     # define some variables to make more clear the code
@@ -881,12 +865,40 @@ GLT.openDICOMFolder<-function(obj = obj, pathToOpen = pathToOpen) {
 #' @param fileName If the attribute is image-related, the fileName should be specified
 #' @description  It's a wrapper to get an attribute from a \code{geoLet} obj.
 #' @return the whished attribute
+#' @examples \dontrun{
+#' # create an object geoLet
+#' obj<-geoLet()
+#' # use the method 'openDICOMFolder' to load a study
+#' obj$openDICOMFolder("/progetti/immagini/SaroshTest")
+#' # use the wrapper GLT.getROIVoxels to get voxels of ROI "Ossa, NOS"
+#' dataStorage<-GLT.getAttribute(obj = obj,attribute = "dataStorage")
+#' # just to see the content of 'ossa'....
+#' names(dataStorage)
+#' }
 #' @export
 GLT.getAttribute<-function(obj = obj, attribute = attribute, seriesInstanceUID = seriesInstanceUID, fileName = fileName) {
-  return( getAttribute ( attribute = attribute, seriesInstanceUID = seriesInstanceUID, fileName = fileName ) )
+  return( obj$getAttribute ( attribute, seriesInstanceUID , fileName  ) )
 }
-GLT.getROIVoxels<-function( obj = obj, Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) {
-  return( obj$getROIVoxels( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) )
+#' GLT.getROIVoxels - a wrapper function to get a set of voxel within a ROI from a \code{geoLet} object
+#' 
+#' @param obj an \code{geoLet} object
+#' @param Structure the ROIName to extract 
+#' @description  force a \code{geoLet} object to extract the CT/MR voxels within the interested ROI and return a voxelCube containing the CT/MR voxels, the mask and some info (as a list)
+#' @details it's jusat a wrapper function to the \code{getROIVoxels} method of \code{geoLEt} class.
+#' @return a list
+#' @export
+#' @examples \dontrun{
+#' # create an object geoLet
+#' obj<-geoLet()
+#' # use the method 'openDICOMFolder' to load a study
+#' obj$openDICOMFolder("/progetti/immagini/SaroshTest")
+#' # use the wrapper GLT.getROIVoxels to get voxels of ROI "Ossa, NOS"
+#' ossa<-GLT.getROIVoxels(obj = obj,Structure = "Ossa, NOS")
+#' # just to see the content of 'ossa'....
+#' names(ossa)
+#' }
+GLT.getROIVoxels<-function( obj = obj, Structure = Structure) {
+  return( obj$getROIVoxels( Structure = Structure) )
 }
 # --------------------------------------------------------------------------------------------------------------------
 #  Examples
