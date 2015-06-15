@@ -695,8 +695,7 @@ old_getStructuresFromXML<-function(fileName) {
     #numberOfRows<-as.numeric(dataStorage$info[[1]][[1]]$Columns);
     numberOfSlices<-dim(dataStorage$dose[[1]])[3]
     # initialize the image array with the right dimension
-    image.arr<-array( data = -1, dim = c(numberOfRows, numberOfColumns, numberOfSlices ) )    
-    
+    image.arr<-array( data = -1, dim = c(numberOfRows, numberOfColumns, numberOfSlices ) )        
     stop("now I'm here");    
   }
 #   getROIVoxelsFromCTRMN<-function( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) {
