@@ -239,11 +239,11 @@ geoLet<-function() {
               imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]]<-getAttribute(attribute<-"PatientPosition",fileName=i)
               # get the image data
               immagine<-getDICOMTag(i,"7fe0,0010");
-              
               # Do I have to rotate the image?
               imageToBeRotated <- -1
               if( imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "HFS" ) imageToBeRotated<-1
               if( imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "FFS" ) imageToBeRotated<-1
+              if( imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "HFP" ) imageToBeRotated<-1
               if ( imageToBeRotated != -1 ) {
                 immagine <- objServ$SV.rotateMatrix( immagine, imageToBeRotated )
               }
