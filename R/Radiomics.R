@@ -47,7 +47,8 @@ mmButo<-function() {
           SS<-names(ds$img);
           
           #result<-RAD.NewMultiPIPOblique(dataStorage = ds, Structure = ROIName, SeriesInstanceUID = SS)
-          result<-obj$getROIVoxels( Structure = ROIName, SeriesInstanceUID = SS)
+          #result<-obj$getROIVoxels( Structure = ROIName, SeriesInstanceUID = SS)
+          result<-obj$getROIVoxels( Structure = ROIName)
           
           cubeVoxelList[[ folderName ]][["voxelCubes"]][[ ROIName ]]<-result$masked.images    
           cubeVoxelList[[ folderName ]][["info"]]<-result$DOM
@@ -593,8 +594,8 @@ RAD.ROIStats<-function(obj, ROIName, errorHandlerParams=c() ) {
 
 # example -- mmButo stile Toronto
 #rm(obj.positive)
-#obj.positive<-RAD.mmButo()
-#obj.positive$openTreeMultiROIs("/progetti/immagini/CONTOURED/Positive/easy", structureList=c("GTV","Retto"))
+#obj.positive<-mmButo()
+#obj.positive$openTreeMultiROIs("/progetti/immagini/urinaEasy/easy", structureList=c("GTV","Retto"))
 #b<-obj.positive$getAttribute("dataStorage")
 #image(b[[1]]$voxelCubes$GTV[,,10])
 #obj.positive$execAlgorithm(algorithm="KDF",ROIName="GTV");
