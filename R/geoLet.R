@@ -244,6 +244,8 @@ geoLet<-function() {
               if( imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "HFS" ) imageToBeRotated<-1
               if( imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "FFS" ) imageToBeRotated<-1
               if( imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "HFP" ) imageToBeRotated<-1
+              
+              if( imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "FFP" ) imageToBeRotated<-1
               if ( imageToBeRotated != -1 ) {
                 immagine <- objServ$SV.rotateMatrix( immagine, imageToBeRotated )
               }
