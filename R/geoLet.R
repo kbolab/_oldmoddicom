@@ -85,6 +85,8 @@ geoLet<-function() {
     dataStorage[["structures"]]<<-loadRTStructFiles(SOPClassUIDList);   
     # Associate ROI and Images
     associateROIandImageSlices();
+    # calculate the ImageVoxelCube
+    createImageVoxelCube();
     # set the internal attribute indicating the path
     attributeList[["path"]]<<-pathToOpen
   }
@@ -315,6 +317,39 @@ geoLet<-function() {
     return(imageSerie);
   }
   #=================================================================================
+  # createImageVoxelCube
+  # create the imageVoxelCube for the current obj and for the image stored
+  #=================================================================================   
+  createImageVoxelCube<-function() {
+    browser()
+    seriesInstanceUID<-giveBackImageSeriesInstanceUID();
+    listaSeqImages<-as.character(sort(as.numeric(names( dataStorage$img[[seriesInstanceUID]]) )))
+    Rows<-dataStorage$info[[seriesInstanceUID]][[1]]$Rows
+    Columns<-dataStorage$info[[seriesInstanceUID]][[1]]$Columns
+    Slices<-length(listaSeqImages)
+    cubone<-array(data = 0,dim = c(Columns,Rows,Slices))
+    numSlice<-1
+    for(i in listaSeqImages) {
+      cubone[,,numSlice]<-dataStorage$img[[seriesInstanceUID]][[as.character(i)]]
+      numSlice<-numSlice+1
+    }
+    dataStorage$voxelCubes<<-list();
+    dataStorage$voxelCubes[[seriesInstanceUID]]<<-cubone
+  }
+  #=================================================================================
+  # giveBackImageSeriesInstanceUID
+  # from dataStorage it gives back the SOPInstanceUID of the series which has a 
+  # SOPClassUID as 'CTImageStorage' or 'MRImageStorage'
+  #=================================================================================
+  giveBackImageSeriesInstanceUID<-function() {
+    list.index<-''
+    for(whichIdentifier in seq(1,length(dataStorage$info) )) {
+      if(dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'CTImageStorage' ||
+         dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'MRImageStorage' ) list.index<-whichIdentifier
+    }
+    return(list.index)
+  }
+  #=================================================================================
   # getImageFromRAW
   # build a row data from a DICOM file stored on filesystem and load it 
   # into memory (using DCMTK)
@@ -386,11 +421,12 @@ geoLet<-function() {
         
         assegnato<-FALSE
         ReferencedSOPInstanceUID<-''
-        list.index<-''
-        for(whichIdentifier in seq(1,length(dataStorage$info) )) {
-          if(dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'CTImageStorage' ||
-               dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'MRImageStorage' ) list.index<-whichIdentifier
-        }
+#        list.index<-''
+        list.index<-giveBackImageSeriesInstanceUID()
+#         for(whichIdentifier in seq(1,length(dataStorage$info) )) {
+#           if(dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'CTImageStorage' ||
+#                dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'MRImageStorage' ) list.index<-whichIdentifier
+#         }
         if(list.index=='') stop("list.index is empty!")
         for(slice.index in seq(1,length(dataStorage$info[[list.index]]))) {
           distanza<-obj.S$SV.getPointPlaneDistance(c(fPoint.x,fPoint.y,fPoint.z),dataStorage$info[[list.index]][[slice.index]]$planeEquation)
@@ -405,68 +441,6 @@ geoLet<-function() {
     }
     return(list("IDROINameAssociation"=matrice2,"tableROIPointList"=matrice3))
   }
-old_getStructuresFromXML<-function(fileName) {    
-  
-  
-  fileNameXML<-paste(fileName,".xml")    
-  fileNameXML<-str_replace_all(string = fileNameXML , pattern = " .xml",replacement = ".xml")
-  pathToStore<-substr(fileName,1,tail(which(strsplit(fileName, '')[[1]]=='/'),1)-1)
-  
-  # dcmodify -i "(0008,0005)=ISO_IR 100" ./RTSTRUCT999.61977.8337.20150525122026787.dcm
-  
-  if(!file.exists( fileNameXML )) {
-    # now check the problem of viewRAY is the 0008,0005 present?
-    stringa1<-"dcmdump";
-    stringa2<-paste(" ",fileName," | grep '0008,0005'",collapse='')
-    options(warn=-1)
-    aTMPa<-system2( stringa1,stringa2,stdout=TRUE )
-    options(warn=0)
-    if(length(aTMPa)==0) {
-      stringa1<-"dcmodify";
-      stringa2<-paste(" -i '(0008,0005)=ISO_IR 100'  ",fileName,collapse='')
-      options(warn=-1)
-      system2(stringa1,stringa2,stdout=NULL)
-      options(warn=0)        
-    }
-    
-    stringa1<-"dcm2xml";
-    stringa2<-paste(" +M  ",fileName,fileNameXML,collapse='')
-    options(warn=-1)
-    system2(stringa1,stringa2,stdout=NULL)
-    options(warn=0)
-  }
-  
-  # Load the XML file
-  doc = xmlInternalTreeParse(fileNameXML)
-  
-  # SEQUENCES: the one with the attribute  tag="3006,0020"  and name="StructureSetROISequence" is the one with association NAME<->ID
-  n2XML<-getNodeSet(doc,'/file-format/data-set/sequence[@tag="3006,0020" and @name="StructureSetROISequence"]/item')
-  # SEQUENCES: now get the true coords
-  n3XML<-getNodeSet(doc,'/file-format/data-set/sequence[@tag="3006,0039" and @name="ROIContourSequence"]/item')
-  
-  # ROI Names
-  matrice2<-c()
-  for(i in n2XML) {
-    ROINumber<-xpathApply(xmlDoc(i),'/item/element[@tag="3006,0022"]',xmlValue)[[1]]
-    ROIName<-xpathApply(xmlDoc(i),'/item/element[@tag="3006,0026"]',xmlValue)[[1]]
-    matrice2<-rbind(matrice2,c(ROINumber,ROIName))
-  }
-  matrice2<-t(matrice2)
-  # ROI Point list
-  matrice3<-c()
-  for(i in n3XML) {
-    ROINumber<-xpathApply(xmlDoc(i),'/item/element[@tag="3006,0084"]',xmlValue)[[1]]
-    ROIName<-matrice2[2,which(matrice2[1,]==ROINumber)]
-    listaPuntiDaRavanare<-getNodeSet(xmlDoc(i),'/item/sequence/item')
-    for(i2 in listaPuntiDaRavanare)   {
-      ReferencedSOPInstanceUID<-xpathApply(xmlDoc(i2),'//element[@tag="0008,1155"]',xmlValue)[[1]]
-      ROIPointList<-xpathApply(xmlDoc(i2),'/item/element[@tag="3006,0050"]',xmlValue)
-      matrice3<-rbind(matrice3,c(ROINumber,ROIName,ROIPointList,ReferencedSOPInstanceUID))
-    }
-  }
-  
-  return(list("IDROINameAssociation"=matrice2,"tableROIPointList"=matrice3))
-}
   #=================================================================================
   # getImageFromRAW
   # build a row data from a DICOM file stored on filesystem and load it 
@@ -679,14 +653,15 @@ old_getStructuresFromXML<-function(fileName) {
 
   getROIVoxels<-function( Structure = Structure ) {
     # try to find out which Series is the CT/MR serie
-    CTMRSeriesInstanceUID<-''
-    for(i in seq(1,length(dataStorage$info) ) ) {
-      SOPClassUID2Check<- dataStorage$info[[i]][[1]]$SOPClassUID
-      if (SOPClassUID2Check == "CTImageStorage" | SOPClassUID2Check == "MRImageStorage") {
-        CTMRSeriesInstanceUID<-i
-      } 
-    }    
-    SeriesInstanceUID<-CTMRSeriesInstanceUID
+#     CTMRSeriesInstanceUID<-''
+#     for(i in seq(1,length(dataStorage$info) ) ) {
+#       SOPClassUID2Check<- dataStorage$info[[i]][[1]]$SOPClassUID
+#       if (SOPClassUID2Check == "CTImageStorage" | SOPClassUID2Check == "MRImageStorage") {
+#         CTMRSeriesInstanceUID<-i
+#       } 
+#     }    
+    SeriesInstanceUID<-giveBackImageSeriesInstanceUID()
+#    SeriesInstanceUID<-CTMRSeriesInstanceUID
     if(SeriesInstanceUID == '' ) stop("ERROR: missing CT/MR series")
     return( getROIVoxelsFromCTRMN( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) )
   }
