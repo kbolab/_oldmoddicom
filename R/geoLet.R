@@ -321,7 +321,6 @@ geoLet<-function() {
   # create the imageVoxelCube for the current obj and for the image stored
   #=================================================================================   
   createImageVoxelCube<-function() {
-    browser()
     seriesInstanceUID<-giveBackImageSeriesInstanceUID();
     listaSeqImages<-as.character(sort(as.numeric(names( dataStorage$img[[seriesInstanceUID]]) )))
     Rows<-dataStorage$info[[seriesInstanceUID]][[1]]$Rows
@@ -348,6 +347,25 @@ geoLet<-function() {
          dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'MRImageStorage' ) list.index<-whichIdentifier
     }
     return(list.index)
+  }
+  #=================================================================================
+  # getGeometricalInformationOfImage
+  # give back pixelspacing and other little stuff about the CT/MR
+  #=================================================================================  
+  getGeometricalInformationOfImage<-function() {
+    serieInstanceUID<-giveBackImageSeriesInstanceUID();
+    ddd<-dataStorage$info[[ serieInstanceUID ]][[1]]
+    return(list(
+      "PatientPosition"=ddd$PatientPosition,
+      "SOPClassUID"=ddd$MRImageStorage,
+      "pixelSpacing"=ddd$pixelSpacing,
+      "pixelSpacing"=ddd$pixelSpacing,
+      "Rows"=ddd$Rows,
+      "Columns"=ddd$Columns,
+      "SliceThickness"=ddd$SliceThickness,
+      "randomSliceImageOrientationPatient"=ddd$ImageOrientationPatient,
+      "randomSlicePlaneEquation"=ddd$planeEquation
+    ))
   }
   #=================================================================================
   # getImageFromRAW
@@ -764,7 +782,13 @@ geoLet<-function() {
     
     #    return(list(TotalX=TotalX, TotalY=TotalY, FullZ=FullZ, Offset=Offset, 
     #                DOM=array(DOM, dim = c(3,3,length(index))), final.array=final.array, masked.images=final.array*image.arr))
-    return(list("DOM"=array(DOM, dim = c(3,3,length(index))), "final.array"=final.array, "masked.images"=final.array*image.arr))
+    return(list(
+      "DOM"=array(DOM, dim = c(3,3,length(index))), 
+      "final.array"=final.array, 
+      "masked.images"=final.array*image.arr,
+      "geometricalInformationOfImages"=getGeometricalInformationOfImage()
+      )
+    )
   }
   NewMultiPointInPolyObl<-function(DICOMOrientationVector,totalX,totalY,arrayAssociationROIandSlice,nX,nY,nZ ) {  
     
@@ -801,7 +825,8 @@ geoLet<-function() {
   constructor()
   return(list(openDICOMFolder=openDICOMFolder,getAttribute=getAttribute,
               getDICOMTag=getDICOMTag,getROIList=getROIList,getROIPointList=getROIPointList,
-              setAttribute=setAttribute,getFolderContent=getFolderContent,getROIVoxels=getROIVoxels))
+              setAttribute=setAttribute,getFolderContent=getFolderContent,getROIVoxels=getROIVoxels,
+              getGeometricalInformationOfImage=getGeometricalInformationOfImage))
 }
 
 # ========================================================================================

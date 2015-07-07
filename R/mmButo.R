@@ -1,22 +1,58 @@
-
+#' Load and handle a tree
+#' @description this is the old (and deprecated) version of mmButo. It is able to look into a folder serching all DICOM studies and return a structure containint all the voxel cubes.
+#'               The available methods are:
+#' @export
 new.mmButo<-function() {
   # attribute lists
   list_geoLet<-list()
+  list_extractROIVoxel<-list();
   # ========================================================================================
-  # loadFromDir: load a set of subfolders
+  # loadCollection: load a set of subfolders
   # ========================================================================================
-  loadFromDir<-function( path, ROINames, behaviour = "reload" ) {
+  loadCollection<-function( Path, collectionID = "default", behaviour = "reload" ) {
     objService<-services();
-    if(!(behaviour %in% c('reload','incremental')))
+    if(!(behaviour %in% c('reload','incremental'))) stop("behaviour not recognized")
     listaFolders<-list.dirs( Path )
     ct<-1
+    if( length(list_geoLet[[collectionID]]) == 0 ) list_geoLet[[collectionID]]<<-list()
     for( folderName in listaFolders[2:length(listaFolders)] ) {
-      
-      list_geoLet[[ folderName ]]<-geoLet()
-      list_geoLet[[ folderName ]]$openDICOMFolder( folderName )      
-      
+      list_geoLet[[collectionID]][[ folderName ]]<<-geoLet()
+      list_geoLet[[collectionID]][[ folderName ]]$openDICOMFolder( folderName )    
     }
   }
+  # ========================================================================================
+  # getAttribute: the usual 'getAttribute' method
+  # ======================================================================================== 
+  getAttribute<-function( attributeName, ROIName ) {
+    if( attributeName == 'list_geoLet' ) return( list_geoLet );
+    if( attributeName == 'list_extractROIVoxel' ) return( list_extractROIVoxel );
+    stop("behaviour not recognized")
+  }
+  # ========================================================================================
+  # getCollection: give back the wished collection
+  # ======================================================================================== 
+  getCollection<-function( collectionID ) {
+    return( list_geoLet[[ collectionID ]] )
+  }  
+  # ========================================================================================
+  # extractROIs: extract one or more ROIs voxels
+  # ======================================================================================== 
+  getROIVoxel<-function(  ROIName, collectionID = "default", path="*") {
+    singleROI<-ROIName
+    if( path!="*") stop("not yet supported")
+    for(folderName in names(list_geoLet[[collectionID]])) {
+      if( length(list_extractROIVoxel[[collectionID]][[ folderName ]])==0 ) list_extractROIVoxel[[collectionID]][[ folderName ]]<<-list();
+        if( length(list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]])==0 ) {
+          a <- GLT.getROIVoxels(obj = list_geoLet[[collectionID]][[folderName]], Structure = singleROI )
+          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]<<-a
+        }
+    }
+    arr2Return<-list();
+    for( folderName in names(list_extractROIVoxel[[collectionID]])) {
+      arr2Return[[folderName]]<-list_extractROIVoxel[[collectionID]][[folderName]][[singleROI]]
+    }
+    return(arr2Return)
+  }  
   # ========================================================================================
   # conctructor: initialises the attributes
   # ========================================================================================
@@ -24,7 +60,10 @@ new.mmButo<-function() {
     list_geoLet<<-list()
   }
   costructor();
-  return( list( loadFromDir="loadFromDir" ) )
+  return( list( "loadCollection"=loadCollection,
+                "getAttribute"=getAttribute,
+                "getCollection"=getCollection,
+                "getROIVoxel"=getROIVoxel ) )
 }
 
 
