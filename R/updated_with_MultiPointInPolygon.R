@@ -116,6 +116,8 @@ RTStruct.Mesh<-function(geoLet, Structure.Index, num=200, threshold=1, smoothing
   message("Preprocessing...")
   ROIPointList<-geoLet$getROIPointList_v2(Structure.Index)
   CTseqZ<-sort(as.numeric(names(geoLet$getAttribute("CT")))) # vector of CT images z coordinates
+  # should be replaced with:  CTseqZ<-sort(as.numeric(names(dataStorage$img[[1]])))
+  
   # find minima  
   minX<-NULL
   for (n in 1:length(ROIPointList)) {
