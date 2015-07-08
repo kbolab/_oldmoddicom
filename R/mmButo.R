@@ -39,10 +39,14 @@ new.mmButo<-function() {
   # ======================================================================================== 
   getROIVoxel<-function(  ROIName, collectionID = "default", path="*") {
     singleROI<-ROIName
+    print("=================================================================");
+    print( paste( c("getROIVoxel for ROI: ",ROIName)   , collapse='') );
+    print("=================================================================");
     if( path!="*") stop("not yet supported")
     for(folderName in names(list_geoLet[[collectionID]])) {
       if( length(list_extractROIVoxel[[collectionID]][[ folderName ]])==0 ) list_extractROIVoxel[[collectionID]][[ folderName ]]<<-list();
         if( length(list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]])==0 ) {
+          print( paste( c("Now processing=",folderName)   , collapse='') );
           a <- GLT.getROIVoxels(obj = list_geoLet[[collectionID]][[folderName]], Structure = singleROI )
           list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]<<-a
         }
@@ -685,5 +689,16 @@ RAD.ROIStats<-function(obj, ROIName, errorHandlerParams=c() ) {
 #dataStorage<-a
 #result<-RAD.NewMultiPIPOblique(dataStorage = ds, Structure = ROIName, SeriesInstanceUID = SS)
 ## dyn.load("./src/PointInPolygon.so"); 
-
-
+diagnostica<-function() {
+  diagnosi<-function( mmButoObj ) {
+    
+  }
+  getAvailableROI<-function( obj, collectionID="default" ) {
+    list_geoLet<-obj$getAttribute(("list_geoLet"))
+    tabella<-c()
+    for( i in names( list_geoLet[[collectionID]] ) ) {
+      riga<-list_geoLet[[collectionID]][[i]]$getROIList();
+      
+    }
+  }
+}

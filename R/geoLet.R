@@ -86,6 +86,9 @@ geoLet<-function() {
     # Associate ROI and Images
     associateROIandImageSlices();
     # calculate the ImageVoxelCube
+    if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("---------------------------------------")
+    if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("Creating image Voxel cubes")
+    if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("---------------------------------------")
     createImageVoxelCube();
     # set the internal attribute indicating the path
     attributeList[["path"]]<<-pathToOpen
