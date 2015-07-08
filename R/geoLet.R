@@ -671,15 +671,7 @@ geoLet<-function() {
 
   getROIVoxels<-function( Structure = Structure ) {
     # try to find out which Series is the CT/MR serie
-#     CTMRSeriesInstanceUID<-''
-#     for(i in seq(1,length(dataStorage$info) ) ) {
-#       SOPClassUID2Check<- dataStorage$info[[i]][[1]]$SOPClassUID
-#       if (SOPClassUID2Check == "CTImageStorage" | SOPClassUID2Check == "MRImageStorage") {
-#         CTMRSeriesInstanceUID<-i
-#       } 
-#     }    
     SeriesInstanceUID<-giveBackImageSeriesInstanceUID()
-#    SeriesInstanceUID<-CTMRSeriesInstanceUID
     if(SeriesInstanceUID == '' ) stop("ERROR: missing CT/MR series")
     return( getROIVoxelsFromCTRMN( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) )
   }
@@ -817,7 +809,6 @@ geoLet<-function() {
     attributeList<<-list()
     attributeList$verbose<<-list("lv1"=TRUE,"lv2"=TRUE,"lv3"=FALSE,"onScreen"=TRUE,"onFile"=FALSE)
     logObj<<-logHandler()
-    #logObj$setOutput( onScreen = attributeList$verbose$onScreen,   onFile = attributeList$verbose$onFile   )
     logObj$setOutput( list("onScreen" = attributeList$verbose$onScreen,   "onFile" = attributeList$verbose$onFile )  )
     logObj$do("clearOutputFile")
     objServ<<-services()

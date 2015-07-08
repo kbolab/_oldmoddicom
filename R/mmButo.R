@@ -661,9 +661,6 @@ RAD.ROIStats<-function(obj, ROIName, errorHandlerParams=c() ) {
   return(obj$ROIStats( ROIName = ROIName))
 }
 
-
-
-
 # example -- mmButo stile Toronto
 #rm(obj.positive)
 #obj.positive<-mmButo()
