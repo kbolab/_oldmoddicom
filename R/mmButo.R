@@ -689,16 +689,28 @@ RAD.ROIStats<-function(obj, ROIName, errorHandlerParams=c() ) {
 #dataStorage<-a
 #result<-RAD.NewMultiPIPOblique(dataStorage = ds, Structure = ROIName, SeriesInstanceUID = SS)
 ## dyn.load("./src/PointInPolygon.so"); 
+#' @export
 diagnostica<-function() {
-  diagnosi<-function( mmButoObj ) {
-    
-  }
-  getAvailableROI<-function( obj, collectionID="default" ) {
+  mostraContenuto<-function( obj, collectionID="default" ) {
     list_geoLet<-obj$getAttribute(("list_geoLet"))
     tabella<-c()
     for( i in names( list_geoLet[[collectionID]] ) ) {
-      riga<-list_geoLet[[collectionID]][[i]]$getROIList();
       
+      a<-list_geoLet[[collectionID]][[i]]$getAttribute("dataStorage")
+      print("=======================================================================")
+      print( i )
+      print("=======================================================================")
+      print( paste( c("dataStorageNames: " , names(a) ), collapse=' ')  )
+      print( paste( c("a$info[[1]]: "), names(a$info), collapse=' '  )   )
+      print( paste( c("length(a$info[[1]][[1]]): "), length(names(a$info[[1]])), collapse=' '  )   )
+      print(  cat("[1] a$info[[1]][[1]]:", unlist(a$info[[1]][[1]]) )  )
+      print(  cat("[1] dim(a$voxelCubes[[1]]):", dim(a$voxelCubes[[1]]) )  )
+      print(  cat("[1] names(a$img[[1]]):", names(a$img[[1]]) )  )
+      print(  cat("[1] ROIs:",list_geoLet[[collectionID]][[i]]$getROIList())[2,] ) 
+      for( tt in list_geoLet[[collectionID]][[i]]$getROIList()[2,]  ) {
+          print(  cat("[1] ROIPointList for ",tt,": ",length(list_geoLet[[collectionID]][[i]]$getROIPointList( tt )))   )
+      }
     }
   }
+  return( list( "mostraContenuto"=mostraContenuto ))
 }
