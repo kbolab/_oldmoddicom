@@ -35,3 +35,33 @@ RAD.firstOrderFeatureImage <- function ( inputData, histSamples = 150)
   #Restituisce una lista di array; ciascun valore corrisponde al singolo paziente ()
   return(list ("entropy"=ImageEntropy, "kurtosis"=ImageKurtosis, "skewness"=ImageSkewness) ) 
 }
+#' function to calculate Are/Volume and related measures
+#' 
+#' @description  calculates Are, Volume, Area/Volume Ratio and equivolumetric Spherical Area Ratio
+#' @param listaROIVoxels an output of a \code{obj$getROIVoxel()} method
+#' @return a list containing, for each patient the indicated measures
+#' @export
+RAD.areaVolume<-function( listaROIVoxels ) {
+  objS<-services()
+  arrayAV<-list()
+  for ( i in names(listaROIVoxels) ) {
+    geometry<-listaROIVoxels[[ i ]]$geometricalInformationOfImages;
+    pSX<-geometry$pixelSpacing[1]
+    pSY<-geometry$pixelSpacing[2]
+    pSZ<-as.numeric(geometry$SliceThickness  )
+    voxelCube<-listaROIVoxels[[ i ]]$masked.images;
+    arrayAV[[ i ]]$Area<-objS$SV.rawSurface(voxelMatrix = voxelCube, pSX = pSX, pSY=pSY,pSZ=pSZ)    
+    if ( arrayAV[[ i ]]$Area == -1 ) {
+      arrayAV[[ i ]]$Volume<- -1
+      arrayAV[[ i ]]$equivolumetricSphericAreaRadio<- -1
+    }
+    else {
+      arrayAV[[ i ]]$Volume<-length(which(voxelCube!=0))*pSX*pSY*pSZ
+      arrayAV[[ i ]]$equivolumetricSphericAreaRadio<- ( 4*pi* (   (3/(4*pi))*arrayAV[[ i ]]$Volume   )^(2/3) ) / arrayAV[[ i ]]$Area
+    }    
+  }
+  return(arrayAV)
+}
+
+
+

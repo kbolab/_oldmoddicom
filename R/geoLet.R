@@ -324,24 +324,32 @@ geoLet<-function() {
   # create the imageVoxelCube for the current obj and for the image stored
   #=================================================================================   
   createImageVoxelCube<-function() {
+    # ge the series Instance UID of the images
     seriesInstanceUID<-giveBackImageSeriesInstanceUID();
+    # order them according with the Instance Number
     listaSeqImages<-as.character(sort(as.numeric(names( dataStorage$img[[seriesInstanceUID]]) )))
+    # get dimensional data
     Rows<-dataStorage$info[[seriesInstanceUID]][[1]]$Rows
     Columns<-dataStorage$info[[seriesInstanceUID]][[1]]$Columns
     Slices<-length(listaSeqImages)
     cubone<-array(data = 0,dim = c(Columns,Rows,Slices))
     numSlice<-1
+    # add the slices and build the cube
     for(i in listaSeqImages) {
       cubone[,,numSlice]<-dataStorage$img[[seriesInstanceUID]][[as.character(i)]]
       numSlice<-numSlice+1
     }
     dataStorage$voxelCubes<<-list();
+    # add the cube to the dataStorage
     dataStorage$voxelCubes[[seriesInstanceUID]]<<-cubone
   }
   #=================================================================================
   # giveBackImageSeriesInstanceUID
   # from dataStorage it gives back the SOPInstanceUID of the series which has a 
-  # SOPClassUID as 'CTImageStorage' or 'MRImageStorage'
+  # SOPClassUID as 'CTImageStorage' or 'MRImageStorage'. This is useful because if you
+  # want to do some operations on image voxels, geoLet has to find out which seriesInstanceUID
+  # has associated a CT or a MR image. Otherwise it could looking for information in a wrong
+  # series, for example an RTStruct or an RTDose...
   #=================================================================================
   giveBackImageSeriesInstanceUID<-function() {
     list.index<-''
@@ -366,6 +374,7 @@ geoLet<-function() {
       "Rows"=ddd$Rows,
       "Columns"=ddd$Columns,
       "SliceThickness"=ddd$SliceThickness,
+      "supposedNumberOfSlices"=length(dataStorage$info[[ serieInstanceUID ]]),
       "randomSliceImageOrientationPatient"=ddd$ImageOrientationPatient,
       "randomSlicePlaneEquation"=ddd$planeEquation
     ))

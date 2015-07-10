@@ -38,6 +38,7 @@ new.mmButo<-function() {
   # extractROIs: extract one or more ROIs voxels
   # ======================================================================================== 
   getROIVoxel<-function(  ROIName, collectionID = "default", path="*") {
+  objS<-services();
     singleROI<-ROIName
     print("=================================================================");
     print( paste( c("getROIVoxel for ROI: ",ROIName)   , collapse='') );
@@ -48,7 +49,14 @@ new.mmButo<-function() {
         if( length(list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]])==0 ) {
           print( paste( c("Now processing=",folderName)   , collapse='') );
           a <- GLT.getROIVoxels(obj = list_geoLet[[collectionID]][[folderName]], Structure = singleROI )
-          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]<<-a
+          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]<<-list()
+          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$DOM<-a$DOM
+          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$geometricalInformationOfImages<-a$geometricalInformationOfImages
+          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images<-objS$cropCube( bigCube = a$masked.images)
+          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$fe<-dim(a$masked.images)[1]
+          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$se<-dim(a$masked.images)[2]
+          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$te<-dim(a$masked.images)[3]
+          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$geometricalInformationOfImages$koc<-"littleCube"
         }
     }
     arr2Return<-list();
@@ -57,6 +65,20 @@ new.mmButo<-function() {
     }
     return(arr2Return)
   }  
+  mmButoLittleCube.expand<-function( ROIVoxelElement ) {
+    pc<-ROIVoxelElement
+    x<-pc$masked.images$location$min.x
+    y<-pc$masked.images$location$min.y
+    z<-pc$masked.images$location$min.z
+    fe<-pc$masked.images$location$fe
+    se<-pc$masked.images$location$se
+    te<-pc$masked.images$location$te
+    
+    objS<-services()
+    bigVoxelCube<-objS$expandCube(littleCube = pc$masked.images$voxelCube, x.start = x, y.start=y, z.start=z, fe = fe, se = se, te = te )    
+    return(bigVoxelCube)
+  }
+
   # ========================================================================================
   # conctructor: initialises the attributes
   # ========================================================================================
@@ -67,7 +89,9 @@ new.mmButo<-function() {
   return( list( "loadCollection"=loadCollection,
                 "getAttribute"=getAttribute,
                 "getCollection"=getCollection,
-                "getROIVoxel"=getROIVoxel ) )
+                "getROIVoxel"=getROIVoxel,
+                "mmButoLittleCube.expand"=mmButoLittleCube.expand
+                ) )
 }
 
 

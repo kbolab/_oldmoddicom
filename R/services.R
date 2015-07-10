@@ -40,7 +40,7 @@ services<-function() {
   }
   SV.rawSurface<-function(voxelMatrix, pSX, pSY, pSZ) {
     
-    if( pSX != pSY ) warning("\n X and Y must have the same pixelSpacing for this implementation");
+    # if( pSX != pSY ) warning("\n X and Y must have the same pixelSpacing for this implementation");
     
     nX<-dim(voxelMatrix)[1]
     nY<-dim(voxelMatrix)[2]
@@ -62,6 +62,33 @@ services<-function() {
     
     return( array( res[[11]] , dim=c(newNx,newNy,newNz) ) )    
   }  
+  # ========================================================================================
+  # cropCube: crop a voxel cube in order to limit its dimension to the needs
+  # ========================================================================================   
+  cropCube<-function( bigCube ) {
+    matPos<-which(bigCube!=0,arr.ind = T)
+    min.x<-min(matPos[,1]);     max.x<-max(matPos[,1])
+    min.y<-min(matPos[,2]);     max.y<-max(matPos[,2])
+    min.z<-min(matPos[,3]);     max.z<-max(matPos[,3])
+    newCube<-bigCube[ min.x:max.x, min.y:max.y , min.z:max.z]
+    location<-list( "min.x"=min.x, "max.x"=max.x, "min.y"=min.y, "max.y"=max.y, "min.z"=min.z, "max.z"=max.z  )
+    return( list ( "voxelCube"=newCube, "location"=location) )
+  }    
+  # ========================================================================================
+  # expandCube: expand a cropped voxel cube
+  # ========================================================================================     
+  expandCube<-function( littleCube,  x.start, y.start, z.start, fe, se, te) {
+    
+    bigCube<-array(0,dim=c(fe,se,te) )
+    for(z in seq(1,dim(littleCube)[3] ) ) {
+      for(y in seq(1,dim(littleCube)[2] ) ) {
+        for(x in seq(1,dim(littleCube)[1] ) ) {
+          bigCube[ x+x.start-1 , y+y.start-1, z+z.start-1  ]<-littleCube[x,y,z]
+        }
+      }
+    }
+    return( bigCube )    
+  }   
   triangle2mesh <- function(x) {
     v <- list()
     n <- nrow(x$v1)
@@ -122,7 +149,9 @@ services<-function() {
               SV.LoadAccordingOSType = SV.LoadAccordingOSType,
               SV.rotateMatrix = SV.rotateMatrix,
               SV.rawSurface = SV.rawSurface,
-              triangle2mesh = triangle2mesh
+              triangle2mesh = triangle2mesh,
+              cropCube = cropCube,
+              expandCube = expandCube
               ))  
 }
 
