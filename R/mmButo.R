@@ -4,8 +4,10 @@
 #' @export
 new.mmButo<-function() {
   # attribute lists
+  # the list of loaded geoLet objects
   list_geoLet<-list()
-  list_extractROIVoxel<-list();
+  # the list of extracted ROIs. This works as  a chache in order to avoid double computations
+#  list_extractROIVoxel<-list();
   # ========================================================================================
   # loadCollection: load a set of subfolders
   # ========================================================================================
@@ -31,7 +33,7 @@ new.mmButo<-function() {
   # ========================================================================================
   # getCollection: give back the wished collection
   # ======================================================================================== 
-  getCollection<-function( collectionID ) {
+  getCollection<-function( collectionID='default' ) {
     return( list_geoLet[[ collectionID ]] )
   }  
   # ========================================================================================
@@ -44,41 +46,80 @@ new.mmButo<-function() {
     print( paste( c("getROIVoxel for ROI: ",ROIName)   , collapse='') );
     print("=================================================================");
     if( path!="*") stop("not yet supported")
+    list_extractROIVoxel<-list();
+    list_extractROIVoxel[[collectionID]]<-list();    
+    
     for(folderName in names(list_geoLet[[collectionID]])) {
-      if( length(list_extractROIVoxel[[collectionID]][[ folderName ]])==0 ) list_extractROIVoxel[[collectionID]][[ folderName ]]<<-list();
-        if( length(list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]])==0 ) {
-          print( paste( c("Now processing=",folderName)   , collapse='') );
-          a <- GLT.getROIVoxels(obj = list_geoLet[[collectionID]][[folderName]], Structure = singleROI )
-          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]<<-list()
-          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$DOM<-a$DOM
-          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$geometricalInformationOfImages<-a$geometricalInformationOfImages
-          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images<-objS$cropCube( bigCube = a$masked.images)
-          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$fe<-dim(a$masked.images)[1]
-          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$se<-dim(a$masked.images)[2]
-          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$te<-dim(a$masked.images)[3]
-          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$geometricalInformationOfImages$koc<-"littleCube"
-        }
+      list_extractROIVoxel[[collectionID]][[ folderName ]]<-list();
+
+      print( paste( c("Now processing=",folderName)   , collapse='') );
+      a <- GLT.getROIVoxels(obj = list_geoLet[[collectionID]][[folderName]], Structure = singleROI )
+      list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]<-list()
+      list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$DOM<-a$DOM
+      list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$geometricalInformationOfImages<-a$geometricalInformationOfImages
+      list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images<-objS$cropCube( bigCube = a$masked.images)
+      list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$fe<-dim(a$masked.images)[1]
+      list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$se<-dim(a$masked.images)[2]
+      list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$te<-dim(a$masked.images)[3]
+      list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$geometricalInformationOfImages$koc<-"littleCube"
     }
     arr2Return<-list();
     for( folderName in names(list_extractROIVoxel[[collectionID]])) {
       arr2Return[[folderName]]<-list_extractROIVoxel[[collectionID]][[folderName]][[singleROI]]
     }
     return(arr2Return)
-  }  
+  }
+  # ========================================================================================
+  # getROIVoxelStats: give back the stats for a given ROIVoxelList in a compact form
+  # useful, for example, for normalization issues....
+  # ======================================================================================== 
+  getROIVoxelStats<-function( ROIVoxelList ) {
+    # define the empty arrays
+    dataInfo<-list()
+    min.arr<-c(); max.arr<-c(); mean.arr<-c(); sd.arr<-c(); median.arr<-c()
+    # loop in order to calcualte min, max, mean, medians, sd
+    for(i in names(Urina)) {
+      # consider only the voxel which are NOT ZERO
+      listaGrigiDaConsiderare<-ROIVoxelList[[i]]$masked.images$voxelCube[which(Urina[[i]]$masked.images$voxelCube!=0)]
+      dataInfo[[i]]<-list()
+      # collect the details
+      dataInfo[[i]]$mean<-mean(listaGrigiDaConsiderare)
+      dataInfo[[i]]$min<-min(listaGrigiDaConsiderare)
+      dataInfo[[i]]$max<-max(listaGrigiDaConsiderare)
+      dataInfo[[i]]$sd<-sd(listaGrigiDaConsiderare)
+      dataInfo[[i]]$median<-median(listaGrigiDaConsiderare)
+      # and get the summary
+      min.arr<-c( min.arr, dataInfo[[i]]$min )
+      max.arr<-c( max.arr, dataInfo[[i]]$max )
+      mean.arr<-c( mean.arr, dataInfo[[i]]$mean )
+      sd.arr<-c( sd.arr, dataInfo[[i]]$sd )
+      median.arr<-c( median.arr, dataInfo[[i]]$median )
+    }    
+    return(list(
+      "details"=dataInfo,
+      "summary"=list(
+        "min"=min.arr,
+        "max"=max.arr,
+        "mean"=mean.arr,
+        "sd"=sd.arr,
+        "median"=median.arr)
+    ))
+  }
+  # ========================================================================================
+  # mmButoLittleCube.expand: expand a cropped ROI in order to satisfy compatibility
+  # with older releases of moddicom
+  # ========================================================================================   
   mmButoLittleCube.expand<-function( ROIVoxelElement ) {
+    # get the needed parameters
     pc<-ROIVoxelElement
-    x<-pc$masked.images$location$min.x
-    y<-pc$masked.images$location$min.y
-    z<-pc$masked.images$location$min.z
-    fe<-pc$masked.images$location$fe
-    se<-pc$masked.images$location$se
-    te<-pc$masked.images$location$te
-    
+    x<-pc$masked.images$location$min.x; y<-pc$masked.images$location$min.y; z<-pc$masked.images$location$min.z
+    fe<-pc$masked.images$location$fe; se<-pc$masked.images$location$se;  te<-pc$masked.images$location$te
+    # invocke the procedure from class Services. The procedure is in Services because it could also be used 
+    # for different issues, in perspective, from classes different than mmButo.
     objS<-services()
     bigVoxelCube<-objS$expandCube(littleCube = pc$masked.images$voxelCube, x.start = x, y.start=y, z.start=z, fe = fe, se = se, te = te )    
     return(bigVoxelCube)
   }
-
   # ========================================================================================
   # conctructor: initialises the attributes
   # ========================================================================================
@@ -90,7 +131,8 @@ new.mmButo<-function() {
                 "getAttribute"=getAttribute,
                 "getCollection"=getCollection,
                 "getROIVoxel"=getROIVoxel,
-                "mmButoLittleCube.expand"=mmButoLittleCube.expand
+                "mmButoLittleCube.expand"=mmButoLittleCube.expand,
+                "getROIVoxelStats"=getROIVoxelStats
                 ) )
 }
 

@@ -63,5 +63,112 @@ RAD.areaVolume<-function( listaROIVoxels ) {
   return(arrayAV)
 }
 
+#' Extract the possible Biopsies for a given ROIVoxelData
+#' 
+#' @description  Extract the possible Biopsies for a given ROIVoxelData. It can extract all the possible biopsies considering different volumes within a specified volume range along the axes. Please consider that if you give order to extract voxelCubes from dx.max=2,dy.max=2,dy.max=0 it will consider as biggest voxelCubes cube of 2*2+1,2*2+1,1 because with max.dx,max,dy,max,dz you specify only the distance from the centroid (the centroids itself is the '+1' in each direction)
+#' @param ROIVoxelData as got from of a \code{obj$getROIVoxel()} method. It considers the cropped version and provide internally to explode it
+#' @param dx.min the minumim number of voxels to be considered along the x dimension: default is equal to 2.
+#' @param dy.min the minumim number of voxels to be considered along the y dimension: default is equal to 2
+#' @param dz.min the minumim number of voxels to be considered along the z dimension: default is equal to 0' 
+#' @param dx.max the maximum number of voxel to be considered for biopsy along x axes;
+#' @param dy.max the maximum number of voxel to be considered for biopsy along y axes;
+#' @param dz.max the maximum number of voxel to be considered for biopsy along z axes; 
+#' @return a list containing a lot of things
+#' @examples \dontrun{
+#' # Create an instante of new.mmButo and load some cases
+#' obj<-new.mmButo()
+#' obj$loadCollection(Path = '/progetti/immagini/urinaEasy')
+#' 
+#' # get the three ROIs
+#' GTV<-obj$getROIVoxel(ROIName="GTV")  
+#' 
+#' # get the possible biopsy
+#' biopsy<-VirtualBiopsy(dx.max = 3,dy.max = 3,dz.max = 2,ROIVoxelData = Retto,dx.min = 2,dy.min = 2, dz.min = 1)
+#' }#' 
+#' @export
+#' @useDynLib moddicom
+RAD.VirtualBiopsy <- function ( ROIVoxelData, dx.min=2, dy.min=2, dz.min=0, dx.max, dy.max, dz.max)  {
 
+  # instance the object justo to use the static methods
+  # (i.e. to explode the voxel cubes)
+  obj.mmButo<-new.mmButo()
+  # set and initialize general variables
+  h <- 1;  lista <- list();  pazienti <- list();
+  NumPatients<-length( ROIVoxelData )
+  # loop for each patient
+  for (i in seq(1,NumPatients) )  {
+    # set some variables
+    exam <- c();    carot <- c();
+    # estraggo i dati del paziente i-esimo con le relative dimensioni. I need to expand the because
+    # they are in the cropped format
+    exam <- obj.mmButo$mmButoLittleCube.expand(   ROIVoxelData[[i]] )
+    # get the dimension of the big voxel cube and set examArray
+    dim1 <- dim(exam)[1];    dim2 <- dim(exam)[2];    dim3 <- dim(exam)[3]
+    examArray <- array(data = exam, dim = (dim1*dim2*dim3))
+    # build the expand.grid for each <dx,dy,dz> possible values 
+    stepCheck <- expand.grid(
+      indiceX = seq (dx.min, dx.max), 
+      indiceY = seq (dy.min, dy.max), 
+      indiceZ = seq (dz.min, dz.max))
+    
+    NumCheck <- nrow(stepCheck)
+    stepCheckX <- array(data = stepCheck[,1], dim = c(NumCheck))
+    stepCheckY <- array(data = stepCheck[,2], dim = c(NumCheck))
+    stepCheckZ <- array(data = stepCheck[,3], dim = c(NumCheck))
+    
+    # setting some variables;
+    lungh<-c();    expand<-c();    p<-1;    controlli<-c();    r<-c();  iteraz<-0;
+    # loop for each possible configuration of the interested <dx,dy,dz>
+    for ( s in seq(1,NumCheck) )   {
+      if (stepCheckX[s]!=0 && stepCheckY[s]!=0) {
+        iteraz <- iteraz+1
+        # calculates how many controls are needed for each expand.grid (? ask Carlotta)
+        expand <- expand.grid (indiceX=seq(-stepCheck[s,1],stepCheck[s,1]), 
+                               indiceY=seq(-stepCheck[s,2],stepCheck[s,2]),
+                               indiceZ=seq(-stepCheck[s,3],stepCheck[s,3]))        
+        lungh[p] <- nrow(expand)
+        controlli[p] <- s
+        p <- p+1
+      }
+    }
+    
+    # beginning from the first <dx,dy,dz>
+    for ( p in seq(1,iteraz) )    {
+      # set some variables
+      stepX <- stepCheckX[(controlli[p])];  stepY <- stepCheckY[(controlli[p])];  stepZ <- stepCheckZ[(controlli[p])]
+      lunghezza <- lungh[p]; uni<-0;
+      esameCarot <- array(data = c(0), dim = dim1*dim2*dim3)
+      # call the .C procedure
+      prova.carot <- .C( "new_virtualBiopsy", as.double (examArray), as.integer (dim1), as.integer (dim2), 
+                         as.integer (dim3), as.integer(stepX), as.integer(stepY), 
+                         as.integer(stepZ), as.integer (lunghezza), as.integer(esameCarot) ,
+                         as.integer(uni) )
+      carot <- array(data = prova.carot[[9]], dim = c(dim1, dim2, dim3))
+      
+      # calculates the coords <x,y,z> of the centroids
+      carot.index <- which(carot==1, arr.ind = T )
+      # save the desider output (hte <dx,dy,dz of the single analysis, the number of possible 
+      # samples and the coords of the centroids)
+      realX<-as.numeric(ROIVoxelData[[i]]$geometricalInformationOfImages$pixelSpacing[1])*stepX
+      realX<-realX*2+realX
+      realY<-as.numeric(ROIVoxelData[[i]]$geometricalInformationOfImages$pixelSpacing[2])*stepY
+      realY<-realY*2+realY
+      realZ<-as.numeric(ROIVoxelData[[i]]$geometricalInformationOfImages$SliceThickness)*stepY
+      realZ<-realZ*2+realZ
+      listLabel<-paste(c(stepX,"_",stepY,"_",stepZ),collapse='')
+      lista[[ listLabel ]] <- list(
+        "dx_dy_dz"=c(stepX*2+1,stepY*2+1, stepY*2+1), 
+        "volume"=(stepX*2+1) * (stepY*2+1) *(stepY*2+1),
+        "real_dx_dy_dz"=c(realX,realY,realZ), 
+        "real_volume"=realX * realY *realZ,
+        "NumCarotaggi"=prova.carot[[10]], 
+        "IndexBiopsy"=carot.index)
+      
+    }
+    pazienti[[ names(ROIVoxelData)[i] ]] <- lista
+  }
+  # define the returning object as member of the class 'virtualBiopsy'
+  class(pazienti)<-'virtualBiopsy'
+  return(pazienti)
+}
 

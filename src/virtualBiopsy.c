@@ -1,6 +1,59 @@
 #include <stdlib.h>  
 #include <stdio.h>
 
+void new_virtualBiopsy(   double *esame, int *dim1, int *dim2, int *dim3, int *stepX, int *stepY, 
+                   int *stepZ, int *lunghezza, int *esameCarot, int *uni    ){
+  
+  int i;      int j;    int k;
+  int indice;   int indice2;
+  int m;      int n;    int o;
+  int h;      int indsomma;
+  
+  h=0;
+  //preso il primo dx, dy, dz utile applico il carotaggio di quella data quantita' all'array paziente
+  for ( k=*stepZ;  k<((*dim3)-(*stepZ));  k++ )
+  {
+    for(  j=*stepY;  j<((*dim2)-(*stepY));  j++  )
+    {
+      for(  i=*stepX;   i<((*dim1)-(*stepX));   i++  )
+      {
+        indice= ((k*(*dim1)*(*dim2))+(j*(*dim1))+i);
+        
+        // se il valore analizzato e' diverso da zero entra in questo ciclo e fa tutti expand grid 
+        //nell'intorno del punto      
+        if(   esame[  indice   ]  !=  0   )
+        { 
+          
+          indsomma=0;
+          
+          for (m=-*stepX; m<=*stepX; m++) 
+          {
+            for (n=-*stepY; n<=*stepY; n++) 
+            {
+              for (o=-*stepZ; o<=*stepZ; o++) 
+              {
+                indice2 = ((k+o)*(*dim1)*(*dim2))  +  ((j+n)*(*dim1))  +  (i+m);
+                if ( esame   [  indice2    ] !=0) 
+                {
+                  //per ogni valore dell'intorno diverso da zero incrementa la variabile indsomma
+                  indsomma=indsomma + 1;
+                }
+              }
+            }
+          }
+          // se indsomma e' uguale al numero di check fatti incrementa di 1 la variabile uni e in corrispondenza
+          // dell'indice del centroide sovrascrive 1
+          if (indsomma == *lunghezza) 
+          {
+            esameCarot[indice] = 1;
+            *uni = *uni+1;
+          }
+        }
+      }
+    }
+  }
+}
+
 void virtualBiopsy(   double *esame, int *dimensione1, int *dimensione2, int *dimensione3, int *nx, int *ny, int *nz,
                       int *expand, int *controllo  ,int *lunghezza, int *carotaggioVolume    ){
   int i;

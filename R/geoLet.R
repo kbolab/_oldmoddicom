@@ -86,10 +86,10 @@ geoLet<-function() {
     # Associate ROI and Images
     associateROIandImageSlices();
     # calculate the ImageVoxelCube
-    if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("---------------------------------------")
-    if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("Creating image Voxel cubes")
-    if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("---------------------------------------")
-    createImageVoxelCube();
+#    if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("---------------------------------------")
+#    if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("Creating image Voxel cubes")
+#    if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("---------------------------------------")
+#    createImageVoxelCube();
     # set the internal attribute indicating the path
     attributeList[["path"]]<<-pathToOpen
   }
@@ -339,9 +339,13 @@ geoLet<-function() {
       cubone[,,numSlice]<-dataStorage$img[[seriesInstanceUID]][[as.character(i)]]
       numSlice<-numSlice+1
     }
-    dataStorage$voxelCubes<<-list();
-    # add the cube to the dataStorage
-    dataStorage$voxelCubes[[seriesInstanceUID]]<<-cubone
+    return(cubone)
+#     dataStorage$voxelCubes<<-list();
+#     # add the cube to the dataStorage
+#     dataStorage$voxelCubes[[seriesInstanceUID]]<<-cubone
+  }
+  getImageVoxelCube<-function() {
+    return(createImageVoxelCube())
   }
   #=================================================================================
   # giveBackImageSeriesInstanceUID
@@ -829,7 +833,8 @@ geoLet<-function() {
   return(list(openDICOMFolder=openDICOMFolder,getAttribute=getAttribute,
               getDICOMTag=getDICOMTag,getROIList=getROIList,getROIPointList=getROIPointList,
               setAttribute=setAttribute,getFolderContent=getFolderContent,getROIVoxels=getROIVoxels,
-              getGeometricalInformationOfImage=getGeometricalInformationOfImage))
+              getGeometricalInformationOfImage=getGeometricalInformationOfImage,
+              getImageVoxelCube=getImageVoxelCube))
 }
 
 # ========================================================================================
