@@ -78,9 +78,9 @@ new.mmButo<-function() {
     dataInfo<-list()
     min.arr<-c(); max.arr<-c(); mean.arr<-c(); sd.arr<-c(); median.arr<-c()
     # loop in order to calcualte min, max, mean, medians, sd
-    for(i in names(Urina)) {
+    for(i in names(ROIVoxelList)) {
       # consider only the voxel which are NOT ZERO
-      listaGrigiDaConsiderare<-ROIVoxelList[[i]]$masked.images$voxelCube[which(Urina[[i]]$masked.images$voxelCube!=0)]
+      listaGrigiDaConsiderare<-ROIVoxelList[[i]]$masked.images$voxelCube[which(ROIVoxelList[[i]]$masked.images$voxelCube!=0)]
       dataInfo[[i]]<-list()
       # collect the details
       dataInfo[[i]]$mean<-mean(listaGrigiDaConsiderare)

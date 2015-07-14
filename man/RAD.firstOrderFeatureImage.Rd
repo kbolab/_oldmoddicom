@@ -4,17 +4,29 @@
 \alias{RAD.firstOrderFeatureImage}
 \title{function to calculate the first order features}
 \usage{
-RAD.firstOrderFeatureImage(inputData, histSamples = 150)
+RAD.firstOrderFeatureImage(inputData)
 }
 \arguments{
 \item{inputData}{a list where each element is an array of the voxel of the image. Each element of the list normally refers to a patient.}
-
-\item{histSamples}{in order to avoid distorsion in the calculus of the entropy the histogram can be sampled to a wished number of bins. The defaul is 150, any other integer value can be set using this parameter.}
 }
 \value{
 three lists: the first list contains the entropies, the second the kurtosis and the third the skewness
 }
 \description{
 calculates Shannon entropy, kursosis and Skewness of a given list of arrays of voxels
+}
+\examples{
+\dontrun{
+# Create an instante of new.mmButo and load some cases
+obj<-new.mmButo()
+obj$loadCollection(Path = '/progetti/immagini/urinaEasy')
+
+# get the three ROIs
+Retto<-obj$getROIVoxel(ROIName="Retto")
+
+# get the possible biopsy
+aa<-RAD.firstOrderFeatureImage(inputData = Retto )
+aa$entropy
+}#' #'
 }
 
