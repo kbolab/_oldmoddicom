@@ -35,10 +35,10 @@ obj<-new.mmButo()
 obj$loadCollection(Path = '/progetti/immagini/urinaEasy')
 
 # get the three ROIs
-GTV<-obj$getROIVoxel(ROIName="GTV")
+Retto<-obj$getROIVoxel(ROIName="Retto")
 
 # get the possible biopsy
-biopsy<-VirtualBiopsy(dx.max = 3,dy.max = 3,dz.max = 2,ROIVoxelData = Retto,dx.min = 2,dy.min = 2, dz.min = 1)
+biopsy<-RAD.VirtualBiopsy(dx.max = 3,dy.max = 3,dz.max = 2,ROIVoxelData = Retto,dx.min = 2,dy.min = 2, dz.min = 1)
 }#'
 }
 

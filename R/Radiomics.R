@@ -80,10 +80,10 @@ RAD.areaVolume<-function( listaROIVoxels ) {
 #' obj$loadCollection(Path = '/progetti/immagini/urinaEasy')
 #' 
 #' # get the three ROIs
-#' GTV<-obj$getROIVoxel(ROIName="GTV")  
+#' Retto<-obj$getROIVoxel(ROIName="Retto")  
 #' 
 #' # get the possible biopsy
-#' biopsy<-VirtualBiopsy(dx.max = 3,dy.max = 3,dz.max = 2,ROIVoxelData = Retto,dx.min = 2,dy.min = 2, dz.min = 1)
+#' biopsy<-RAD.VirtualBiopsy(dx.max = 3,dy.max = 3,dz.max = 2,ROIVoxelData = Retto,dx.min = 2,dy.min = 2, dz.min = 1)
 #' }#' 
 #' @export
 #' @useDynLib moddicom
@@ -97,6 +97,7 @@ RAD.VirtualBiopsy <- function ( ROIVoxelData, dx.min=2, dy.min=2, dz.min=0, dx.m
   NumPatients<-length( ROIVoxelData )
   # loop for each patient
   for (i in seq(1,NumPatients) )  {
+    print(  paste(c("Processing: ",names(ROIVoxelData)[i]),collapse='' )  )
     # set some variables
     exam <- c();    carot <- c();
     # estraggo i dati del paziente i-esimo con le relative dimensioni. I need to expand the because
