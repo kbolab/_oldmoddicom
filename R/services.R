@@ -39,9 +39,7 @@ services<-function() {
       return(paste(library.name, ".so", sep=""))
   }
   SV.rawSurface<-function(voxelMatrix, pSX, pSY, pSZ) {
-    
-    # if( pSX != pSY ) warning("\n X and Y must have the same pixelSpacing for this implementation");
-    
+
     nX<-dim(voxelMatrix)[1]
     nY<-dim(voxelMatrix)[2]
     nZ<-dim(voxelMatrix)[3]
@@ -98,48 +96,48 @@ services<-function() {
     class(v) <- "mesh3d"
     return(v)
   }  
-  elaboraCarlottaggio<-function( ds.n ,nx=2,ny=2,nz=0) {
-    
-    UpperBoundDiNormalizzazione<-max(c(obj.n$ROIStats("Urina")$total$max,obj.p$ROIStats("Urina")$total$max))
-    
-    total<-length(names(ds.n));
-    
-    
-    #medieNorm<-list();
-    #devianzeNorm<-list();
-    #centroide<-list();
-    
-    medie<-list();
-    devianze<-list();
-    
-    for(i in names(ds.n) )  {    
-      
-      print( i )
-      piscioPaziente4Tuning<-mean(ds.n[[i]]$voxelCubes[["Urina"]][which(ds.n[[i]]$voxelCubes[["Urina"]]!=0)])
-      
-      a<-Biopsy(   (ds.n[[ i ]]$voxelCubes$GTV)*(UpperBoundDiNormalizzazione/piscioPaziente4Tuning)    ,nx,ny,nz)
-      
-      if(a$fottiti!="si")
-        medie[[i]]<-a$medie
-      devianze[[i]]<-a$devianze  
-      
-      #     medie[[i]]<-density(a$medie)
-      #     devianze[[i]]<-density(a$devianze)
-      
-      #medieNorm[[i]]<-approx(medie$x,medie$y,n=UpperBoundDiNormalizzazione, xout=seq( from=0 , to=max(UpperBoundDiNormalizzazione) ))
-      #devianzeNorm[[i]]<-approx(devianze$x,devianze$y,n=UpperBoundDiNormalizzazione, xout=seq( from=0 , to=max(UpperBoundDiNormalizzazione) )) 
-      
-      #medieNorm[[i]]$y[which(is.na(medieNorm[[i]]$y))]<-0
-      #devianzeNorm[[i]]$y[which(is.na(devianzeNorm[[i]]$y))]<-0
-      
-      #centro<-COGravity(x=a$medie,y=a$devianze);
-      #centroide[[i]]<-c(   centro[1] , centro[3] )
-      
-    }
-    #return( list( "medie"=a$medie, "devianze"=a$devianze,"medieNorm"=medieNorm, "devianzeNorm"=devianzeNorm, "centroide"=centroide  ) )
-    return( list( "medie"=medie, "devianze"=devianze  ) )
-    
-  }  
+#   elaboraCarlottaggio<-function( ds.n ,nx=2,ny=2,nz=0) {
+#     
+#     UpperBoundDiNormalizzazione<-max(c(obj.n$ROIStats("Urina")$total$max,obj.p$ROIStats("Urina")$total$max))
+#     
+#     total<-length(names(ds.n));
+#     
+#     
+#     #medieNorm<-list();
+#     #devianzeNorm<-list();
+#     #centroide<-list();
+#     
+#     medie<-list();
+#     devianze<-list();
+#     
+#     for(i in names(ds.n) )  {    
+#       
+#       print( i )
+#       piscioPaziente4Tuning<-mean(ds.n[[i]]$voxelCubes[["Urina"]][which(ds.n[[i]]$voxelCubes[["Urina"]]!=0)])
+#       
+#       a<-Biopsy(   (ds.n[[ i ]]$voxelCubes$GTV)*(UpperBoundDiNormalizzazione/piscioPaziente4Tuning)    ,nx,ny,nz)
+#       
+#       if(a$fottiti!="si")
+#         medie[[i]]<-a$medie
+#       devianze[[i]]<-a$devianze  
+#       
+#       #     medie[[i]]<-density(a$medie)
+#       #     devianze[[i]]<-density(a$devianze)
+#       
+#       #medieNorm[[i]]<-approx(medie$x,medie$y,n=UpperBoundDiNormalizzazione, xout=seq( from=0 , to=max(UpperBoundDiNormalizzazione) ))
+#       #devianzeNorm[[i]]<-approx(devianze$x,devianze$y,n=UpperBoundDiNormalizzazione, xout=seq( from=0 , to=max(UpperBoundDiNormalizzazione) )) 
+#       
+#       #medieNorm[[i]]$y[which(is.na(medieNorm[[i]]$y))]<-0
+#       #devianzeNorm[[i]]$y[which(is.na(devianzeNorm[[i]]$y))]<-0
+#       
+#       #centro<-COGravity(x=a$medie,y=a$devianze);
+#       #centroide[[i]]<-c(   centro[1] , centro[3] )
+#       
+#     }
+#     #return( list( "medie"=a$medie, "devianze"=a$devianze,"medieNorm"=medieNorm, "devianzeNorm"=devianzeNorm, "centroide"=centroide  ) )
+#     return( list( "medie"=medie, "devianze"=devianze  ) )
+#     
+#   }  
 #lanciaEsempio<-function() 
   # list of the available methods of the class
   return(list(SV.getPointPlaneDistance = SV.getPointPlaneDistance,

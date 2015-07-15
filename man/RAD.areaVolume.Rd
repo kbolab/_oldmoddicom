@@ -15,4 +15,17 @@ a list containing, for each patient the indicated measures
 \description{
 calculates Are, Volume, Area/Volume Ratio and equivolumetric Spherical Area Ratio
 }
+\examples{
+\dontrun{
+# Create an instante of new.mmButo and load some cases
+obj<-new.mmButo()
+obj$loadCollection(Path = '/progetti/immagini/urinaEasy')
+
+# get the three ROIs
+Retto<-obj$getROIVoxel(ROIName="Retto")
+
+# get the possible biopsy
+uu<-RAD.areaVolume(listaROIVoxels = Retto)
+}#' #'
+}
 

@@ -60,23 +60,36 @@ RAD.firstOrderFeatureImage <- function ( inputData )
 #' @param listaROIVoxels an output of a \code{obj$getROIVoxel()} method
 #' @return a list containing, for each patient the indicated measures
 #' @export
+#' @examples \dontrun{
+#' # Create an instante of new.mmButo and load some cases
+#' obj<-new.mmButo()
+#' obj$loadCollection(Path = '/progetti/immagini/urinaEasy')
+#' 
+#' # get the three ROIs
+#' Retto<-obj$getROIVoxel(ROIName="Retto")  
+#' 
+#' # get the possible biopsy
+#' uu<-RAD.areaVolume(listaROIVoxels = Retto)
+#' }#' #' 
 RAD.areaVolume<-function( listaROIVoxels ) {
-  objS<-services()
+  objS<-services();
+  obj.mmButo<-new.mmButo();
   arrayAV<-list()
   for ( i in names(listaROIVoxels) ) {
     geometry<-listaROIVoxels[[ i ]]$geometricalInformationOfImages;
     pSX<-geometry$pixelSpacing[1]
     pSY<-geometry$pixelSpacing[2]
     pSZ<-as.numeric(geometry$SliceThickness  )
-    voxelCube<-listaROIVoxels[[ i ]]$masked.images;
+    # expand the cropped voxelCube
+    voxelCube <- obj.mmButo$mmButoLittleCube.expand(   listaROIVoxels[[i]] )
     arrayAV[[ i ]]$Area<-objS$SV.rawSurface(voxelMatrix = voxelCube, pSX = pSX, pSY=pSY,pSZ=pSZ)    
     if ( arrayAV[[ i ]]$Area == -1 ) {
       arrayAV[[ i ]]$Volume<- -1
-      arrayAV[[ i ]]$equivolumetricSphericAreaRadio<- -1
+      arrayAV[[ i ]]$equivolumetricSphericAreaRatio<- -1
     }
     else {
       arrayAV[[ i ]]$Volume<-length(which(voxelCube!=0))*pSX*pSY*pSZ
-      arrayAV[[ i ]]$equivolumetricSphericAreaRadio<- ( 4*pi* (   (3/(4*pi))*arrayAV[[ i ]]$Volume   )^(2/3) ) / arrayAV[[ i ]]$Area
+      arrayAV[[ i ]]$equivolumetricSphericAreaRatio<- ( 4*pi* (   (3/(4*pi))*arrayAV[[ i ]]$Volume   )^(2/3) ) / arrayAV[[ i ]]$Area
     }    
   }
   return(arrayAV)

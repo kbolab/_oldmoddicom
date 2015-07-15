@@ -560,16 +560,17 @@ void rawSurface(double *arr, int *nX, int *nY, int *nZ, double *pSX, double *pSY
   int z,y,x;
   // reset surface value
   *surface = 0;
-
+  
   // loop the 3D-matrix
   for( z = 0 ; z < *nZ ; z++ ) {
     for( y = 0 ; y < *nY ; y++ ) {
       for( x = 0 ; x < *nX ; x++ ) {
-
+        
         if( arr[  posDecod(x,y,z,*nX,*nY,*nZ) ] !=0 ) {
           
           // if a non-zero voxel is on the border, surface cannot be calculated
-          if( x==0 || x==*nX || y==0 || y==*nY || z==0 || z==*nZ) {*surface = -1; return; }
+          // for now skipped but you now... in the future....
+          //if( x==0 || x==*nX || y==0 || y==*nY || z==0 || z==*nZ) {*surface = -1; return; }
           
           // is it a border-voxel in each possible direction?
           if( arr[  posDecod(x,y,z+1,*nX,*nY, *nZ ) ] == 0 ) *surface+= (*pSX) * (*pSY);

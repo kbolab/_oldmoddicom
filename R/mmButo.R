@@ -151,7 +151,6 @@ new.mmButo<-function() {
 #'               }
 #' @import MASS colorRamps 
 #' @useDynLib moddicom
-#' @export
 mmButo<-function() {
   
   dataStructure<-list()
@@ -608,7 +607,6 @@ mmButo<-function() {
 #' @description  retrieve an attribute from a \code{mmButo} object
 #' @details This is just a wrapper of the method \code{getAttribute} defined in the class \code{mmButo}
 #' @return The desired attribute, normally in form of \code{list}
-#' @export
 RAD.getAttribute<-function(obj, attribute, errorHandlerParams=c()) {
   errorHandler<-logHandler()
   if(length(errorHandlerParams)>0) errorHandler$setOutput(errorHandlerParams)
@@ -632,7 +630,6 @@ RAD.getAttribute<-function(obj, attribute, errorHandlerParams=c()) {
 #' @description  retrieve an attribute from a \code{mmButo} object
 #' @details it's jusat a wrapper function to force an mmButo object to load DICOM Studies by the method \code{openTreeMultiROIs}
 #' @return nothing. To read the loaded data please retrieve the attribute \code{dataStorage} by the \code{getAttribute} method or by it's wrapper-function \code{RAD.getAttribute}.
-#' @export
 RAD.openTreeMultiROIs<-function(obj, path, structureList, errorHandlerParams=c()) {
   errorHandler<-logHandler()
   if(length(errorHandlerParams)>0) errorHandler$setOutput(errorHandlerParams)
@@ -656,7 +653,6 @@ RAD.openTreeMultiROIs<-function(obj, path, structureList, errorHandlerParams=c()
 #' @description  set an attribute of a \code{mmButo} object
 #' @details it's jusat a wrapper function to force an mmButo object to load DICOM Studies by the method \code{openTreeMultiROIs}
 #' @return nothing. To read the loaded data please retrieve the attribute \code{dataStorage} by the \code{getAttribute} method or by it's wrapper-function \code{RAD.getAttribute}.
-#' @export
 RAD.setAttribute<-function(obj, attribute, value, errorHandlerParams=c() ) {
   errorHandler<-logHandler()
   if(length(errorHandlerParams)>0) errorHandler$setOutput(errorHandlerParams)
@@ -689,7 +685,6 @@ RAD.setAttribute<-function(obj, attribute, value, errorHandlerParams=c() ) {
 #' @description  run the calculus for the given algorithm, for a given ROI, for all the cases stored in un mmButo object. Further runs of the same algorithm will override the results.
 #' @details it's jusat a wrapper function of the method \code{execAlgorithm} of the \code{mmBute} class
 #' @return nothing. To read the loaded data please retrieve the attribute \code{results} by the \code{getAttribute} method or by it's wrapper-function \code{RAD.getAttribute}.
-#' @export
 RAD.execAlgorithm<-function(obj, algorithm=c("KDF","BAVA","virtualBiopsy","rawAreaVolume"), ROIName , grayTuningValue, ROIName4Tuning , nx=2, ny=2, nz=0 , errorHandlerParams=c() ) {
   errorHandler<-logHandler()
   if(length(errorHandlerParams)>0) errorHandler$setOutput(errorHandlerParams)
@@ -723,7 +718,6 @@ RAD.execAlgorithm<-function(obj, algorithm=c("KDF","BAVA","virtualBiopsy","rawAr
 #'        \item \code{total-maxmax} the max value from all the max from all the patients      
 #'        \item \code{total-stdevmax} the stdev value from all the max from all the patients         
 #'      }
-#' @export
 RAD.ROIStats<-function(obj, ROIName, errorHandlerParams=c() ) {
   errorHandler<-logHandler()
   if(length(errorHandlerParams)>0) errorHandler$setOutput(errorHandlerParams)
@@ -755,7 +749,6 @@ RAD.ROIStats<-function(obj, ROIName, errorHandlerParams=c() ) {
 #dataStorage<-a
 #result<-RAD.NewMultiPIPOblique(dataStorage = ds, Structure = ROIName, SeriesInstanceUID = SS)
 ## dyn.load("./src/PointInPolygon.so"); 
-#' @export
 diagnostica<-function() {
   mostraContenuto<-function( obj, collectionID="default" ) {
     list_geoLet<-obj$getAttribute(("list_geoLet"))
