@@ -560,7 +560,6 @@ void rawSurface(double *arr, int *nX, int *nY, int *nZ, double *pSX, double *pSY
   int z,y,x;
   // reset surface value
   *surface = 0;
-  
   // loop the 3D-matrix
   for( z = 0 ; z < *nZ ; z++ ) {
     for( y = 0 ; y < *nY ; y++ ) {

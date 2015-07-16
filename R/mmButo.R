@@ -72,6 +72,7 @@ new.mmButo<-function() {
   # ========================================================================================
   # getROIVoxelStats: give back the stats for a given ROIVoxelList in a compact form
   # useful, for example, for normalization issues....
+  # PAY ATTENTION! it does not consider the ZERO values.
   # ======================================================================================== 
   getROIVoxelStats<-function( ROIVoxelList ) {
     # define the empty arrays

@@ -5,7 +5,7 @@
 \title{Extract the possible Biopsies for a given ROIVoxelData}
 \usage{
 RAD.VirtualBiopsy(ROIVoxelData, dx.min = 2, dy.min = 2, dz.min = 0,
-  dx.max, dy.max, dz.max)
+  dx.max, dy.max, dz.max, sampleResultAt = Inf)
 }
 \arguments{
 \item{ROIVoxelData}{as got from of a \code{obj$getROIVoxel()} method. It considers the cropped version and provide internally to explode it}
@@ -21,6 +21,8 @@ RAD.VirtualBiopsy(ROIVoxelData, dx.min = 2, dy.min = 2, dz.min = 0,
 \item{dy.max}{the maximum number of voxel to be considered for biopsy along y axes;}
 
 \item{dz.max}{the maximum number of voxel to be considered for biopsy along z axes;}
+
+\item{sampleResultAt}{because of it is nurmaly not useful having the list of ALL the possible centroids (they can be hundred of thounsands) this parameters forces the function to RESAMPLE the list of possible centroids to the wished value. A value of 500 centroids, for example can be as espressive as a list of 100.000 centroids and save a lot of memory. Consider the adoption of this parameter if you don't want to be snowed under a tons of centoids (in particular for little volumes)}
 }
 \value{
 a list containing a lot of things
@@ -38,7 +40,7 @@ obj$loadCollection(Path = '/progetti/immagini/urinaEasy')
 Retto<-obj$getROIVoxel(ROIName="Retto")
 
 # get the possible biopsy
-biopsy<-RAD.VirtualBiopsy(dx.max = 3,dy.max = 3,dz.max = 2,ROIVoxelData = Retto,dx.min = 2,dy.min = 2, dz.min = 1)
+biopsy<-RAD.VirtualBiopsy(dx.max = 3,dy.max = 3,dz.max = 2,ROIVoxelData = Retto,dx.min = 2,dy.min = 2, dz.min = 1, sampleResultAt = 500)
 }#'
 }
 

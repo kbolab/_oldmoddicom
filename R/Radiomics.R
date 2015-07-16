@@ -80,6 +80,7 @@ RAD.areaVolume<-function( listaROIVoxels ) {
     pSX<-geometry$pixelSpacing[1]
     pSY<-geometry$pixelSpacing[2]
     pSZ<-as.numeric(geometry$SliceThickness  )
+    print("*");
     # expand the cropped voxelCube
     voxelCube <- obj.mmButo$mmButoLittleCube.expand(   listaROIVoxels[[i]] )
     arrayAV[[ i ]]$Area<-objS$SV.rawSurface(voxelMatrix = voxelCube, pSX = pSX, pSY=pSY,pSZ=pSZ)    
@@ -105,6 +106,7 @@ RAD.areaVolume<-function( listaROIVoxels ) {
 #' @param dx.max the maximum number of voxel to be considered for biopsy along x axes;
 #' @param dy.max the maximum number of voxel to be considered for biopsy along y axes;
 #' @param dz.max the maximum number of voxel to be considered for biopsy along z axes; 
+#' @param sampleResultAt because of it is nurmaly not useful having the list of ALL the possible centroids (they can be hundred of thounsands) this parameters forces the function to RESAMPLE the list of possible centroids to the wished value. A value of 500 centroids, for example can be as espressive as a list of 100.000 centroids and save a lot of memory. Consider the adoption of this parameter if you don't want to be snowed under a tons of centoids (in particular for little volumes)
 #' @return a list containing a lot of things
 #' @examples \dontrun{
 #' # Create an instante of new.mmButo and load some cases
@@ -115,18 +117,20 @@ RAD.areaVolume<-function( listaROIVoxels ) {
 #' Retto<-obj$getROIVoxel(ROIName="Retto")  
 #' 
 #' # get the possible biopsy
-#' biopsy<-RAD.VirtualBiopsy(dx.max = 3,dy.max = 3,dz.max = 2,ROIVoxelData = Retto,dx.min = 2,dy.min = 2, dz.min = 1)
+#' biopsy<-RAD.VirtualBiopsy(dx.max = 3,dy.max = 3,dz.max = 2,ROIVoxelData = Retto,dx.min = 2,dy.min = 2, dz.min = 1, sampleResultAt = 500)
 #' }#' 
 #' @export
 #' @useDynLib moddicom
-RAD.VirtualBiopsy <- function ( ROIVoxelData, dx.min=2, dy.min=2, dz.min=0, dx.max, dy.max, dz.max)  {
+RAD.VirtualBiopsy <- function ( ROIVoxelData, dx.min=2, dy.min=2, dz.min=0, dx.max, dy.max, dz.max, sampleResultAt = Inf)  {
 
-  # instance the object justo to use the static methods
+  # instance the object just to use the static methods
   # (i.e. to explode the voxel cubes)
   obj.mmButo<-new.mmButo()
+  
   # set and initialize general variables
   h <- 1;  lista <- list();  pazienti <- list();
   NumPatients<-length( ROIVoxelData )
+  
   # loop for each patient
   for (i in seq(1,NumPatients) )  {
     print(  paste(c("Processing: ",names(ROIVoxelData)[i]),collapse='' )  )
@@ -180,7 +184,7 @@ RAD.VirtualBiopsy <- function ( ROIVoxelData, dx.min=2, dy.min=2, dz.min=0, dx.m
       
       # calculates the coords <x,y,z> of the centroids
       carot.index <- which(carot==1, arr.ind = T )
-      # save the desider output (hte <dx,dy,dz of the single analysis, the number of possible 
+      # save the desired output (hte <dx,dy,dz> of the single analysis, the number of possible 
       # samples and the coords of the centroids)
       realX<-as.numeric(ROIVoxelData[[i]]$geometricalInformationOfImages$pixelSpacing[1])*stepX
       realX<-realX*2+realX
@@ -189,13 +193,22 @@ RAD.VirtualBiopsy <- function ( ROIVoxelData, dx.min=2, dy.min=2, dz.min=0, dx.m
       realZ<-as.numeric(ROIVoxelData[[i]]$geometricalInformationOfImages$SliceThickness)*stepY
       realZ<-realZ*2+realZ
       listLabel<-paste(c(stepX,"_",stepY,"_",stepZ),collapse='')
+      # fai un resample se non interessa avere indietro TUTTI i punti carotabili
+      if( sampleResultAt != Inf  && dim(carot.index)[1]>sampleResultAt ) {
+        listaPossibiliSamples<-seq(1,dim(carot.index)[1])
+        listaPossibiliSamples<-sample(listaPossibiliSamples, size = sampleResultAt, replace = FALSE)
+        carot.index.resampled<-carot.index[ listaPossibiliSamples,  ]
+        prova.carot[[10]]<-listaPossibiliSamples
+      } 
+      else carot.index.resampled<-carot.index
+      # return
       lista[[ listLabel ]] <- list(
         "dx_dy_dz"=c(stepX*2+1,stepY*2+1, stepY*2+1), 
         "volume"=(stepX*2+1) * (stepY*2+1) *(stepY*2+1),
         "real_dx_dy_dz"=c(realX,realY,realZ), 
         "real_volume"=realX * realY *realZ,
         "NumCarotaggi"=prova.carot[[10]], 
-        "IndexBiopsy"=carot.index)
+        "IndexBiopsy"=carot.index.resampled)
       
     }
     pazienti[[ names(ROIVoxelData)[i] ]] <- lista
