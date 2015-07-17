@@ -467,7 +467,6 @@ mmButo<-function() {
                     as.integer (size3), as.integer(nx), as.integer(ny), as.integer(nz), as.integer(expand),
                     as.integer (control), as.integer(lungh), as.integer(carotaggioVolume)   )
     
-    
     #organize output into matrix structure
     virtual.biopsy <- array (biopsy[11][[1]], dim=c(size1,size2,size3))
     

@@ -119,3 +119,10 @@ void greyMatrix(int *indX, int *indY, int *indZ, int *numCentroidi, int *nx, int
     } 
   }
 }
+
+
+
+
+
+
+
