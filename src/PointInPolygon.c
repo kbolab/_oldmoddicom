@@ -680,7 +680,7 @@ void erosion( double *cube, int *nX, int *nY, int *nZ, int *mx, int *my, int *mz
     if(cube[ct]==-1) cube[ct]=0;
   }
 //  fprintf(fp, "\n (9)");
-  fclose(fp);
+//  fclose(fp);
   // rilancia ricorsivamente
   *iterator = *iterator + 1;
   erosion( cube, nX, nY, nZ, mx, my, mz, iterator );
