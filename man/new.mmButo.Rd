@@ -2,12 +2,42 @@
 % Please edit documentation in R/mmButo.R
 \name{new.mmButo}
 \alias{new.mmButo}
-\title{Load and handle a tree}
+\title{class for loading multiple sets of DICOM studies stored on filesystem}
 \usage{
 new.mmButo()
 }
 \description{
-this is the old (and deprecated) version of mmButo. It is able to look into a folder serching all DICOM studies and return a structure containint all the voxel cubes.
+Instantiate an object of the class \code{new.mmButo}.This represents just the classname,
+              for each instantiated object many methods are available not i S3 or S4 but by closures method.
               The available methods are:
+              \itemize{
+              \item \code{void loadCollection(string Path, string collectionID='default')}
+              is a method used to open a chosen folder and load all the DICOM studies stored from that.
+              each loads refers to a specific collection of studies and new.mmButo can handle multiple
+              collections simply addressing those by a label \code{collectionID}. If \code{collectionID}
+              is not specified the DICOM studies will be loaded into the \code{collectionID} named 'default'.
+              The different loded collections are independent among them.
+              \item \code{list getAttribute(string attributeName) }
+              This method returns the desided attribute. At the moment the possible attributes are:
+              \itemize{
+              \item \code{list_geoLet} this attribute contains the list of all the collections containing the
+              differents \code{geoLet} object loaded by \code{new.mmButo}.
+              Please consider that a \code{names()} on such returned attribute will gave no any valid values
+              because of are object built by closures. Each \code{geoLet} object should be handled by with
+              its own methods (i.e. \code{...$getAttribute("dataStorage")} or \code{...$getROIList()}, etc..).
+              }
+              \item \code{list getCollection(collectionID='default')} this methods returns list of geoLet objects,
+              exactly as \code{getAttribute("list_geoLet")} does, with the exception that it returns only the list of
+              \code{geoLet} objects which refers to the specified collection.
+              \item \code{list getROIVoxel(string ROIName, string collectionID)} returns a list of a voxel within
+              the indicated ROIs, for the specified collection. If no collection is specified, the default is
+              'default'. The returned list contains one element for each loaded study and the voxel cubes are stored
+              'cropped' in order ti save memory. Anyway, geometric information of the cropped sub-cube respect the
+              biggest voxel cubes are provided. Another option is to use the method \code{...$mmButoLittleCube.expand()}
+              to explode the cropped cube to the dimension of the big voxel cube built by CT/MR scans.
+              \item \code{list getROIVoxelStats( ROIVoxelList )} it take as parameter a list obtained by the method \code{getROIVoxel()}
+              and return some stats. Particularly useful if you have to normalize.
+
+              }
 }
 
