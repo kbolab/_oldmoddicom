@@ -569,15 +569,23 @@ void rawSurface(double *arr, int *nX, int *nY, int *nZ, double *pSX, double *pSY
           
           // if a non-zero voxel is on the border, surface cannot be calculated
           // for now skipped but you now... in the future....
-          //if( x==0 || x==*nX || y==0 || y==*nY || z==0 || z==*nZ) {*surface = -1; return; }
+          if( x==0 || x==*nX || y==0 || y==*nY || z==0 || z==*nZ) {*surface = -1; return; }
           
           // is it a border-voxel in each possible direction?
-          if( arr[  posDecod(x,y,z+1,*nX,*nY, *nZ ) ] == 0 ) *surface+= (*pSX) * (*pSY);
-          if( arr[  posDecod(x,y,z-1,*nX,*nY, *nZ ) ] == 0 ) *surface+= (*pSX) * (*pSY);
-          if( arr[  posDecod(x,y+1,z,*nX, *nY, *nZ ) ] == 0 ) *surface+= (*pSX) * (*pSZ);
-          if( arr[  posDecod(x,y-1,z,*nX,*nY, *nZ ) ] == 0 ) *surface+= (*pSX) * (*pSZ);
-          if( arr[  posDecod(x+1,y,z, *nX, *nY, *nZ ) ] == 0 ) *surface+= (*pSY) * (*pSZ);
-          if( arr[  posDecod(x-1,y,z, *nX, *nY, *nZ ) ] == 0 ) *surface+= (*pSY) * (*pSZ);        
+          if(z+1!=*nZ) {if( arr[  posDecod(x,y,z+1,*nX,*nY, *nZ ) ] == 0 ) *surface+= (*pSX) * (*pSY);}
+          if(z-1>0) {if( arr[  posDecod(x,y,z-1,*nX,*nY, *nZ ) ] == 0 ) *surface+= (*pSX) * (*pSY);}
+          if(y+1!=*nY) {if( arr[  posDecod(x,y+1,z,*nX, *nY, *nZ ) ] == 0 ) *surface+= (*pSX) * (*pSZ);}
+          if(y-1>0) {if( arr[  posDecod(x,y-1,z,*nX,*nY, *nZ ) ] == 0 ) *surface+= (*pSX) * (*pSZ);}
+          if(x+1!=*nX) {if( arr[  posDecod(x+1,y,z, *nX, *nY, *nZ ) ] == 0 ) *surface+= (*pSY) * (*pSZ);}
+          if(x-1>0) {if( arr[  posDecod(x-1,y,z, *nX, *nY, *nZ ) ] == 0 ) *surface+= (*pSY) * (*pSZ);        }
+          
+          if(x-1==0) *surface+= (*pSY) * (*pSZ);
+          if(x+1==*nX) *surface+= (*pSY) * (*pSZ); 
+          if(y-1==0) *surface+= (*pSX) * (*pSZ);
+          if(y+1==*nY) *surface+= (*pSX) * (*pSZ);          
+          if(z-1==0) *surface+= (*pSX) * (*pSY);
+          if(z+1==*nZ) *surface+= (*pSX) * (*pSY);           
+            
         }
         
       }      
@@ -585,57 +593,9 @@ void rawSurface(double *arr, int *nX, int *nY, int *nZ, double *pSX, double *pSY
   }
   return;
 }
-void old_erosion( double *cube, int *nX, int *nY, int *nZ, int *mx, int *my, int *mz, int *iterator) {
-  int x,y,z,center,ct;
-  FILE *fp;  
-  
-  fp = fopen("file.txt", "w+");
-  fprintf(fp, "\n (1) ");
-  
-  if( *iterator >= 10) return;  // just to avoid infinite loops
-  if(*mx == 0 && *my ==0 && *mz ==0 ) return;
-  
-  // loop per ogni elemento del cubo
-  for( z=0; z<*nZ; z++ ) {
-    for( y=0; y<*nY; y++ ) {
-      for( x=0; x<*nX; x++) {
-        fprintf(fp, "\n (2) x=%d y=%d z=%d  nX=%d  nY=%d  nZ=%d iterator=%d center=%d",x,y,z,*nX,*nY,*nZ,iterator,center);
-        // prendi l'offset relativo al punto in esame
-        center = posDecod(x,y,z,*nX,*nY,*nZ);
-        fprintf(fp, "\n (3) x=%d y=%d z=%d  nX=%d  nY=%d  nZ=%d iterator=%d center=%d",x,y,z,*nX,*nY,*nZ,iterator,center);
-        // se != 0 vediamo l'intorno
-        if(cube[center]>0) {
-          fprintf(fp, "\n (4)");
-          if( *mx>0 ){
-            if(x==0 || x==*nX) cube[center]=-1;
-            else if( cube[posDecod(x-1,y,z,*nX,*nY,*nZ)]==0 || cube[posDecod(x+1,y,z,*nX,*nY,*nZ)]==0  ) cube[center]=-1;
-          }
-          if( *my>0 ){
-            if(y==0 || y==*nY) cube[center]=-1;
-            else if( cube[posDecod(x,y-1,z,*nX,*nY,*nZ)]==0 || cube[posDecod(x,y+1,z,*nX,*nY,*nZ)]==0  ) cube[center]=-1;
-          }        
-          if( *mz>0 ){
-            if(z==0 || z==*nZ) cube[center]=-1;
-            else if( cube[posDecod(x,y,z-1,*nX,*nY,*nZ)]==0 || cube[posDecod(x,y,z+1,*nX,*nY,*nZ)]==0  )  cube[center]=-1;
-          }
-        }
-        fprintf(fp, "\n (5)");
-      }
-      fprintf(fp, "\n (6)");
-    }
-    fprintf(fp, "\n (7)");
-  }
-  fprintf(fp, "\n (8)");
-  
-  return;
-}
+
 void erosion( double *cube, int *nX, int *nY, int *nZ, int *mx, int *my, int *mz, int *iterator) {
   int x,y,z,center,ct;
-//  FILE *fp;
-  
-//  fp = fopen("file.txt", "w+");
-//  fprintf(fp, "\n (1) ");
-  
   if( *iterator >= 10) return;  // just to avoid infinite loops
   if(*mx == 0 && *my ==0 && *mz ==0 ) return;
   
@@ -644,13 +604,10 @@ void erosion( double *cube, int *nX, int *nY, int *nZ, int *mx, int *my, int *mz
   for( z=0; z<*nZ; z++ ) {
     for( y=0; y<*nY; y++ ) {
       for( x=0; x<*nX; x++) {
-//        fprintf(fp, "\n (2) x=%d y=%d z=%d  nX=%d  nY=%d  nZ=%d iterator=%d center=%d",x,y,z,*nX,*nY,*nZ,iterator,center);
         // prendi l'offset relativo al punto in esame
         center = posDecod(x,y,z,*nX,*nY,*nZ);
-//        fprintf(fp, "\n (3) x=%d y=%d z=%d  nX=%d  nY=%d  nZ=%d iterator=%d center=%d",x,y,z,*nX,*nY,*nZ,iterator,center);
         // se != 0 vediamo l'intorno
         if(cube[center]>0) {
-//          fprintf(fp, "\n (4)");
           if( *mx>0 ){
             if(x==0 || x==*nX) cube[center]=-1;
             else if( cube[posDecod(x-1,y,z,*nX,*nY,*nZ)]==0 || cube[posDecod(x+1,y,z,*nX,*nY,*nZ)]==0  ) cube[center]=-1;
@@ -664,13 +621,9 @@ void erosion( double *cube, int *nX, int *nY, int *nZ, int *mx, int *my, int *mz
             else if( cube[posDecod(x,y,z-1,*nX,*nY,*nZ)]==0 || cube[posDecod(x,y,z+1,*nX,*nY,*nZ)]==0  )  cube[center]=-1;
           }
         }
-//        fprintf(fp, "\n (5)");
       }
-//      fprintf(fp, "\n (6)");
     }
-//    fprintf(fp, "\n (7)");
 }
-//  fprintf(fp, "\n (8)");
   // decrementa i vincoli sui margini
   if( *mx>0 ) *mx = *mx - 1;
   if( *my>0 ) *my = *my - 1;  
@@ -679,8 +632,6 @@ void erosion( double *cube, int *nX, int *nY, int *nZ, int *mx, int *my, int *mz
   for(ct=0; ct<= posDecod((*nX-1),(*nY-1),(*nZ-1),*nX,*nY,*nZ); ct++) {
     if(cube[ct]==-1) cube[ct]=0;
   }
-//  fprintf(fp, "\n (9)");
-//  fclose(fp);
   // rilancia ricorsivamente
   *iterator = *iterator + 1;
   erosion( cube, nX, nY, nZ, mx, my, mz, iterator );

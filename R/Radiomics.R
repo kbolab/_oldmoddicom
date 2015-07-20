@@ -3,7 +3,6 @@
 #' @description  calculates Shannon entropy, kursosis and Skewness of a given list of arrays of voxels
 #' @param inputData a list where each element is an array of the voxel of the image. Each element of the list normally refers to a patient.             
 #' @return three lists: the first list contains the entropies, the second the kurtosis and the third the skewness
-#' @export
 #' @examples \dontrun{
 #' # Create an instante of new.mmButo and load some cases
 #' obj<-new.mmButo()
@@ -17,6 +16,7 @@
 #' aa$entropy
 #' }#' #' 
 #' @import entropy moments 
+#' @export
 RAD.firstOrderFeatureImage <- function ( inputData )
 {
   # set some variables;
@@ -119,8 +119,8 @@ RAD.areaVolume<-function( listaROIVoxels ) {
 #' # get the possible biopsy
 #' biopsy<-RAD.VirtualBiopsy(dx.max = 3,dy.max = 3,dz.max = 2,ROIVoxelData = Retto,dx.min = 2,dy.min = 2, dz.min = 1, sampleResultAt = 500)
 #' }#' 
-#' @export
 #' @useDynLib moddicom
+#' @export
 RAD.possibleVirtualBiopsy <- function ( ROIVoxelData, dx.min=2, dy.min=2, dz.min=0, dx.max, dy.max, dz.max, sampleResultAt = Inf)  {
 
   # instance the object just to use the static methods
