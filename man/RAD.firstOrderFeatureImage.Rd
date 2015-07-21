@@ -10,10 +10,10 @@ RAD.firstOrderFeatureImage(inputData)
 \item{inputData}{a list where each element is an array of the voxel of the image. Each element of the list normally refers to a patient.}
 }
 \value{
-three lists: the first list contains the entropies, the second the kurtosis and the third the skewness
+six lists: the first list contains the entropies, the second the kurtosis, the third the skewness, the fourth the mean, the fifth the standard deviation and the sixth the energy
 }
 \description{
-calculates Shannon entropy, kursosis and Skewness of a given list of arrays of voxels
+Calculates Shannon entropy, kursosis, Skewness, mean, standard deviation and energy of a given list of arrays of voxels
 }
 \examples{
 \dontrun{

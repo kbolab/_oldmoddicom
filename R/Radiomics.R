@@ -1,8 +1,9 @@
 #' function to calculate the first order features
 #' 
-#' @description  calculates Shannon entropy, kursosis and Skewness of a given list of arrays of voxels
+#' @description  Calculates Shannon entropy, kursosis, Skewness, mean, standard deviation and energy of a given list of arrays of voxels
 #' @param inputData a list where each element is an array of the voxel of the image. Each element of the list normally refers to a patient.             
-#' @return three lists: the first list contains the entropies, the second the kurtosis and the third the skewness
+#' @return six lists: the first list contains the entropies, the second the kurtosis, the third the skewness, the fourth the mean, the fifth the standard deviation and the sixth the energy
+#' @export
 #' @examples \dontrun{
 #' # Create an instante of new.mmButo and load some cases
 #' obj<-new.mmButo()
@@ -16,7 +17,6 @@
 #' aa$entropy
 #' }#' #' 
 #' @import entropy moments 
-#' @export
 RAD.firstOrderFeatureImage <- function ( inputData )
 {
   # set some variables;
@@ -25,6 +25,10 @@ RAD.firstOrderFeatureImage <- function ( inputData )
   ImageEntropy <- array(data = c(0), dim = c(numPatient))
   ImageKurtosis <- array(data = c(0), dim = c(numPatient))
   ImageSkewness <- array(data = c(0), dim = c(numPatient))
+  ImageMean <- array(data = c(0), dim = c(numPatient))
+  ImageStandDeviat <- array(data = c(0), dim = c(numPatient))
+  ImageEnergy <- array(data = c(0), dim = c(numPatient))
+  
   histSamples<-500
   
   voxel.stats<-obj.mButo$getROIVoxelStats( inputData )
@@ -50,9 +54,26 @@ RAD.firstOrderFeatureImage <- function ( inputData )
     # Calcola la Skewness per ogni paziente (Skewness = 0 simmetria perfetta, Skewness > 0 asimmetrica verso destra
     # Skewness < 0 asimmetrica verso sinistra)
     ImageSkewness[i] <- skewness(x = voxelCube.values)
+    #Calcola media dei grigi dei singoli pazienti
+    ImageMean[i] <- mean(x = voxelCube.values)
+    #Calcola deviazione standard
+    ImageStandDeviat[i] <- sd (x = voxelCube.values)
+    
+    #Calcola la Enery, permette di valutare l'uniformità dell'immagine. Può assumere un valore tra 0 e 1:
+    # 0 = non uniforme; 1 = uniforme;
+    Energy <- 0
+    for (j in 1:length(istogr$density))
+    {
+      Energy <- Energy+(istogr$density[j])^2
+    }
+    ImageEnergy[i] <- Energy
+    
+    
+    
   }
   #Restituisce una lista di array; ciascun valore corrisponde al singolo paziente ()
-  return(list ("entropy"=ImageEntropy, "kurtosis"=ImageKurtosis, "skewness"=ImageSkewness) ) 
+  return(list ("entropy"=ImageEntropy, "kurtosis"=ImageKurtosis, "skewness"=ImageSkewness, "mean"=ImageMean, 
+               "standard deviation"=ImageStandDeviat, "energy"=ImageEnergy)) 
 }
 #' function to calculate Are/Volume and related measures
 #' 
@@ -80,7 +101,6 @@ RAD.areaVolume<-function( listaROIVoxels ) {
     pSX<-geometry$pixelSpacing[1]
     pSY<-geometry$pixelSpacing[2]
     pSZ<-as.numeric(geometry$SliceThickness  )
-    print("*");
     # expand the cropped voxelCube
     voxelCube <- obj.mmButo$mmButoLittleCube.expand(   listaROIVoxels[[i]] )
     arrayAV[[ i ]]$Area<-objS$SV.rawSurface(voxelMatrix = voxelCube, pSX = pSX, pSY=pSY,pSZ=pSZ)    
@@ -106,7 +126,6 @@ RAD.areaVolume<-function( listaROIVoxels ) {
 #' @param dx.max the maximum number of voxel to be considered for biopsy along x axes;
 #' @param dy.max the maximum number of voxel to be considered for biopsy along y axes;
 #' @param dz.max the maximum number of voxel to be considered for biopsy along z axes; 
-#' @param sampleResultAt because of it is nurmaly not useful having the list of ALL the possible centroids (they can be hundred of thounsands) this parameters forces the function to RESAMPLE the list of possible centroids to the wished value. A value of 500 centroids, for example can be as espressive as a list of 100.000 centroids and save a lot of memory. Consider the adoption of this parameter if you don't want to be snowed under a tons of centoids (in particular for little volumes)
 #' @return a list containing a lot of things
 #' @examples \dontrun{
 #' # Create an instante of new.mmButo and load some cases
@@ -117,20 +136,18 @@ RAD.areaVolume<-function( listaROIVoxels ) {
 #' Retto<-obj$getROIVoxel(ROIName="Retto")  
 #' 
 #' # get the possible biopsy
-#' biopsy<-RAD.VirtualBiopsy(dx.max = 3,dy.max = 3,dz.max = 2,ROIVoxelData = Retto,dx.min = 2,dy.min = 2, dz.min = 1, sampleResultAt = 500)
+#' biopsy<-RAD.VirtualBiopsy(dx.max = 3,dy.max = 3,dz.max = 2,ROIVoxelData = Retto,dx.min = 2,dy.min = 2, dz.min = 1)
 #' }#' 
-#' @useDynLib moddicom
 #' @export
-RAD.possibleVirtualBiopsy <- function ( ROIVoxelData, dx.min=2, dy.min=2, dz.min=0, dx.max, dy.max, dz.max, sampleResultAt = Inf)  {
+#' @useDynLib moddicom
+RAD.VirtualBiopsy <- function ( ROIVoxelData, dx.min=2, dy.min=2, dz.min=0, dx.max, dy.max, dz.max)  {
 
-  # instance the object just to use the static methods
+  # instance the object justo to use the static methods
   # (i.e. to explode the voxel cubes)
   obj.mmButo<-new.mmButo()
-  
   # set and initialize general variables
   h <- 1;  lista <- list();  pazienti <- list();
   NumPatients<-length( ROIVoxelData )
-  
   # loop for each patient
   for (i in seq(1,NumPatients) )  {
     print(  paste(c("Processing: ",names(ROIVoxelData)[i]),collapse='' )  )
@@ -184,7 +201,7 @@ RAD.possibleVirtualBiopsy <- function ( ROIVoxelData, dx.min=2, dy.min=2, dz.min
       
       # calculates the coords <x,y,z> of the centroids
       carot.index <- which(carot==1, arr.ind = T )
-      # save the desired output (hte <dx,dy,dz> of the single analysis, the number of possible 
+      # save the desider output (hte <dx,dy,dz of the single analysis, the number of possible 
       # samples and the coords of the centroids)
       realX<-as.numeric(ROIVoxelData[[i]]$geometricalInformationOfImages$pixelSpacing[1])*stepX
       realX<-realX*2+realX
@@ -193,22 +210,13 @@ RAD.possibleVirtualBiopsy <- function ( ROIVoxelData, dx.min=2, dy.min=2, dz.min
       realZ<-as.numeric(ROIVoxelData[[i]]$geometricalInformationOfImages$SliceThickness)*stepY
       realZ<-realZ*2+realZ
       listLabel<-paste(c(stepX,"_",stepY,"_",stepZ),collapse='')
-      # fai un resample se non interessa avere indietro TUTTI i punti carotabili
-      if( sampleResultAt != Inf  && dim(carot.index)[1]>sampleResultAt ) {
-        listaPossibiliSamples<-seq(1,dim(carot.index)[1])
-        listaPossibiliSamples<-sample(listaPossibiliSamples, size = sampleResultAt, replace = FALSE)
-        carot.index.resampled<-carot.index[ listaPossibiliSamples,  ]
-        prova.carot[[10]]<-listaPossibiliSamples
-      } 
-      else carot.index.resampled<-carot.index
-      # return
       lista[[ listLabel ]] <- list(
         "dx_dy_dz"=c(stepX*2+1,stepY*2+1, stepY*2+1), 
         "volume"=(stepX*2+1) * (stepY*2+1) *(stepY*2+1),
         "real_dx_dy_dz"=c(realX,realY,realZ), 
         "real_volume"=realX * realY *realZ,
         "NumCarotaggi"=prova.carot[[10]], 
-        "IndexBiopsy"=carot.index.resampled)
+        "IndexBiopsy"=carot.index)
       
     }
     pazienti[[ names(ROIVoxelData)[i] ]] <- lista
@@ -216,54 +224,5 @@ RAD.possibleVirtualBiopsy <- function ( ROIVoxelData, dx.min=2, dy.min=2, dz.min
   # define the returning object as member of the class 'virtualBiopsy'
   class(pazienti)<-'virtualBiopsy'
   return(pazienti)
-}
-#' Apply erosion to a set of voxelCubes
-#' 
-#' @description  Apply the erosion to a set of ROIs internal voxels
-#' @param ROIVoxelData as got from of a \code{obj$getROIVoxel()} method. It considers the cropped version and provide internally to explode it
-#' @param margin.x the erosion margin along the x axes: default is 2.
-#' @param margin.y the erosion margin along the y axes: default is 2.
-#' @param margin.z the erosion margin along the z axes: default is 1.
-#' @return a list containing the eroded voxelCubes and some stats
-#' @examples \dontrun{
-#' # Create an instante of new.mmButo and load some cases
-#' obj<-new.mmButo()
-#' obj$loadCollection(Path = '/progetti/immagini/urinaEasy')
-#' 
-#' # get the three ROIs
-#' Retto<-obj$getROIVoxel(ROIName="Retto")  
-#' 
-#' # get the possible biopsy
-#' erodedCubes<-RAD.applyErosion( ROIVoxelData = Retto )
-#' }#' 
-#' @export
-#' @useDynLib moddicom
-RAD.applyErosion<-function(  ROIVoxelData, margin.x=2, margin.y=2, margin.z=1 ) {
-  res<-list()
-  print("Beginnig erosion....");
-  for ( i in names(ROIVoxelData) ) {
-    print( paste( c("Eroding: ",i)   ,collapse = '')    );
-    # declare the lists
-    res[[i]]<-list();    res[[i]]$stat<-list();
-    
-    # get the voxel cube and prepare the erosion
-    erodedVoxelCube<-ROIVoxelData[[i]]$masked.images$voxelCube;
-    # get the dimensions and set the desired margins
-    nX<-dim(erodedVoxelCube)[1];    nY<-dim(erodedVoxelCube)[2];    nZ<-dim(erodedVoxelCube)[3];
-    mx<-margin.x; my<-margin.y; mz<-margin.z;
-    iterator<-0; # this is just to avoid infinite loops...
-    
-    # erode it!
-
-    aa<-.C("erosion",as.double(erodedVoxelCube), as.integer(nX), as.integer(nY), 
-           as.integer(nZ),as.integer(margin.x),as.integer(margin.y), 
-           as.integer(margin.z), as.integer(iterator)) 
-#    aa<-list();aa[[1]]<-erodedVoxelCube
-    
-    erodedVoxelCube<-array(aa[[1]], dim=c(nX,nY,nZ))
-    res[[i]]$voxelCube<-erodedVoxelCube;
-    res[[i]]$stat$number<-length(erodedVoxelCube!=0)
-  }
-  return( res )
 }
 
