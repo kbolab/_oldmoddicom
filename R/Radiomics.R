@@ -225,4 +225,55 @@ RAD.VirtualBiopsy <- function ( ROIVoxelData, dx.min=2, dy.min=2, dz.min=0, dx.m
   class(pazienti)<-'virtualBiopsy'
   return(pazienti)
 }
+#' Apply erosion to a set of voxelCubes
+#' 
+#' @description  Apply the erosion to a set of ROIs internal voxels
+#' @param ROIVoxelData as got from of a \code{obj$getROIVoxel()} method. It considers the cropped version and provide internally to explode it
+#' @param margin.x the erosion margin along the x axes: default is 2.
+#' @param margin.y the erosion margin along the y axes: default is 2.
+#' @param margin.z the erosion margin along the z axes: default is 1.
+#' @return a list containing the eroded voxelCubes and some stats
+#' @examples \dontrun{
+#' # Create an instante of new.mmButo and load some cases
+#' obj<-new.mmButo()
+#' obj$loadCollection(Path = '/progetti/immagini/urinaEasy')
+#' 
+#' # get the three ROIs
+#' Retto<-obj$getROIVoxel(ROIName="Retto")  
+#' 
+#' # get the possible biopsy
+#' erodedCubes<-RAD.applyErosion( ROIVoxelData = Retto )
+#' }#' 
+#' @export
+#' @useDynLib moddicom
+RAD.applyErosion<-function(  ROIVoxelData, margin.x=2, margin.y=2, margin.z=1 ) {
+  res<-list()
+  print("Beginnig erosion....");
+  for ( i in names(ROIVoxelData) ) {
+    print( paste( c("Eroding: ",i)   ,collapse = '')    );
+    # declare the lists
+    res[[i]]<-list();    res[[i]]$stat<-list();
+    
+    # get the voxel cube and prepare the erosion
+    erodedVoxelCube<-ROIVoxelData[[i]]$masked.images$voxelCube;
+    # get the dimensions and set the desired margins
+    nX<-dim(erodedVoxelCube)[1];    nY<-dim(erodedVoxelCube)[2];    nZ<-dim(erodedVoxelCube)[3];
+    mx<-margin.x; my<-margin.y; mz<-margin.z;
+    iterator<-0; # this is just to avoid infinite loops...
+    
+    # erode it!
+    
+    aa<-.C("erosion",as.double(erodedVoxelCube), as.integer(nX), as.integer(nY), 
+           as.integer(nZ),as.integer(margin.x),as.integer(margin.y), 
+           as.integer(margin.z), as.integer(iterator)) 
+    #    aa<-list();aa[[1]]<-erodedVoxelCube
+    
+    erodedVoxelCube<-array(aa[[1]], dim=c(nX,nY,nZ))
+    res[[i]]$voxelCube<-erodedVoxelCube;
+    res[[i]]$stat$number<-length(erodedVoxelCube!=0)
+  }
+  return( res )
+}
+
+
 
