@@ -1,6 +1,6 @@
-#' class for loading multiple sets of DICOM studies stored on filesystem
+#' class for loading multiple sets of DICOM studies from filesystem
 #' 
-#' @description  Instantiate an object of the class \code{new.mmButo}.This represents just the classname, 
+#' @description  Instantiate an object of the class \code{new.mmButo}. This represents just the classname,
 #'               for each instantiated object many methods are available not i S3 or S4 but by closures method.
 #'               The available methods are:
 #'               \itemize{
@@ -29,10 +29,43 @@
 #'               biggest voxel cubes are provided. Another option is to use the method \code{...$mmButoLittleCube.expand()}
 #'               to explode the cropped cube to the dimension of the big voxel cube built by CT/MR scans.
 #'               \item \code{list getROIVoxelStats( ROIVoxelList )} it take as parameter a list obtained by the method \code{getROIVoxel()}
-#'               and return some stats. Particularly useful if you have to normalize.
+#'               and return some stats. Particularly useful if you have to normalize a signal with the maximum, average or 
+#'               minimum value of another signal.
+#'               \item \code{list mmButoLittleCube.expand( ROIVoxelList )} because of \code{..$getROIVoxel()} returns a list of
+#'               voxel cubes cropped around the ROI in order to save memory, can be useful to expand such voxel cube to overlap
+#'               it on the original CT/MR voxel cube correctly for some issues (i.e.: chech the voxel just out the ROI, from the
+#'               external side of the ROI boundaries). In this case, to overlap che cropped voxel cube with the original CT/MR voxel
+#'               cube this method can be used. It takes in input the ROIVoxelList in output from \code{..$getROIVoxel()} and return
+#'               a list with the expanded voxel volumes, ready to be overlapped with CT/MR voxel cubes.
 #'               
 #'               }         
 #' @export
+#' @examples \dontrun{
+#' # Create an instante of new.mmButo and load some cases
+#' obj<-new.mmButo()
+#' obj$loadCollection(Path = '/progetti/immagini/DICOMStudyRepository')
+#' 
+#' get Urina and GTV
+#' GTV<-obj$getROIVoxel( "GTV" )
+#' Urina<-obj$getROIVoxel( "Urina" )
+#' 
+#' # get the stats of Urina
+#' stats.Urina<-obj$getROIVoxelStats(Urina)
+#' 
+#' # Get the max of the averages
+#' maxUrina<-max(stats.Urina$summary$mean)
+#' 
+#' # The hyp now is that the mean value in Urina should be the same for all the MR, so try to normalize
+#' # all the GTV voxel cubes by the "rescale sclope" represented by the variable 'fattoreCorrezione'
+#' for( i in names(GTV)) {
+#'   # the rescale slop is equal to the radio between maxUrina and the mean value in bladder of the considered patient
+#'   fattoreCorrezione <- maxUrina / stats.Urina$details[[ i ]]$mean
+#'   
+#'   # normalize GTV
+#'   GTV[[i]]$masked.images$voxelCube <- GTV[[i]]$masked.images$voxelCube  * fattoreCorrezione;
+#' }
+#' 
+#' }#' #' 
 new.mmButo<-function() {
   # attribute lists
   # the list of loaded geoLet objects
