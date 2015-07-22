@@ -68,9 +68,8 @@ RAD.firstOrderFeatureImage <- function ( inputData )
     }
     ImageEnergy[i] <- Energy
     
-    
-    
   }
+  
   #Restituisce una lista di array; ciascun valore corrisponde al singolo paziente ()
   return(list ("entropy"=ImageEntropy, "kurtosis"=ImageKurtosis, "skewness"=ImageSkewness, "mean"=ImageMean, 
                "standard deviation"=ImageStandDeviat, "energy"=ImageEnergy)) 
@@ -96,6 +95,11 @@ RAD.areaVolume<-function( listaROIVoxels ) {
   objS<-services();
   obj.mmButo<-new.mmButo();
   arrayAV<-list()
+  
+  # progression bar  
+  iterazione<-0
+  pb = txtProgressBar(min = 0, max = length(listaROIVoxels), initial = 0)
+  
   for ( i in names(listaROIVoxels) ) {
     geometry<-listaROIVoxels[[ i ]]$geometricalInformationOfImages;
     pSX<-geometry$pixelSpacing[1]
@@ -111,8 +115,14 @@ RAD.areaVolume<-function( listaROIVoxels ) {
     else {
       arrayAV[[ i ]]$Volume<-length(which(voxelCube!=0))*pSX*pSY*pSZ
       arrayAV[[ i ]]$equivolumetricSphericAreaRatio<- ( 4*pi* (   (3/(4*pi))*arrayAV[[ i ]]$Volume   )^(2/3) ) / arrayAV[[ i ]]$Area
-    }    
+    }
+    
+    setTxtProgressBar(pb,iterazione)
+    iterazione<-iterazione+1
+    
   }
+  close(pb)
+  
   return(arrayAV)
 }
 
@@ -249,6 +259,7 @@ RAD.VirtualBiopsy <- function ( ROIVoxelData, dx.min=2, dy.min=2, dz.min=0, dx.m
 RAD.applyErosion<-function(  ROIVoxelData, margin.x=2, margin.y=2, margin.z=1 ) {
   res<-list()
   print("Beginnig erosion....");
+  
   for ( i in names(ROIVoxelData) ) {
     print( paste( c("Eroding: ",i)   ,collapse = '')    );
     # declare the lists
@@ -271,7 +282,9 @@ RAD.applyErosion<-function(  ROIVoxelData, margin.x=2, margin.y=2, margin.z=1 ) 
     erodedVoxelCube<-array(aa[[1]], dim=c(nX,nY,nZ))
     res[[i]]$voxelCube<-erodedVoxelCube;
     res[[i]]$stat$number<-length(erodedVoxelCube!=0)
+    
   }
+
   return( res )
 }
 
