@@ -49,29 +49,39 @@ Instantiate an object of the class \code{new.mmButo}. This represents just the c
 }
 \examples{
 \dontrun{
-# Create an instante of new.mmButo and load some cases
+# create an object new.mmButo()
 obj<-new.mmButo()
-obj$loadCollection(Path = '/progetti/immagini/DICOMStudyRepository')
+obj$loadCollection("/progetti/immagini/carlotta")
 
-get Urina and GTV
+# get Urina and GTV
 GTV<-obj$getROIVoxel( "GTV" )
 Urina<-obj$getROIVoxel( "Urina" )
 
-# get the stats of Urina
-stats.Urina<-obj$getROIVoxelStats(Urina)
+# build the GTV.corrected which has the GTV  corrected by max value of Urina
+GTV.corrected<-obj$getCorrectedROIVoxel(inputROIVoxel = GTV,correctionROIVoxel = Urina)
 
-# Get the max of the averages
-maxUrina<-max(stats.Urina$summary$mean)
+# plotta le distribuzioni dei GTV (KDF) corretti
+RAD.compareSignals(ROIVoxelData = GTV.corrected)
 
-# The hyp now is that the mean value in Urina should be the same for all the MR, so try to normalize
-# all the GTV voxel cubes by the "rescale sclope" represented by the variable 'fattoreCorrezione'
-for( i in names(GTV)) {
-  # the rescale slop is equal to the radio between maxUrina and the mean value in bladder of the considered patient
-  fattoreCorrezione <- maxUrina / stats.Urina$details[[ i ]]$mean
+# già che ci sei plotta anche le distribuzioni del'Urina, così da vedere come sono posizionate
+# prima correggi per Urina
+Urina.corrected<-obj$getCorrectedROIVoxel(inputROIVoxel = Urina,correctionROIVoxel = Urina)
+RAD.compareSignals(ROIVoxelData = Urina.corrected)
 
-  # normalize GTV
-  GTV[[i]]$masked.images$voxelCube <- GTV[[i]]$masked.images$voxelCube  * fattoreCorrezione;
-}
+# feature extraction
+# (1) estraiamo le features del primo ordine
+feat.fo<-RAD.firstOrderFeatureImage( GTV )
+
+# (2) estraiamo le features di area/volume
+feat.av<-RAD.areaVolume( GTV )
+
+# (3)4 estraiamo i centroidi dei carotaggi
+feat.ca<-RAD.VirtualBiopsy( ROIVoxelData = GTV,dx.max = 5,dy.max = 5,dz.max = 2,sampleResultAt = 500)
+
+# (4) estraiamo anche un set di ROI del GTV "lontane" dalle regioni di confine, tramite erosione,
+# così da neutralizzare eventuali microproblemi di contornazione operatore-dipendente
+# (su questi avrà poi senso calcolare media e varianza come facevamo per i carotaggi)
+GTV.eroded<-RAD.applyErosion(ROIVoxelData = GTV)
 
 }#' #'
 }

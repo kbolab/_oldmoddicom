@@ -5,7 +5,7 @@
 \title{Extract the possible Biopsies for a given ROIVoxelData}
 \usage{
 RAD.VirtualBiopsy(ROIVoxelData, dx.min = 2, dy.min = 2, dz.min = 0,
-  dx.max, dy.max, dz.max)
+  dx.max, dy.max, dz.max, sampleResultAt = Inf)
 }
 \arguments{
 \item{ROIVoxelData}{as got from of a \code{obj$getROIVoxel()} method. It considers the cropped version and provide internally to explode it}
@@ -21,6 +21,8 @@ RAD.VirtualBiopsy(ROIVoxelData, dx.min = 2, dy.min = 2, dz.min = 0,
 \item{dy.max}{the maximum number of voxel to be considered for biopsy along y axes;}
 
 \item{dz.max}{the maximum number of voxel to be considered for biopsy along z axes;}
+
+\item{sampleResultAt}{indicates the maximum number of biopsy for each case. Often having 500 or 10000000 biopsy is the same with the exception of the memory allocated: by this parameter the user can forse a \code{sample} in order to reduce the occupation in memory. Default is \code{Inf}}
 }
 \value{
 a list containing a lot of things

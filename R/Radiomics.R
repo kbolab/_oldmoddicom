@@ -136,6 +136,7 @@ RAD.areaVolume<-function( listaROIVoxels ) {
 #' @param dx.max the maximum number of voxel to be considered for biopsy along x axes;
 #' @param dy.max the maximum number of voxel to be considered for biopsy along y axes;
 #' @param dz.max the maximum number of voxel to be considered for biopsy along z axes; 
+#' @param sampleResultAt indicates the maximum number of biopsy for each case. Often having 500 or 10000000 biopsy is the same with the exception of the memory allocated: by this parameter the user can forse a \code{sample} in order to reduce the occupation in memory. Default is \code{Inf}
 #' @return a list containing a lot of things
 #' @examples \dontrun{
 #' # Create an instante of new.mmButo and load some cases
@@ -150,7 +151,7 @@ RAD.areaVolume<-function( listaROIVoxels ) {
 #' }#' 
 #' @export
 #' @useDynLib moddicom
-RAD.VirtualBiopsy <- function ( ROIVoxelData, dx.min=2, dy.min=2, dz.min=0, dx.max, dy.max, dz.max)  {
+RAD.VirtualBiopsy <- function ( ROIVoxelData, dx.min=2, dy.min=2, dz.min=0, dx.max, dy.max, dz.max, sampleResultAt = Inf)  {
 
   # instance the object justo to use the static methods
   # (i.e. to explode the voxel cubes)
@@ -220,13 +221,22 @@ RAD.VirtualBiopsy <- function ( ROIVoxelData, dx.min=2, dy.min=2, dz.min=0, dx.m
       realZ<-as.numeric(ROIVoxelData[[i]]$geometricalInformationOfImages$SliceThickness)*stepY
       realZ<-realZ*2+realZ
       listLabel<-paste(c(stepX,"_",stepY,"_",stepZ),collapse='')
+      # fai un resample se non interessa avere indietro TUTTI i punti carotabili
+      if( sampleResultAt != Inf  && dim(carot.index)[1]>sampleResultAt ) {
+        listaPossibiliSamples<-seq(1,dim(carot.index)[1])
+        listaPossibiliSamples<-sample(listaPossibiliSamples, size = sampleResultAt, replace = FALSE)
+        carot.index.resampled<-carot.index[ listaPossibiliSamples,  ]
+        prova.carot[[10]]<-listaPossibiliSamples
+      }
+      else carot.index.resampled<-carot.index
+      
       lista[[ listLabel ]] <- list(
         "dx_dy_dz"=c(stepX*2+1,stepY*2+1, stepY*2+1), 
         "volume"=(stepX*2+1) * (stepY*2+1) *(stepY*2+1),
         "real_dx_dy_dz"=c(realX,realY,realZ), 
         "real_volume"=realX * realY *realZ,
         "NumCarotaggi"=prova.carot[[10]], 
-        "IndexBiopsy"=carot.index)
+        "IndexBiopsy"=carot.index.resampled)
       
     }
     pazienti[[ names(ROIVoxelData)[i] ]] <- lista
@@ -289,4 +299,50 @@ RAD.applyErosion<-function(  ROIVoxelData, margin.x=2, margin.y=2, margin.z=1 ) 
 }
 
 
+#' Apply erosion to a set of voxelCubes
+#' 
+#' @description  Apply the erosion to a set of ROIs internal voxels
+#' @export
+RAD.compareSignals<-function( ROIVoxelData, bootStrappedTimes = 1000 ) {
+  interpolatedDensity<-list();
+  listaDensity<-list()
+  valoreMassimoX<-0;valoreMassimoY<-0;
+  addingMatrix<-c()
+  bootstrappedAddingMatrix<-c();
+  
+  for(i in names( ROIVoxelData )) {
+    valori<-ROIVoxelData[[i]]$masked.images$voxelCube[which(ROIVoxelData[[i]]$masked.images$voxelCube!=0)]
+    listaDensity[[i]]<-density(valori)
+    valoreMassimoX<-max(valoreMassimoX,listaDensity[[i]]$x)
+    valoreMassimoY<-max(valoreMassimoY,listaDensity[[i]]$y)
+  }
+  
+  for(i in names( ROIVoxelData )) {
+    interpolatedDensity[[i]]<-approx(listaDensity[[i]]$x,listaDensity[[i]]$y,n=valoreMassimoX, xout=seq( from=0 , to=max(valoreMassimoX) )) 
+    # azzera gli NA
+    interpolatedDensity[[i]]$y[which(is.na(interpolatedDensity[[i]]$y))]<-0   
+    addingMatrix<-rbind(addingMatrix,interpolatedDensity[[i]]$y);
+  }
+
+  bootstrappedAddingMatrix<-apply(addingMatrix,2,sample,size=bootStrappedTimes,replace=T)
+  quantileMatrix<-apply(bootstrappedAddingMatrix, 2, quantile, probs = c(.025, .975), na.rm = TRUE)   # versione bootstrappato
+  
+  x<-interpolatedDensity[[i]]$x
+  x[which(is.na(x))]<-0
+  
+  quantileMatrixSPU<-smooth.spline( x = x, y = quantileMatrix[1,])
+  quantileMatrixSPL<-smooth.spline( x = x, y = quantileMatrix[2,])
+  
+  meanMatrix<-colMeans(addingMatrix, na.rm = TRUE)      # media normale
+  
+  # plot it
+  plot(x = 0, y=0, xlim=c(0,valoreMassimoX),ylim=c(0,valoreMassimoY))
+  polygon(c(x,rev(x)),c(meanMatrix,rev(quantileMatrixSPU$y)), col=rgb(.7, .7, .7, 0.2), lty = c("dashed"))
+  polygon(c(x,rev(x)),c(meanMatrix,rev(quantileMatrixSPL$y)), col=rgb(.7, .7, .7, 0.2), lty = c("dashed"))
+  lines( x = x , y=meanMatrix )   
+#   for( t in seq(1,dim(addingMatrix)[1])) {
+#     lines(x = x, y=addingMatrix[t,],type='l')
+#   }
+  
+}
 
