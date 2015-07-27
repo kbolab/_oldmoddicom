@@ -76,8 +76,9 @@
 #' GTV.eroded<-RAD.applyErosion(ROIVoxelData = GTV)
 #' 
 #' }#' #' 
-new.mmButo<-function() {
+new.mmButo<-function( caching = FALSE) {
   # attribute lists
+  attributeList<-list();
   # the list of loaded geoLet objects
   list_geoLet<-list()
   # ========================================================================================
@@ -90,7 +91,11 @@ new.mmButo<-function() {
     if( length(list_geoLet[[collectionID]]) == 0 ) list_geoLet[[collectionID]]<<-list()
     for( folderName in listaFolders[2:length(listaFolders)] ) {
       list_geoLet[[collectionID]][[ folderName ]]<<-geoLet()
-      list_geoLet[[collectionID]][[ folderName ]]$openDICOMFolder( folderName )    
+      list_geoLet[[collectionID]][[ folderName ]]$openDICOMFolder( folderName ) 
+      if( attributeList$caching == TRUE) {
+        print("saving cache....")
+        list_geoLet[[collectionID]][[ folderName ]]$cacheSave();
+      }
     }
   }
   # ========================================================================================
@@ -122,6 +127,7 @@ new.mmButo<-function() {
       list_extractROIVoxel[[collectionID]][[ folderName ]]<-list();
 
       print( paste( c("Now processing=",folderName)   , collapse='') );
+      if( attributeList$caching == TRUE) list_geoLet[[collectionID]][[ folderName ]]$cacheLoad();
       a <- GLT.getROIVoxels(obj = list_geoLet[[collectionID]][[folderName]], Structure = singleROI )
       list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]<-list()
       list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$DOM<-a$DOM
@@ -131,6 +137,7 @@ new.mmButo<-function() {
       list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$se<-dim(a$masked.images)[2]
       list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$te<-dim(a$masked.images)[3]
       list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$geometricalInformationOfImages$koc<-"littleCube"
+      if( attributeList$caching == TRUE) list_geoLet[[collectionID]][[ folderName ]]$cacheDrop();
     }
     arr2Return<-list();
     for( folderName in names(list_extractROIVoxel[[collectionID]])) {
@@ -214,10 +221,12 @@ new.mmButo<-function() {
   # ========================================================================================
   # conctructor: initialises the attributes
   # ========================================================================================
-  costructor<-function() {
+  costructor<-function( caching = FALSE) {
     list_geoLet<<-list()
+    attributeList<<-list();
+    attributeList$caching<<-caching
   }
-  costructor();
+  costructor( caching = caching );
   return( list( "loadCollection"=loadCollection,
                 "getAttribute"=getAttribute,
                 "getCollection"=getCollection,
@@ -655,7 +664,7 @@ mmButo<-function() {
   # ========================================================================================
   # constructor
   # ========================================================================================
-  constructor<-function() {
+  constructor<-function( caching = FALSE) {
     dataStructure<<-list()
     attributeList<<-list()
     arrayAR<<-list()
@@ -665,8 +674,10 @@ mmButo<-function() {
     logObj<<-logHandler()
     # setting log defaults
     logObj$setOutput( list("onScreen" = attributeList$verbose$onScreen,   "onFile" = attributeList$verbose$onFile )  )
+    attributeList<<-list();
+    attributeList$caching<-caching
   }
-  constructor()
+  constructor( caching = caching )
   return(list(
     openTreeMultiROIs=openTreeMultiROIs,
     setAttribute=setAttribute,

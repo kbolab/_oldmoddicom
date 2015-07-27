@@ -218,7 +218,7 @@ RAD.VirtualBiopsy <- function ( ROIVoxelData, dx.min=2, dy.min=2, dz.min=0, dx.m
       realX<-realX*2+realX
       realY<-as.numeric(ROIVoxelData[[i]]$geometricalInformationOfImages$pixelSpacing[2])*stepY
       realY<-realY*2+realY
-      realZ<-as.numeric(ROIVoxelData[[i]]$geometricalInformationOfImages$SliceThickness)*stepY
+      realZ<-as.numeric(ROIVoxelData[[i]]$geometricalInformationOfImages$SliceThickness)*stepZ
       realZ<-realZ*2+realZ
       listLabel<-paste(c(stepX,"_",stepY,"_",stepZ),collapse='')
       # fai un resample se non interessa avere indietro TUTTI i punti carotabili
@@ -290,12 +290,11 @@ RAD.applyErosion<-function(  ROIVoxelData, margin.x=2, margin.y=2, margin.z=1 ) 
     #    aa<-list();aa[[1]]<-erodedVoxelCube
     
     erodedVoxelCube<-array(aa[[1]], dim=c(nX,nY,nZ))
-    res[[i]]$voxelCube<-erodedVoxelCube;
-    res[[i]]$stat$number<-length(erodedVoxelCube!=0)
-    
+#    res[[i]]$voxelCube<-erodedVoxelCube;
+#    res[[i]]$stat$number<-length(erodedVoxelCube!=0)
+    ROIVoxelData[[i]]$masked.images$voxelCube<-erodedVoxelCube;
   }
-
-  return( res )
+  return( ROIVoxelData )
 }
 
 

@@ -559,7 +559,6 @@ geoLet<-function() {
   #=================================================================================
 
   getAttribute<-function(attribute,seriesInstanceUID="",fileName="") {
-
     if(fileName == "" ) fileName<-getDefaultFileName(seriesInstanceUID)    
 
     # internal DATA
@@ -798,6 +797,7 @@ geoLet<-function() {
       )
     )
   }
+  
   NewMultiPointInPolyObl<-function(DICOMOrientationVector,totalX,totalY,arrayAssociationROIandSlice,nX,nY,nZ ) {  
     
     maxX<-max(totalX)
@@ -816,6 +816,29 @@ geoLet<-function() {
     
     return(result[[1]])
   }
+  cacheLoad<-function() {
+    if( !(dataStorage=='') ) return;
+    fileName<-attributeList$virtualMemory$fileName
+    filePath<-attributeList$virtualMemory$path;
+    completeFileName<-paste( c(filePath,"/",fileName), collapse=''  );
+    dataStorage<<-readRDS( completeFileName )
+    attributeList$virtualMemory$isOn<<-FALSE
+    return();
+  }
+  cacheSave<-function() {
+    if( is.null(names(dataStorage)) ) return();
+    fileName<-attributeList$virtualMemory$fileName
+    filePath<-attributeList$virtualMemory$path;
+    completeFileName<-paste( c(filePath,"/",fileName), collapse=''  );
+    dataStorage<<-saveRDS( object = dataStorage, file = completeFileName )
+    dataStorage<<-'';
+    attributeList$virtualMemory$isOn<<-TRUE
+    return();
+  }
+  cacheDrop<-function() {
+    dataStorage<<-'';
+    return();
+  }  
   #=================================================================================
   # Constructor
   #=================================================================================
@@ -828,13 +851,19 @@ geoLet<-function() {
     logObj$setOutput( list("onScreen" = attributeList$verbose$onScreen,   "onFile" = attributeList$verbose$onFile )  )
     logObj$do("clearOutputFile")
     objServ<<-services()
+    attributeList$virtualMemory<<-list();
+    attributeList$virtualMemory$isOn<<-FALSE;
+    attributeList$virtualMemory$path<<-'./cache';
+    attributeList$virtualMemory$kindOfCache<<-'dataStorage';
+    attributeList$virtualMemory$fileName<<-paste(c(format(Sys.time(), "%a%b%d_%H%M%S%Y_"),as.integer(runif(1)*10000),"_",as.integer(runif(1)*10000) ) , collapse='');
   }
   constructor()
   return(list(openDICOMFolder=openDICOMFolder,getAttribute=getAttribute,
               getDICOMTag=getDICOMTag,getROIList=getROIList,getROIPointList=getROIPointList,
               setAttribute=setAttribute,getFolderContent=getFolderContent,getROIVoxels=getROIVoxels,
               getGeometricalInformationOfImage=getGeometricalInformationOfImage,
-              getImageVoxelCube=getImageVoxelCube))
+              getImageVoxelCube=getImageVoxelCube,
+              cacheLoad=cacheLoad, cacheSave=cacheSave))
 }
 
 # ========================================================================================
