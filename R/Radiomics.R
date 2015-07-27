@@ -152,7 +152,6 @@ RAD.areaVolume<-function( listaROIVoxels ) {
 #' @export
 #' @useDynLib moddicom
 RAD.VirtualBiopsy <- function ( ROIVoxelData, dx.min=2, dy.min=2, dz.min=0, dx.max, dy.max, dz.max, sampleResultAt = Inf)  {
-
   # instance the object justo to use the static methods
   # (i.e. to explode the voxel cubes)
   obj.mmButo<-new.mmButo()

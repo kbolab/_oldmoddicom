@@ -233,7 +233,6 @@ geoLet<-function() {
 #      if(SOPClassUIDList[[i]]$kind=="RTDoseStorage" | 
        if(  SOPClassUIDList[[i]]$kind=="CTImageStorage" |
            SOPClassUIDList[[i]]$kind=="MRImageStorage" ) {
-         
               
               # get the Series number
               seriesInstanceUID<-getDICOMTag(i,"0020,000e")
