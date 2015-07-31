@@ -8,9 +8,12 @@ norm.ind <- sapply(X = Vurine, FUN = function(x) return(mean(x) / max(sapply(X =
 # create normalized GTV values
 message('Normalize GTV data...')
 norm.GTV <- list()
+unnorm.GTV <- list()
 for (n in 1:length(norm.ind)) {
   norm.GTV[[n]] <- GTV[[n]]$masked.images$voxelCube / norm.ind[n]
   norm.GTV[[n]] <- as.vector(norm.GTV[[n]][norm.GTV[[n]]!=0])
+  unnorm.GTV[[n]] <- GTV[[n]]$masked.images$voxelCube
+  unnorm.GTV[[n]] <- as.vector(unnorm.GTV[[n]][unnorm.GTV[[n]]!=0])
 }
 
 # create normalized Urine values
@@ -101,3 +104,24 @@ z.GTV.norm <- (unname(unlist(norm.GTV)) - mean(unlist(norm.GTV))) / sd(unlist(no
 qqnorm(z.GTV.norm, pch = '.')
 abline(0,1, lwd = 2, col = 'red')
 
+#########################################################
+#    Test normality for 2 sd of normalized urine        #
+#########################################################
+Vurine.norm.v <-unlist(Vurine.norm)
+st.subset <- Vurine.norm.v[(Vurine.norm.v > (- 2 * sd(Vurine.norm.v) + mean(Vurine.norm.v))) & (Vurine.norm.v < (2 * sd(Vurine.norm.v)) + mean(Vurine.norm.v))]
+shapiro.test(x = sample(st.subset, size = 2000, replace = F))
+
+#########################################################
+# correlation between GTV signal and Urine signal for   #
+# justifying the use of normalization by urine          #
+#########################################################
+cat('\nPearson correlation test between unnormalized urine and unnormalized GTV values')
+cor.test(x = sapply(X = unnorm.GTV, FUN = mean), y = sapply(Vurine, FUN = mean))
+cat('\nPearson correlation test between normalized urine and normalized GTV values')
+cor.test(x = sapply(X = norm.GTV, FUN = mean), y = sapply(Vurine.norm, FUN = mean))
+# crete dataframe of meanvalues
+meanvalues<-as.data.frame(cbind('unnorm.GTV' = sapply(X = unnorm.GTV, FUN = mean, simplify = TRUE), 'unnorm.Urine' = sapply(X = Vurine, FUN = mean, simplify = TRUE),
+                                'norm.GTV' = sapply(X = norm.GTV, FUN = mean, simplify = TRUE), 'norm.Urine' = sapply(X = Vurine.norm, FUN = mean, simplify = TRUE)))
+# create linear model
+summary(lm(meanvalues$unnorm.GTV ~ meanvalues$unnorm.Urine))
+plot(lm(meanvalues$unnorm.GTV ~ meanvalues$unnorm.Urine))
