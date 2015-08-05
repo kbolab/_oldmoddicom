@@ -60,6 +60,31 @@ services<-function() {
     
     return( array( res[[11]] , dim=c(newNx,newNy,newNz) ) )    
   }  
+  new.SV.trilinearInterpolator<-function(voxelCube = voxelCube,pixelSpacing.new = pixelSpacing.new,pixelSpacing.old = pixelSpacing.old ) {
+    
+    Nx.old<-dim(voxelCube)[1];	Ny.old<-dim(voxelCube)[2];	Nz.old<-dim(voxelCube)[3]
+    xDim.old<-pixelSpacing.old[1];	yDim.old<-pixelSpacing.old[2];	zDim.old<-pixelSpacing.old[3]
+    xDim.new<-pixelSpacing.new[1];	yDim.new<-pixelSpacing.new[2];	zDim.new<-pixelSpacing.new[3]
+    
+    fattoreDiScalaX<-pixelSpacing.old[1]/pixelSpacing.new[1];
+    fattoreDiScalaY<-pixelSpacing.old[2]/pixelSpacing.new[2];
+    fattoreDiScalaZ<-pixelSpacing.old[3]/pixelSpacing.new[3];
+    
+    Nx.new<-ceiling(Nx.old * fattoreDiScalaX)
+    Ny.new<-ceiling(Ny.old * fattoreDiScalaY)
+    Nz.new<-ceiling(Nz.old * fattoreDiScalaZ)
+    
+    result<-array(rep( 0 , Nx.new * Ny.new * Nz.new ))	
+    
+    res<-.C("newnewtrilinearInterpolator", 
+            as.integer(Nx.old),as.integer(Ny.old),as.integer(Nz.old),
+            as.integer(Nx.new),as.integer(Ny.new),as.integer(Nz.new), 
+            as.double(pixelSpacing.old[1]),as.double(pixelSpacing.old[2]),as.double(pixelSpacing.old[3]),
+            as.double(pixelSpacing.new[1]),as.double(pixelSpacing.new[2]),as.double(pixelSpacing.new[3]),
+            as.double(voxelCube),as.double(result) );
+    result<-array( res[[14]] , dim=c(Nx.new,Ny.new,Nz.new) )
+    return( result )      
+  }  
   # ========================================================================================
   # cropCube: crop a voxel cube in order to limit its dimension to the needs
   # ========================================================================================   
@@ -149,7 +174,8 @@ services<-function() {
               SV.rawSurface = SV.rawSurface,
               triangle2mesh = triangle2mesh,
               cropCube = cropCube,
-              expandCube = expandCube
+              expandCube = expandCube,
+              new.SV.trilinearInterpolator = new.SV.trilinearInterpolator
               ))  
 }
 

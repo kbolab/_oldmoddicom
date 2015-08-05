@@ -331,6 +331,7 @@ geoLet<-function() {
     Rows<-dataStorage$info[[seriesInstanceUID]][[1]]$Rows
     Columns<-dataStorage$info[[seriesInstanceUID]][[1]]$Columns
     Slices<-length(listaSeqImages)
+    
     cubone<-array(data = 0,dim = c(Columns,Rows,Slices))
     numSlice<-1
     # add the slices and build the cube
@@ -338,14 +339,40 @@ geoLet<-function() {
       cubone[,,numSlice]<-dataStorage$img[[seriesInstanceUID]][[as.character(i)]]
       numSlice<-numSlice+1
     }
+    
     return(cubone)
-#     dataStorage$voxelCubes<<-list();
-#     # add the cube to the dataStorage
-#     dataStorage$voxelCubes[[seriesInstanceUID]]<<-cubone
-  }
-  getImageVoxelCube<-function() {
-    return(createImageVoxelCube())
-  }
+  }  
+  #=================================================================================
+  # getImageVoxelCube
+  # give back the greyLevel voxel cube. If no ps.x/y/z are specified it gives back 
+  # the voxelCube of the original dimensions, otherwise it gives back the interpolated
+  # voxelCube according to the wished pixelSpacing along x,y or z
+  #=================================================================================     
+  getImageVoxelCube<-function( ps.x=NA, ps.y=NA, ps.z=NA) {
+    objS<-services();
+    # prendi il cubone
+    voxelCube<-createImageVoxelCube()
+    
+    # se non  server interpolare
+    if(is.na(ps.x) && is.na(ps.y) && is.na(ps.z) ) return(voxelCube)
+    
+    # se invece serve interpolare: prendi i pixelSpacing lungo la X, la Y e la Z (slice thickness)
+    seriesInstanceUID<-giveBackImageSeriesInstanceUID();   
+    oldPixelSpacing<-c();
+    oldPixelSpacing[1]<-as.numeric(dataStorage$info[[seriesInstanceUID]][[1]]$pixelSpacing[1])
+    oldPixelSpacing[2]<-as.numeric(dataStorage$info[[seriesInstanceUID]][[1]]$pixelSpacing[2])
+    oldPixelSpacing[3]<-as.numeric(dataStorage$info[[seriesInstanceUID]][[1]]$SliceThickness)
+    if(is.na(ps.x))  ps.x <- oldPixelSpacing[1];
+    if(is.na(ps.y))  ps.y <- oldPixelSpacing[2];
+    if(is.na(ps.z))  ps.z <- oldPixelSpacing[3];
+    
+    voxelCube<-objS$new.SV.trilinearInterpolator(
+      voxelCube = voxelCube,
+      pixelSpacing.new = c(ps.x,ps.y,ps.z),
+      pixelSpacing.old = oldPixelSpacing )    
+    
+    return(voxelCube)
+  }  
   #=================================================================================
   # giveBackImageSeriesInstanceUID
   # from dataStorage it gives back the SOPInstanceUID of the series which has a 

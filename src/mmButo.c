@@ -62,7 +62,7 @@ double _c_TrilinearInterpolation(double x0y0z0, double x0y0z1, double x0y1z0, do
 // corrispondente ai centroidi relativi alle coordinate dei vertici del cubo da interpolare
 // La formula per calcolare il Kinf. è   Kinf = int( (2*xPos - dx) / (2 * dx) )
 //
-void _c_getCubeVertex(struct _c_data * punt, double xPos, double yPos, double zPos) {
+void _c_getCubeVertex(struct _c_data * punt, double xPos, double yPos, double zPos, int ct) {
 
     punt->xInf = (int)((2 * xPos - punt->xDim) / ( 2 * punt->xDim));
     punt->yInf = (int)((2 * yPos - punt->yDim) / ( 2 * punt->yDim));
@@ -89,6 +89,7 @@ void _c_getCubeVertex(struct _c_data * punt, double xPos, double yPos, double zP
 
 }
 
+/*
 //
 // trilinearInterpolator
 //
@@ -132,7 +133,7 @@ void trilinearInterpolator(int *xNVoxel, int *yNVoxel,int *zNVoxel,
 
               // acquisisci i dati relativi ai voxel della vecchia matrice i cui centroidi sono
               // ai vertici del cubo da interpolare
-               _c_getCubeVertex( punt , xPos , yPos , zPos );
+               _c_getCubeVertex( punt , xPos , yPos , zPos, 0 );
 
               // reperisci i valori di tali voxel dalla vecchia matrice
               // ed effettua l'interpolazione rispetto a tali centroidi
@@ -162,9 +163,71 @@ void trilinearInterpolator(int *xNVoxel, int *yNVoxel,int *zNVoxel,
   }
   free(punt);
 }
+*/
 
 
+void newnewtrilinearInterpolator(
+  int *NXold, int *NYold,int *NZold,
+  int *NXnew, int *NYnew,int *NZnew,
+  double *oldXps, double *oldYps, double *oldZps,
+  double *newXps, double *newYps, double *newZps,
+  double *values,double *returnMatrix) {
+  int ct;
+  int zVoxelProgressivo,yVoxelProgressivo,xVoxelProgressivo;
+  double zPos,yPos,xPos,valoreCalcolato;
+  struct _c_data *punt;
+  
+  // Alloca un puntatore alla struttura _c_data
+  punt = (struct _c_data *)calloc(1,sizeof(struct _c_data));
+  if( punt == NULL ) return;
+  
+  // calcola il nuovo passo e copia i valori in _c_data: l'idea è quella di ridurre il passaggio parametri
+  // fra funzioni ed il clone delle variabili per preservare memoria 
+  punt->newXDim = *newXps;  punt->newYDim = *newYps;  punt->newZDim = *newZps;
+  punt->xNVoxel = *NXold; punt->yNVoxel = *NYold; punt->zNVoxel = *NZold;
+  punt->xDim = *oldXps; punt->yDim = *oldYps; punt->zDim = *oldZps;
+  int maxNewXVoxel,maxNewYVoxel,maxNewZVoxel;
+  
+  // Pulisci la matrice di destinazione
+  for(int ct=0;ct< ((*NXnew)*(*NYnew)*(*NZnew));ct++ ) returnMatrix[ct]=0;  
+  ct=0;
+  for( zPos = punt->newZDim/2, zVoxelProgressivo=0; zVoxelProgressivo < *NZnew; zPos+=punt->newZDim, zVoxelProgressivo++ ) {
+    for( yPos = punt->newYDim/2, yVoxelProgressivo=0; yVoxelProgressivo < *NYnew; yPos+=punt->newYDim, yVoxelProgressivo++ ) {
+      for( xPos = punt->newXDim/2, xVoxelProgressivo=0; xVoxelProgressivo < *NXnew; xPos+=punt->newXDim, xVoxelProgressivo++ ) {
+        
+        // acquisisci i dati relativi ai voxel della vecchia matrice i cui centroidi sono
+        // ai vertici del cubo da interpolare
+        _c_getCubeVertex( punt , xPos , yPos , zPos ,ct );
+        
+        // reperisci i valori di tali voxel dalla vecchia matrice
+        // ed effettua l'interpolazione rispetto a tali centroidi
+        valoreCalcolato = _c_TrilinearInterpolation(
+            values[punt->zInf*(*NXold)*(*NYold)+punt->yInf*(*NXold)+punt->xInf],  //x0y0z0 (sample value)
+            values[punt->zSup*(*NXold)*(*NYold)+punt->yInf*(*NXold)+punt->xInf],  //x0y0z1 (sample value)
+            values[punt->zInf*(*NXold)*(*NYold)+punt->ySup*(*NXold)+punt->xInf],  //x0y1z0 (sample value)
+            values[punt->zSup*(*NXold)*(*NYold)+punt->ySup*(*NXold)+punt->xInf],  //x0y1z1 (sample value)
+            values[punt->zInf*(*NXold)*(*NYold)+punt->yInf*(*NXold)+punt->xSup],  //x1y0z0 (sample value)
+            values[punt->zSup*(*NXold)*(*NYold)+punt->yInf*(*NXold)+punt->xSup],  //x1y0z1 (sample value)
+            values[punt->zInf*(*NXold)*(*NYold)+punt->ySup*(*NXold)+punt->xSup],  //x1y1z0 (sample value)
+            values[punt->zSup*(*NXold)*(*NYold)+punt->ySup*(*NXold)+punt->xSup],  //x1y1z1 (sample value)
+            punt->xInf*(*oldXps)+(*oldXps)/2, //x0
+            punt->yInf*(*oldYps)+(*oldYps)/2, //y0,
+            punt->zInf*(*oldZps)+(*oldZps)/2, //z0,
+            *oldXps, //dx1x0,
+            *oldYps, //dy1y0,
+            *oldZps, //dz1z0,
+            xPos, yPos, zPos);
 
-
+        // memorizza il risultato nella nuova struttura
+        returnMatrix[ xVoxelProgressivo + yVoxelProgressivo * (*NXnew) + zVoxelProgressivo * ((*NYnew) * (*NXnew))] = valoreCalcolato;        
+        // if( valoreCalcolato!=0 ) printf("\nx = %d, y= %d, z= %d",xVoxelProgressivo,yVoxelProgressivo,zVoxelProgressivo);
+      }
+      if(maxNewYVoxel<yVoxelProgressivo) maxNewYVoxel = yVoxelProgressivo;
+  }
+    if(maxNewZVoxel<zVoxelProgressivo) maxNewZVoxel = zVoxelProgressivo;
+}
+  free(punt);
+  
+  }
 
 
