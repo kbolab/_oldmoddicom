@@ -348,7 +348,7 @@ geoLet<-function() {
   # the voxelCube of the original dimensions, otherwise it gives back the interpolated
   # voxelCube according to the wished pixelSpacing along x,y or z
   #=================================================================================     
-  getImageVoxelCube<-function( ps.x=NA, ps.y=NA, ps.z=NA) {
+  getImageVoxelCube<-function( ps.x=NA, ps.y=NA, ps.z=NA ) {
     objS<-services();
     # prendi il cubone
     voxelCube<-createImageVoxelCube()
@@ -357,11 +357,13 @@ geoLet<-function() {
     if(is.na(ps.x) && is.na(ps.y) && is.na(ps.z) ) return(voxelCube)
     
     # se invece serve interpolare: prendi i pixelSpacing lungo la X, la Y e la Z (slice thickness)
-    seriesInstanceUID<-giveBackImageSeriesInstanceUID();   
-    oldPixelSpacing<-c();
-    oldPixelSpacing[1]<-as.numeric(dataStorage$info[[seriesInstanceUID]][[1]]$pixelSpacing[1])
-    oldPixelSpacing[2]<-as.numeric(dataStorage$info[[seriesInstanceUID]][[1]]$pixelSpacing[2])
-    oldPixelSpacing[3]<-as.numeric(dataStorage$info[[seriesInstanceUID]][[1]]$SliceThickness)
+#     seriesInstanceUID<-giveBackImageSeriesInstanceUID();   
+#     oldPixelSpacing<-c();
+#     oldPixelSpacing[1]<-as.numeric(dataStorage$info[[seriesInstanceUID]][[1]]$pixelSpacing[1])
+#     oldPixelSpacing[2]<-as.numeric(dataStorage$info[[seriesInstanceUID]][[1]]$pixelSpacing[2])
+#     oldPixelSpacing[3]<-as.numeric(dataStorage$info[[seriesInstanceUID]][[1]]$SliceThickness)
+    oldPixelSpacing<-getPixelSpacing();
+
     if(is.na(ps.x))  ps.x <- oldPixelSpacing[1];
     if(is.na(ps.y))  ps.y <- oldPixelSpacing[2];
     if(is.na(ps.z))  ps.z <- oldPixelSpacing[3];
@@ -371,8 +373,28 @@ geoLet<-function() {
       pixelSpacing.new = c(ps.x,ps.y,ps.z),
       pixelSpacing.old = oldPixelSpacing )    
     
-    return(voxelCube)
+    return( voxelCube )
   }  
+  getPixelSpacing<-function() {
+    seriesInstanceUID<-giveBackImageSeriesInstanceUID();   
+    ps<-c();
+    ps[1]<-as.numeric(dataStorage$info[[seriesInstanceUID]][[1]]$pixelSpacing[1])
+    ps[2]<-as.numeric(dataStorage$info[[seriesInstanceUID]][[1]]$pixelSpacing[2])
+    ps[3]<-as.numeric(dataStorage$info[[seriesInstanceUID]][[1]]$SliceThickness)
+    return(ps);
+  }  
+  getAlignedStructureAndVoxelCube<-function(  ps.x=NA, ps.y=NA, ps.z=NA, ROIName ) {
+    voxelCube<-getImageVoxelCube( ps.x = ps.x, ps.y = ps.y, ps.z = ps.z ) 
+    ROI<-obj$rotateToAlign(ROIName = ROIName)
+    old.ps<-getPixelSpacing();
+    delta<-old.ps[3] / ps.z;
+    for(i in names(ROI$pointList)) {
+      for( ct in seq(1,length(ROI$pointList[[i]]) ) ) {
+        ROI$pointList[[i]][[ct]][,3]<-ROI$pointList[[i]][[ct]][,3] * delta;
+      }
+    }
+    return( list( "voxelCube"=voxelCube, "ROI"=ROI$pointList )  )
+  }
   #=================================================================================
   # giveBackImageSeriesInstanceUID
   # from dataStorage it gives back the SOPInstanceUID of the series which has a 
@@ -894,16 +916,16 @@ geoLet<-function() {
     Nz<-Sz;
     return(list("Nx"=Nx,"Ny"=Ny,"Nz"=Nz))
   }  
-rotate3dMatrix<-function( point.coords , angle.x = 0, angle.y = 0, angle.z = 0 ) {
-  
-  rotation.x<-matrix(c( 1, 0, 0, 0, cos(angle.x), sin(angle.x), 0,-sin(angle.x), cos(angle.x)),ncol=3)
-  rotation.y<-matrix(c( cos(angle.y), 0, -sin(angle.y), 0, 1, 0, sin(angle.y), 0, cos(angle.y)),ncol=3)
-  rotation.z<-matrix(c( cos(angle.z), sin(angle.z), 0, -sin(angle.z), cos(angle.z), 0, 0, 0, 1),ncol=3)
-  
-  R = (rotation.x %*% rotation.y %*% rotation.z ) %*% point.coords
-  return(R);
-  
-}
+  rotate3dMatrix<-function( point.coords , angle.x = 0, angle.y = 0, angle.z = 0 ) {
+    
+    rotation.x<-matrix(c( 1, 0, 0, 0, cos(angle.x), sin(angle.x), 0,-sin(angle.x), cos(angle.x)),ncol=3)
+    rotation.y<-matrix(c( cos(angle.y), 0, -sin(angle.y), 0, 1, 0, sin(angle.y), 0, cos(angle.y)),ncol=3)
+    rotation.z<-matrix(c( cos(angle.z), sin(angle.z), 0, -sin(angle.z), cos(angle.z), 0, 0, 0, 1),ncol=3)
+    
+    R = (rotation.x %*% rotation.y %*% rotation.z ) %*% point.coords
+    return(R);
+    
+  }
   rotateToAlign<-function(ROIName) {
     SeriesInstanceUID<-giveBackImageSeriesInstanceUID();
     
@@ -959,6 +981,7 @@ rotate3dMatrix<-function( point.coords , angle.x = 0, angle.y = 0, angle.z = 0 )
               getGeometricalInformationOfImage=getGeometricalInformationOfImage,
               getImageVoxelCube=getImageVoxelCube,
               cacheLoad=cacheLoad, cacheSave=cacheSave,
+              getAlignedStructureAndVoxelCube = getAlignedStructureAndVoxelCube,
               
               getAssociationTable=getAssociationTable,
               rotateToAlign=rotateToAlign
