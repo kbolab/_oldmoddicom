@@ -500,6 +500,7 @@ geoLet<-function() {
       if(bitsAllocated!=16) stop("16bit pixel are allowed only for non-RTDoseStorage")
       rn<-readBin(con = fileNameRAW, what="integer", size=2, endian="little",n=rowsDICOM*columnsDICOM)    
       rn<-matrix(rn,ncol=columnsDICOM, byrow = TRUE)
+      #rn<-matrix(rn,ncol=columnsDICOM)
     }
     if(SOPClassUIDList[[fileName]]$kind=="RTDoseStorage"){
       if(bitsAllocated==32) {
@@ -838,6 +839,74 @@ geoLet<-function() {
     dataStorage<<-'';
     return();
   }  
+  # ...............................................................
+  #  functions to support rotation
+  # ...............................................................
+  
+  getAssociationTable<-function( tipoTabella="SOPInstance_vs_SliceLocation", ROIName ) {
+    
+    SeriesInstanceUID<-giveBackImageSeriesInstanceUID();
+    
+    if(tipoTabella=="SOPInstance_vs_SliceLocation") {
+      matrice<-c()
+      involvedCT<-names(dataStorage$structures[[ROIName]]);
+      
+      for(index in names(dataStorage$info[[SeriesInstanceUID]]) ) {
+        matrice<-rbind(matrice,cbind(dataStorage$info[[SeriesInstanceUID]][[index]]$ROIList,index) );
+      }
+      matrice<-matrice[which(matrice[,1]==ROIName),]
+      return(matrice)
+    }
+  }  
+  calcolaNX<-function(riga,DOM) {
+    Px<-riga[1];    Py<-riga[2];
+    a11<-DOM[1,1];    a21<-DOM[2,1];    a31<-DOM[3,1];    a12<-DOM[1,2];
+    a22<-DOM[2,2];    a32<-DOM[3,2];    Sx<-DOM[1,4];     Sy<-DOM[2,4];     Sz<-DOM[3,4]; 
+    Nx<-(a22*Px-a12*Py-a22*Sx+a12*Sy)/(a11*a22-a21*a12);
+    Ny<-(a11*Py-a21*Px+a21*Sx-a11*Sy)/(a22*a11-a21*a12);
+    Nz<-Sz;
+    return(list("Nx"=Nx,"Ny"=Ny,"Nz"=Nz))
+  }  
+rotate3dMatrix<-function( point.coords , angle.x = 0, angle.y = 0, angle.z = 0 ) {
+  
+  rotation.x<-matrix(c( 1, 0, 0, 0, cos(angle.x), sin(angle.x), 0,-sin(angle.x), cos(angle.x)),ncol=3)
+  rotation.y<-matrix(c( cos(angle.y), 0, -sin(angle.y), 0, 1, 0, sin(angle.y), 0, cos(angle.y)),ncol=3)
+  rotation.z<-matrix(c( cos(angle.z), sin(angle.z), 0, -sin(angle.z), cos(angle.z), 0, 0, 0, 1),ncol=3)
+  
+  R = (rotation.x %*% rotation.y %*% rotation.z ) %*% point.coords
+  return(R);
+  
+}
+  rotateToAlign<-function(ROIName) {
+    SeriesInstanceUID<-giveBackImageSeriesInstanceUID();
+    
+    tabella1<-getAssociationTable( "SOPInstance_vs_SliceLocation" , ROIName )
+    pointList<-getROIPointList( ROIName )
+    newPointList<-pointList
+    iterazione<-1
+    
+    for(index in names( pointList )) {
+      for(internalIndex in seq(1,length(pointList[[index]]))) {
+        IMGsliceInfo<-dataStorage$info[[SeriesInstanceUID]][[ tabella1[ which(tabella1[,2]==index)  ,3  ]  ]]
+        sliceLocation<-as.numeric(tabella1[which(tabella1[,2]==index),3])
+        DOM<-IMGsliceInfo$orientationMatrix
+        
+        m<-pointList[[index]][[internalIndex]];
+        
+        numeroRighe<-dim(m)[1]
+        for(i in seq(1,numeroRighe)) {
+          valori<-calcolaNX(m[i,],DOM )
+          newPointList[[index]][[internalIndex]][i,1]<-valori$Nx
+          newPointList[[index]][[internalIndex]][i,2]<-valori$Ny
+          newPointList[[index]][[internalIndex]][i,3]<-sliceLocation
+          #newPointList[[index]][[internalIndex]][i,3]<-valori$Nz
+        }
+      }
+      iterazione<-iterazione+1
+    }
+    return( list("pointList"=newPointList) ) 
+  }  
+  
   #=================================================================================
   # Constructor
   #=================================================================================
@@ -862,7 +931,11 @@ geoLet<-function() {
               setAttribute=setAttribute,getFolderContent=getFolderContent,getROIVoxels=getROIVoxels,
               getGeometricalInformationOfImage=getGeometricalInformationOfImage,
               getImageVoxelCube=getImageVoxelCube,
-              cacheLoad=cacheLoad, cacheSave=cacheSave))
+              cacheLoad=cacheLoad, cacheSave=cacheSave,
+              
+              getAssociationTable=getAssociationTable,
+              rotateToAlign=rotateToAlign
+              ))
 }
 
 # ========================================================================================

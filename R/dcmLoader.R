@@ -1,4 +1,6 @@
 
+# obj<-geoLet();
+# obj$openDICOMFolder("/progetti/immagini/urinaEasy/Alimenti")
 
 
 dcmLoader<-function() {

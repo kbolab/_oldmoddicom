@@ -344,3 +344,27 @@ RAD.compareSignals<-function( ROIVoxelData, bootStrappedTimes = 1000 ) {
   
 }
 
+#' return a simple list of voxelcubes
+#' 
+#' @description  convertes the output of a \code{obj$getROIVoxel()} to an easy-to-handle list of voxelCubes
+#' @param ROIVoxelData as got from of a \code{obj$getROIVoxel()} method. Cropped or expanded, it's the same
+#' @return a list containing the eroded voxelCubes presented in a 'easy to handle' shape
+#' @examples \dontrun{
+#' # Create an instante of new.mmButo and load some cases
+#' obj<-new.mmButo()
+#' obj$loadCollection(Path = '/progetti/immagini/urinaEasy')
+#' 
+#' # get the three ROIs
+#' GTV<-obj$getROIVoxel(ROIName="GTV")  
+#' 
+#' # get the possible biopsy
+#' res<-RAD.easyROI( GTV )
+#' }#' 
+#' @export
+RAD.easyROI<-function( ROIVoxelData ) {
+  res<-list();
+  for(i in names(ROIVoxelData)) {
+    res[[i]]<-ROIVoxelData[[i]]$masked.images$voxelCube
+  }
+  return(res);
+}
