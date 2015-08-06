@@ -390,7 +390,7 @@ geoLet<-function() {
   }  
   getAlignedStructureAndVoxelCube<-function(  ps.x=NA, ps.y=NA, ps.z=NA, ROIName ) {
     voxelCube<-getImageVoxelCube( ps.x = ps.x, ps.y = ps.y, ps.z = ps.z ) 
-    ROI<-obj$rotateToAlign(ROIName = ROIName)
+    ROI<-rotateToAlign(ROIName = ROIName)
     old.ps<-getPixelSpacing();
     delta.x<-old.ps[1] / ps.x;
     delta.y<-old.ps[2] / ps.y;
