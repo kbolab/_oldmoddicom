@@ -56,6 +56,11 @@ Instantiate an object of the class \code{geoLet}.This represents just the classn
                  }
               \item \code{list getFolderContent(string pathToOpen="") }
               explores the content of the given folder and returns informarion about the stored DICOM objects
+              \item \code{getPixelSpacing()} it give back the pixelSpaxing along x,y,z of the image scan. Such information can also be obtained gy \code{getAttribute} but it is so common that this explicit method is provided.
+              \item \code{cacheSave} : it forces to save che most expensive internal memory structure and drop by memory. Until a next \code{cacheLoad} will not be available. It is useful in order to use the memory 'on demand' instead of having everything load all the time.
+              \item \code{cacheLoad} : it loads the most expensive internal memory structure from filesystem into memory. Pay attention because it override every possible previous content of such list.
+              \item \code{cacheDrop} : it simply delete the most expensive internal memory structure withouth saving it on filesystem. It is useful if you have previously stored it and you didn't change it. So, in order to use the geoLet object you can simpli load che cache with the \code{cacheLoad} and then drop it without updating the cache on filesystem (in order to save time). Obviously it can be smarty used only if you didn't make any changes...
+              \item \code{getAlignedStructureAndVoxelCube( double ps.x, double ps.y, double ps.z, string ROIName )} this function resample the image voxel cube and give back the interested ROI rotated on such cube ad adapted according with the new geometry. ps.x,y and z are optional: if not specified the normal pixel Spacing are used.
               }
 }
 

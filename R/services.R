@@ -48,18 +48,18 @@ services<-function() {
     res<-.C("rawSurface",as.double(arr),as.integer(nX), as.integer(nY), as.integer(nZ), as.double(pSX), as.double(pSY), as.double(pSZ), as.double(superficie) );
     return(res[[8]]);    
   } 
-  SV.trilinearInterpolator<-function(campo,pixelSpacing,newNxNyNzDim) {
-    
-    Nx<-dim(campo)[1];	Ny<-dim(campo)[2];	Nz<-dim(campo)[3]
-    xDim<-pixelSpacing[1];	yDim<-pixelSpacing[2];	zDim<-pixelSpacing[3]
-    newNx<-newNxNyNzDim[1];	newNy<-newNxNyNzDim[2];	newNz<-newNxNyNzDim[3]
-    
-    result<-array(rep(0,newNx*newNx*newNx))	
-    
-    res<-.C("trilinearInterpolator", as.integer(Nx),as.integer(Ny),as.integer(Nz), as.double(xDim),as.double(yDim),as.double(zDim),as.integer(newNx),as.integer(newNy),as.integer(newNz),as.double(campo),as.double(result) );
-    
-    return( array( res[[11]] , dim=c(newNx,newNy,newNz) ) )    
-  }  
+#   SV.trilinearInterpolator<-function(campo,pixelSpacing,newNxNyNzDim) {
+#     
+#     Nx<-dim(campo)[1];	Ny<-dim(campo)[2];	Nz<-dim(campo)[3]
+#     xDim<-pixelSpacing[1];	yDim<-pixelSpacing[2];	zDim<-pixelSpacing[3]
+#     newNx<-newNxNyNzDim[1];	newNy<-newNxNyNzDim[2];	newNz<-newNxNyNzDim[3]
+#     
+#     result<-array(rep(0,newNx*newNx*newNx))	
+#     
+#     res<-.C("trilinearInterpolator", as.integer(Nx),as.integer(Ny),as.integer(Nz), as.double(xDim),as.double(yDim),as.double(zDim),as.integer(newNx),as.integer(newNy),as.integer(newNz),as.double(campo),as.double(result) );
+#     
+#     return( array( res[[11]] , dim=c(newNx,newNy,newNz) ) )    
+#   }  
   new.SV.trilinearInterpolator<-function(voxelCube = voxelCube,pixelSpacing.new = pixelSpacing.new,pixelSpacing.old = pixelSpacing.old ) {
     
     Nx.old<-dim(voxelCube)[1];	Ny.old<-dim(voxelCube)[2];	Nz.old<-dim(voxelCube)[3]
