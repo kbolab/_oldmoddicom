@@ -609,15 +609,18 @@ void erosion( double *cube, int *nX, int *nY, int *nZ, int *mx, int *my, int *mz
         // se != 0 vediamo l'intorno
         if(cube[center]>0) {
           if( *mx>0 ){
-            if(x==0 || x==*nX) cube[center]=-1;
+            //if(x==0 || x==*nX) cube[center]=-1;
+            if(x==0 || x>=(*nX-1)) cube[center]=-1;
             else if( cube[posDecod(x-1,y,z,*nX,*nY,*nZ)]==0 || cube[posDecod(x+1,y,z,*nX,*nY,*nZ)]==0  ) cube[center]=-1;
           }
           if( *my>0 ){
-            if(y==0 || y==*nY) cube[center]=-1;
+            // if(y==0 || y==*nY) cube[center]=-1;
+            if(y==0 || y==(*nY-1)) cube[center]=-1;
             else if( cube[posDecod(x,y-1,z,*nX,*nY,*nZ)]==0 || cube[posDecod(x,y+1,z,*nX,*nY,*nZ)]==0  ) cube[center]=-1;
           }        
           if( *mz>0 ){
-            if(z==0 || z==*nZ) cube[center]=-1;
+            // if(z==0 || z==*nZ) cube[center]=-1;
+            if(z==0 || z==(*nZ-1)) cube[center]=-1;
             else if( cube[posDecod(x,y,z-1,*nX,*nY,*nZ)]==0 || cube[posDecod(x,y,z+1,*nX,*nY,*nZ)]==0  )  cube[center]=-1;
           }
         }
@@ -629,7 +632,7 @@ void erosion( double *cube, int *nX, int *nY, int *nZ, int *mx, int *my, int *mz
   if( *my>0 ) *my = *my - 1;  
   if( *mz>0 ) *mz = *mz - 1;
   // trasforma tutti i '-1' in '0' per l'iterazione successiva
-  for(ct=0; ct<= posDecod((*nX-1),(*nY-1),(*nZ-1),*nX,*nY,*nZ); ct++) {
+  for(ct=0; ct<= posDecod((*nX),(*nY),(*nZ),*nX,*nY,*nZ); ct++) {
     if(cube[ct]==-1) cube[ct]=0;
   }
   // rilancia ricorsivamente
