@@ -105,16 +105,17 @@ geoLet<-function() {
   loadRTStructFiles<-function(SOPClassUIDList) {    
     imageSerie<-list()
     listaPuntiROI<-list()
-    
+
     # loop over the list    
     # even if the assumption is that only one RTStruct is admitted for a CT scan serie
+    TMP<-NA
     for(i in names(SOPClassUIDList)) {
       if(  SOPClassUIDList[[i]]$kind=="RTStructureSetStorage") {
         if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog(i) 
         TMP<-getStructuresFromXML( i );
       }
     }
-
+    if(is.na(TMP)) return( list());
     # now let me use some more easy to handle variable names
     matrice2<-TMP$IDROINameAssociation;
     matrice3<-TMP$tableROIPointList;
@@ -240,7 +241,7 @@ geoLet<-function() {
            SOPClassUIDList[[i]]$kind=="MRImageStorage" ) {
               
               # get the Series number
-              seriesInstanceUID<-getDICOMTag(i,"0020,000e")
+            seriesInstanceUID<-getDICOMTag(i,"0020,000e")
               # get the Instance number (number of CT in the serie)
               instanceNumber<-getDICOMTag(i,"0020,0013")              
               imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]]<-list()
@@ -641,6 +642,7 @@ geoLet<-function() {
     if(attribute=="GridFrameOffsetVector" | attribute=="(3004,000c)")  return(splittaTAG(getDICOMTag(fileName,"3004,000c")))
     
     if(attribute=="orientationMatrix")  return( buildOrientationMatrix(fileName)  )
+    return(getDICOMTag(fileName,attribute))  
   }
   #=================================================================================
   # splittaTAG
