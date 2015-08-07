@@ -89,7 +89,9 @@ geoLet<-function() {
     if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("---------------------------------------")
     dataStorage[["structures"]]<<-loadRTStructFiles(SOPClassUIDList);   
     # Associate ROI and Images
-    associateROIandImageSlices();
+    if(is.list(dataStorage[["structures"]])) {
+       associateROIandImageSlices();
+    }
     # calculate the ImageVoxelCube
 #    if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("---------------------------------------")
 #    if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("Creating image Voxel cubes")
@@ -115,7 +117,9 @@ geoLet<-function() {
         TMP<-getStructuresFromXML( i );
       }
     }
-    if(is.na(TMP)) return( list());
+    if(!is.list(TMP)) {
+      if(is.na(TMP)) return( TMP );
+    }
     # now let me use some more easy to handle variable names
     matrice2<-TMP$IDROINameAssociation;
     matrice3<-TMP$tableROIPointList;
@@ -161,7 +165,7 @@ geoLet<-function() {
     return(listaROI); 
   }  
   #=================================================================================
-  # associateROIandImageSlices
+  # getAttrFromSOPiUID
   # Create the association between ROI and images
   #=================================================================================
   getAttrFromSOPiUID<-function( serUID, sopUID , attrName) {
@@ -281,6 +285,8 @@ geoLet<-function() {
               imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["Rows"]]<-getDICOMTag(i,"0028,0010")
               imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["Columns"]]<-getDICOMTag(i,"0028,0011")
               imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["SliceThickness"]]<-getDICOMTag(i,"0018,0050")
+              imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["RepetitionTime"]]<-getDICOMTag(i,"0018,0080")
+              imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["EchoTime"]]<-getDICOMTag(i,"0018,0081")
               instanceNumber<-getDICOMTag(i,"0020,0013")
               
               # three points to find out plane equation
