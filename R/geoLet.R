@@ -997,7 +997,7 @@ geoLet<-function() {
               setAttribute=setAttribute,getFolderContent=getFolderContent,getROIVoxels=getROIVoxels,
               getGeometricalInformationOfImage=getGeometricalInformationOfImage,
               getImageVoxelCube=getImageVoxelCube,
-              cacheLoad=cacheLoad, cacheSave=cacheSave,
+              cacheLoad=cacheLoad, cacheSave=cacheSave, cacheDrop = cacheDrop, 
               getAlignedStructureAndVoxelCube = getAlignedStructureAndVoxelCube,
               getPixelSpacing = getPixelSpacing
               ))

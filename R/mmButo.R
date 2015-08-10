@@ -115,7 +115,7 @@ new.mmButo<-function( caching = FALSE) {
   # extractROIs: extract one or more ROIs voxels
   # ======================================================================================== 
   getROIVoxel<-function(  ROIName, collectionID = "default") {
-  objS<-services();
+    objS<-services();
     singleROI<-ROIName
     print("=================================================================");
     print( paste( c("getROIVoxel for ROI: ",ROIName)   , collapse='') );
