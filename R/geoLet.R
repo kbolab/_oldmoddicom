@@ -486,7 +486,8 @@ geoLet<-function() {
     # Load the XML file
     doc = xmlInternalTreeParse(fileNameXML)
     
-    # SEQUENCES: the one with the attribute  tag="3006,0020"  and name="StructureSetROISequence" is the one with association NAME<->ID
+    # SEQUENCES: the one with the attribute  tag="3006,0020"  and name="StructureSetROISequence" 
+    # is the one with association NAME<->ID
     n2XML<-getNodeSet(doc,'/file-format/data-set/sequence[@tag="3006,0020" and @name="StructureSetROISequence"]/item')
     # SEQUENCES: now get the true coords
     n3XML<-getNodeSet(doc,'/file-format/data-set/sequence[@tag="3006,0039" and @name="ROIContourSequence"]/item')
@@ -746,6 +747,10 @@ geoLet<-function() {
       }
       logObj$setOutput( attributeList$verbose )
       return;  
+    }
+    if(attribute=="cacheDir") {
+      attributeList$virtualMemory$path<<-value;
+      return;
     }
     attributeList[[ attribute ]]<<-value    
   }

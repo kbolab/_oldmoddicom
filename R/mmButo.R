@@ -76,7 +76,7 @@
 #' GTV.eroded<-RAD.applyErosion(ROIVoxelData = GTV)
 #' 
 #' }#' #' 
-new.mmButo<-function( caching = FALSE) {
+new.mmButo<-function( caching = FALSE, cacheDir='./cache') {
   # attribute lists
   attributeList<-list();
   # the list of loaded geoLet objects
@@ -94,6 +94,7 @@ new.mmButo<-function( caching = FALSE) {
       list_geoLet[[collectionID]][[ folderName ]]$openDICOMFolder( folderName ) 
       if( attributeList$caching == TRUE) {
         print("saving cache....")
+        list_geoLet[[collectionID]][[ folderName ]]$setAttribute("cacheDir",attributeList$cacheDir)
         list_geoLet[[collectionID]][[ folderName ]]$cacheSave();
       }
     }
@@ -221,10 +222,11 @@ new.mmButo<-function( caching = FALSE) {
   # ========================================================================================
   # conctructor: initialises the attributes
   # ========================================================================================
-  costructor<-function( caching = FALSE) {
+  costructor<-function( caching = FALSE, cacheDir='./cache') {
     list_geoLet<<-list()
     attributeList<<-list();
     attributeList$caching<<-caching
+    attributeList$cacheDir<<-cacheDir
   }
   costructor( caching = caching );
   return( list( "loadCollection"=loadCollection,
@@ -664,7 +666,7 @@ mmButo<-function() {
   # ========================================================================================
   # constructor
   # ========================================================================================
-  constructor<-function( caching = FALSE) {
+  constructor<-function( caching = FALSE,cacheDir = "./cache") {
     dataStructure<<-list()
     attributeList<<-list()
     arrayAR<<-list()
@@ -675,9 +677,10 @@ mmButo<-function() {
     # setting log defaults
     logObj$setOutput( list("onScreen" = attributeList$verbose$onScreen,   "onFile" = attributeList$verbose$onFile )  )
     attributeList<<-list();
-    attributeList$caching<-caching
+    attributeList$caching<<-caching
+    attributeList$cacheDir<<-cacheDir;
   }
-  constructor( caching = caching )
+  constructor( caching = caching , cacheDir = cacheDir)
   return(list(
     openTreeMultiROIs=openTreeMultiROIs,
     setAttribute=setAttribute,

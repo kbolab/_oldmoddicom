@@ -632,7 +632,8 @@ void erosion( double *cube, int *nX, int *nY, int *nZ, int *mx, int *my, int *mz
   if( *my>0 ) *my = *my - 1;  
   if( *mz>0 ) *mz = *mz - 1;
   // trasforma tutti i '-1' in '0' per l'iterazione successiva
-  for(ct=0; ct<= posDecod((*nX),(*nY),(*nZ),*nX,*nY,*nZ); ct++) {
+  //for(ct=0; ct<= posDecod((*nX-1),(*nY-1),(*nZ-1),*nX,*nY,*nZ); ct++) {
+  for(ct=0; ct<= ((*nX)*(*nY)*(*nZ)-1); ct++) {
     if(cube[ct]==-1) cube[ct]=0;
   }
   // rilancia ricorsivamente

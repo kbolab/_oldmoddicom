@@ -162,7 +162,7 @@ RAD.VirtualBiopsy <- function ( ROIVoxelData, dx.min=2, dy.min=2, dz.min=0, dx.m
   for (i in seq(1,NumPatients) )  {
     print(  paste(c("Processing: ",names(ROIVoxelData)[i]),collapse='' )  )
     # set some variables
-    exam <- c();    carot <- c();
+  exam <- c();    carot <- c();
     # estraggo i dati del paziente i-esimo con le relative dimensioni. I need to expand the because
     # they are in the cropped format
     exam <- obj.mmButo$mmButoLittleCube.expand(   ROIVoxelData[[i]] )
@@ -230,8 +230,8 @@ RAD.VirtualBiopsy <- function ( ROIVoxelData, dx.min=2, dy.min=2, dz.min=0, dx.m
       else carot.index.resampled<-carot.index
       
       lista[[ listLabel ]] <- list(
-        "dx_dy_dz"=c(stepX*2+1,stepY*2+1, stepY*2+1), 
-        "volume"=(stepX*2+1) * (stepY*2+1) *(stepY*2+1),
+        "dx_dy_dz"=c(stepX*2+1,stepY*2+1, stepZ*2+1), 
+        "volume"=(stepX*2+1) * (stepY*2+1) *(stepZ*2+1),
         "real_dx_dy_dz"=c(realX,realY,realZ), 
         "real_volume"=realX * realY *realZ,
         "NumCarotaggi"=prova.carot[[10]], 
@@ -280,7 +280,6 @@ RAD.applyErosion<-function(  ROIVoxelData, margin.x=2, margin.y=2, margin.z=1 ) 
     nX<-dim(erodedVoxelCube)[1];    nY<-dim(erodedVoxelCube)[2];    nZ<-dim(erodedVoxelCube)[3];
     mx<-margin.x; my<-margin.y; mz<-margin.z;
     iterator<-0; # this is just to avoid infinite loops...
-    
     # erode it!
     
     aa<-.C("erosion",as.double(erodedVoxelCube), as.integer(nX), as.integer(nY), 

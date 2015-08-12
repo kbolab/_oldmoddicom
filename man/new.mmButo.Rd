@@ -4,7 +4,7 @@
 \alias{new.mmButo}
 \title{class for loading multiple sets of DICOM studies from filesystem}
 \usage{
-new.mmButo(caching = FALSE)
+new.mmButo(caching = FALSE, cacheDir = "./cache")
 }
 \description{
 Instantiate an object of the class \code{new.mmButo}. This represents just the classname,
