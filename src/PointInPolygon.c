@@ -569,7 +569,7 @@ void rawSurface(double *arr, int *nX, int *nY, int *nZ, double *pSX, double *pSY
           
           // if a non-zero voxel is on the border, surface cannot be calculated
           // for now skipped but you now... in the future....
-          if( x==0 || x==*nX || y==0 || y==*nY || z==0 || z==*nZ) {*surface = -1; return; }
+  //        if( x==0 || x==*nX || y==0 || y==*nY || z==0 || z==*nZ) {*surface = -1; return; }
           
           // is it a border-voxel in each possible direction?
           if(z+1!=*nZ) {if( arr[  posDecod(x,y,z+1,*nX,*nY, *nZ ) ] == 0 ) *surface+= (*pSX) * (*pSY);}
