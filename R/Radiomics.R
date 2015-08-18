@@ -367,3 +367,54 @@ RAD.easyROI<-function( ROIVoxelData ) {
   }
   return(res);
 }
+#' return the biopsy 
+#' 
+#' @description  get the list of possible centroids and return the list of biopsy
+#' @param possBio as got from of a \code{RAD.VirtualBiopsy()} method.
+#' @param ROIVoxelData is the voxelData (cropped) got from of a \code{obj$getROIVoxel()} method.
+#' @param x the x dim of the biopsy (as passed to the \code{RAD.VirtualBiopsy()} method: the real cube will have (2*x+1) along x axes)
+#' @param y the x dim of the biopsy (as passed to the \code{RAD.VirtualBiopsy()} method: the real cube will have (2*y+1) along y axes) 
+#' @param z the x dim of the biopsy (as passed to the \code{RAD.VirtualBiopsy()} method: the real cube will have (2*z+1) along z axes)  
+#' @return a list (quite big) containing all the biopsy
+#' @examples \dontrun{
+#' # Create an instante of new.mmButo and load some cases
+#' obj<-new.mmButo()
+#' obj$loadCollection(Path = '/progetti/immagini/urinaEasy')
+#' 
+#' # get the three ROIs
+#' GTV<-obj$getROIVoxel(ROIName="GTV")  
+#' 
+#' # get the possible centroids
+#' a<-RAD.VirtualBiopsy(ROIVoxelData = GTV,dx.min = 3,dy.min = 4,dz.min = 1,dx.max = 4,dy.max = 4,dz.max = 1)
+#' 
+#' # get the biopsy
+#' listaBiopsie<-RAD.getBiopsy(possBio = a,ROIVoxelData = GTV,x = 4,y = 4,z = 1)
+#' }#' 
+#' @export
+RAD.getBiopsy<-function(possBio, ROIVoxelData, x = 4, y = 4, z = 1) {
+  obj.mmButo<-new.mmButo()
+  submatrix<-list()
+  stringaDim<-paste(c(x,y,z),collapse='_');
+  #scorri tutti i pazienti
+  for(paziente in names(possBio)) {
+    print(paziente);
+    submatrix[[paziente]]<-list()
+    # prendi la lista dei centroidi per fare la biopsia
+    listaPunti<-possBio[[ paziente ]][[ stringaDim ]]$IndexBiopsy
+    # espandi il voxelCube
+    voxelCube <- obj.mmButo$mmButoLittleCube.expand(   ROIVoxelData[[ paziente ]] )
+    # per ogni centroide estrai la corrispondente biopsia
+    for( riga in seq(1,dim(listaPunti)[1])) {
+      # coordinate del centroide
+      xC<-listaPunti[riga,1]; yC<-listaPunti[riga,2]; zC<-listaPunti[riga,3];
+      # carota
+      submatrix[[paziente]][[riga]]<-voxelCube[  (xC-x):(xC+x),(yC-y):(yC+y),(zC-z):(zC+z)   ]
+      # se c'è anche solo uno '0', 'epic fail!'
+      if( length(which(submatrix[[paziente]][[riga]]==0)) !=0 ) { 
+        print("Epic fail");
+        browser();
+      }
+    }
+  }
+  return(submatrix);
+}
