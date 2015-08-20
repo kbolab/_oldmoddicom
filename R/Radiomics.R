@@ -418,3 +418,93 @@ RAD.getBiopsy<-function(possBio, ROIVoxelData, x = 4, y = 4, z = 1) {
   }
   return(submatrix);
 }
+#' Calculate entropy and stdev maps
+#' 
+#' @description  Calculate entropy maps and stdev maps of the images, eventually normalizing the image
+#' @param obj.mmButo an object of class \code{new.mmButo}
+#' @param ROIName the name of the interested ROI
+#' @param margin.x for the biopsy; default is 3 (the box has 7 voxels along x direction)
+#' @param margin.y for the biopsy; default is 3 (the box has 7 voxels along y direction)
+#' @param margin.z for the biopsy; default is 1 (the box has 3 voxels along z direction)
+#' @param erosion.x for the erosion; default is 3 
+#' @param erosion.y for the erosion; default is 3 
+#' @param erosion.z for the erosion; default is 1 
+#' @param collection the interested collection; the dafault collection is '\code{default}'
+#' @param normalizationROIName the name of the ROI used to normaliza the signal: default is \code{NA}
+#' @return a list containing the entropy maps and the stdev maps.
+#' @examples \dontrun{
+#' # Create an instante of new.mmButo and load some cases
+#' obj<-new.mmButo()
+#' obj$loadCollection(Path = '/progetti/immagini/urinaEasy')
+#' 
+#' # get the three ROIs
+#' Retto<-obj$getROIVoxel(ROIName="Retto")  
+#' 
+#' # get the possible biopsy
+#' erodedCubes<-RAD.applyErosion( ROIVoxelData = Retto )
+#' }#' 
+#' @import entropy  
+#' @export
+RAD.borderTextureMap<-function(obj.mmButo, ROIName, margin.x=3,margin.y=3,margin.z=1,collection="default", ROINameForNormalization = NA,erosion.x = 3,erosion.y = 3,erosion.z = 1) {
+  objS<-services();
+  # prendi le matrici dei voxel completi della ROI di interesse (croppati)
+  ROIVoxelData<-obj.mmButo$getROIVoxel(ROIName = ROIName)
+  if(!is.na(ROINameForNormalization)) {
+    ROIForCorrection<-obj.mmButo$getROIVoxel(ROIName = ROINameForNormalization)
+    ROIVoxelData<-obj$getCorrectedROIVoxel(inputROIVoxel = ROIVoxelData,correctionROIVoxel = ROIForCorrection)
+  }
+  
+  # calcola l'erosione
+  eroded<-RAD.applyErosion(ROIVoxelData = ROIVoxelData,margin.x = erosion.x,margin.y = erosion.y,margin.z = erosion.z)
+  # prendi la lista di oggetti geoLet
+  list_geoLet<-obj.mmButo$getAttribute("list_geoLet");
+  entropyMap<-list();
+  standardDev<-list();
+  ct<-1
+  for(patient in names(ROIVoxelData)) {
+    
+    print( paste("ENTROPY - Now processing:",patient),collapse='' )
+    
+    # calcola il bordo (come la differenza)
+    bordo<-ROIVoxelData[[patient]]$masked.images$voxelCube - eroded[[patient]]$masked.images$voxelCube
+    # prendi la struttura di VoxelData
+    voxelData.bordo<-ROIVoxelData[[patient]]
+    # ed ad essa sostituisci l'immagine del bordo
+    voxelData.bordo$masked.images$voxelCube<-bordo
+    # così' sono pronto per estendere
+    bordoEspanso <- obj.mmButo$mmButoLittleCube.expand(   voxelData.bordo )
+    # i punti non a zero di tale struttura sono quindi quelli in cui posso "carotare".
+    centr<-which(bordoEspanso!=0,arr.ind = T)
+    originalMR<-list_geoLet[[collection]][[patient]]$getImageVoxelCube()
+
+    entropyMap[[patient]]<-array(0,dim=c(  dim(originalMR)[1],dim(originalMR)[2],dim(originalMR)[3]   ))
+    standardDev[[patient]]<-array(0,dim=c(  dim(originalMR)[1],dim(originalMR)[2],dim(originalMR)[3]   ))
+    
+    for ( i in seq(1,dim(centr)[1]) ) {
+      
+      if( 
+        (centr[i,][3]+margin.z)<=dim(originalMR)[3] && (centr[i,][3]-margin.z)>=1 && 
+        (centr[i,][2]+margin.y)<=dim(originalMR)[2] && (centr[i,][2]-margin.y)>=1 &&
+        (centr[i,][1]+margin.x)<=dim(originalMR)[1] && (centr[i,][1]-margin.x)>=1
+      ) {      
+        subCube<-originalMR[  
+          (centr[i,][1]-margin.x):(centr[i,][1]+margin.x), 
+          (centr[i,][2]-margin.y):(centr[i,][2]+margin.y), 
+          (centr[i,][3]-margin.z):(centr[i,][3]+margin.z) ]
+        
+        istogr <- hist(subCube,  plot=FALSE)    
+        freq <- freqs(y = istogr$counts)
+        ImageEntropy <- entropy.plugin(freqs = freq, unit = c("log2"))
+        entropyMap[[patient]][ centr[i,][1] , centr[i,][2], centr[i,][3] ]<-ImageEntropy
+        standardDev[[patient]][ centr[i,][1] , centr[i,][2], centr[i,][3] ]<-sd(subCube)
+      }
+    }
+    # ora Croppali, o facciamo notte
+    entropyMap[[patient]]<-objS$cropCube( entropyMap[[patient]] )
+    standardDev[[patient]]<-objS$cropCube( standardDev[[patient]]  )
+    ct<-ct+1
+#    if(ct==5) break;   # just for debug
+  }
+  return( list("entropyMap"=entropyMap,"stdMap"=standardDev)   )
+  
+}

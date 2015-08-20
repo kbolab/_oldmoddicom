@@ -856,8 +856,7 @@ geoLet<-function() {
 #      image.arr[,,i]<-objService$SV.rotateMatrix(image.arr[,,i])
       final.array[,,i]<-t(objService$SV.rotateMatrix(final.array[,,i],rotations=3))
     }
-    
-    
+
     #    return(list(TotalX=TotalX, TotalY=TotalY, FullZ=FullZ, Offset=Offset, 
     #                DOM=array(DOM, dim = c(3,3,length(index))), final.array=final.array, masked.images=final.array*image.arr))
     return(list(
