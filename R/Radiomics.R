@@ -456,6 +456,7 @@ RAD.borderTextureMap<-function(obj.mmButo, ROIName, margin.x=3,margin.y=3,margin
   
   # calcola l'erosione
   eroded<-RAD.applyErosion(ROIVoxelData = ROIVoxelData,margin.x = erosion.x,margin.y = erosion.y,margin.z = erosion.z)
+
   # prendi la lista di oggetti geoLet
   list_geoLet<-obj.mmButo$getAttribute("list_geoLet");
   entropyMap<-list();
@@ -503,7 +504,7 @@ RAD.borderTextureMap<-function(obj.mmButo, ROIName, margin.x=3,margin.y=3,margin
     entropyMap[[patient]]<-objS$cropCube( entropyMap[[patient]] )
     standardDev[[patient]]<-objS$cropCube( standardDev[[patient]]  )
     ct<-ct+1
-#    if(ct==5) break;   # just for debug
+#   if(ct==5) break;   # just for debug
   }
   return( list("entropyMap"=entropyMap,"stdMap"=standardDev)   )
   
