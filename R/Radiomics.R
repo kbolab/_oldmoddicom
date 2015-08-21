@@ -451,7 +451,7 @@ RAD.borderTextureMap<-function(obj.mmButo, ROIName, margin.x=3,margin.y=3,margin
   ROIVoxelData<-obj.mmButo$getROIVoxel(ROIName = ROIName)
   if(!is.na(ROINameForNormalization)) {
     ROIForCorrection<-obj.mmButo$getROIVoxel(ROIName = ROINameForNormalization)
-    ROIVoxelData<-obj$getCorrectedROIVoxel(inputROIVoxel = ROIVoxelData,correctionROIVoxel = ROIForCorrection)
+    ROIVoxelData<-obj.mmButo$getCorrectedROIVoxel(inputROIVoxel = ROIVoxelData,correctionROIVoxel = ROIForCorrection)
   }
   
   # calcola l'erosione
