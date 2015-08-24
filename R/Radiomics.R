@@ -431,6 +431,7 @@ RAD.getBiopsy<-function(possBio, ROIVoxelData, x = 4, y = 4, z = 1) {
 #' @param erosion.z for the erosion; default is 1 
 #' @param collection the interested collection; the dafault collection is '\code{default}'
 #' @param normalizationROIName the name of the ROI used to normaliza the signal: default is \code{NA}
+#' @param kindOfOutput is a string which can be '\code{normal}' or '\code{extended}'. In the first case it returna a complex list, cropped, with all the information needed to extend the images; in the second it provides the extended images avoiding to return all the ancillary (geometry) data
 #' @return a list containing the entropy maps and the stdev maps.
 #' @examples \dontrun{
 #' # Create an instante of new.mmButo and load some cases

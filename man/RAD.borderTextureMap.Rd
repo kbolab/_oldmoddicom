@@ -27,6 +27,8 @@ RAD.borderTextureMap(obj.mmButo, ROIName, margin.x = 3, margin.y = 3,
 
 \item{erosion.z}{for the erosion; default is 1}
 
+\item{kindOfOutput}{is a string which can be '\code{normal}' or '\code{extended}'. In the first case it returna a complex list, cropped, with all the information needed to extend the images; in the second it provides the extended images avoiding to return all the ancillary (geometry) data}
+
 \item{normalizationROIName}{the name of the ROI used to normaliza the signal: default is \code{NA}}
 }
 \value{
