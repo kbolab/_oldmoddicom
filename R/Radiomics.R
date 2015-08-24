@@ -445,7 +445,7 @@ RAD.getBiopsy<-function(possBio, ROIVoxelData, x = 4, y = 4, z = 1) {
 #' }#' 
 #' @import entropy  
 #' @export
-RAD.borderTextureMap<-function(obj.mmButo, ROIName, margin.x=3,margin.y=3,margin.z=1,collection="default", ROINameForNormalization = NA,erosion.x = 3,erosion.y = 3,erosion.z = 1) {
+RAD.borderTextureMap<-function(obj.mmButo, ROIName, margin.x=3,margin.y=3,margin.z=1,collection="default", ROINameForNormalization = NA,erosion.x = 3,erosion.y = 3,erosion.z = 1, kindOfOutput="normal") {
   objS<-services();
   # prendi le matrici dei voxel completi della ROI di interesse (croppati)
   ROIVoxelData<-obj.mmButo$getROIVoxel(ROIName = ROIName)
@@ -504,8 +504,26 @@ RAD.borderTextureMap<-function(obj.mmButo, ROIName, margin.x=3,margin.y=3,margin
     entropyMap[[patient]]<-objS$cropCube( entropyMap[[patient]] )
     standardDev[[patient]]<-objS$cropCube( standardDev[[patient]]  )
     ct<-ct+1
-#   if(ct==5) break;   # just for debug
+   if(ct==5) break;   # just for debug
   }
-  return( list("entropyMap"=entropyMap,"stdMap"=standardDev)   )
+  if( kindOfOutput == "normal") {
+    return( list("entropyMap"=entropyMap,"stdMap"=standardDev)   )
+  }
+  if( kindOfOutput == "extended") {
+    entropyExtended<-ROIVoxelData
+    standardDevExtended<-ROIVoxelData
+    ct<-1
+    listaEntropy<-list();
+    listaSD<-list();
+    for( patient in names(ROIVoxelData)) {
+      entropyExtended[[patient]]$masked.images$voxelCube<-entropyMap[[patient]]$voxelCube
+      standardDevExtended[[patient]]$masked.images$voxelCube<-standardDev[[patient]]$voxelCube
+      listaEntropy[[patient]]<-obj.mmButo$mmButoLittleCube.expand(  entropyExtended[[patient]] )
+      listaSD[[patient]]<-obj.mmButo$mmButoLittleCube.expand(  standardDevExtended[[patient]] )
+      ct<-ct+1
+#      if(ct==5) break;   # just for debug      
+    }
+    return( list("entropyMap"=listaEntropy,"stdMap"=listaSD)   )
+  }  
   
 }
