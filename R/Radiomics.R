@@ -505,7 +505,6 @@ RAD.borderTextureMap<-function(obj.mmButo, ROIName, margin.x=3,margin.y=3,margin
     entropyMap[[patient]]<-objS$cropCube( entropyMap[[patient]] )
     standardDev[[patient]]<-objS$cropCube( standardDev[[patient]]  )
     ct<-ct+1
-   if(ct==5) break;   # just for debug
   }
   if( kindOfOutput == "normal") {
     return( list("entropyMap"=entropyMap,"stdMap"=standardDev)   )
@@ -527,4 +526,108 @@ RAD.borderTextureMap<-function(obj.mmButo, ROIName, margin.x=3,margin.y=3,margin
     return( list("entropyMap"=listaEntropy,"stdMap"=listaSD)   )
   }  
   
+}
+#' Calculate whatever you want from a defined region of mmButo voxel maps
+#' 
+#' @description  It applies a passed FUNCTION to the voxel maps of the new.mmButo objects. The maps can be the normal maps or maps obtained by erosion and/or biopsy
+#' @param obj.mmButo an object of class \code{new.mmButo}
+#' @param ROIName the name of the interested ROI
+#' @param normalizationROIName the name of the ROI used to normaliza the signal: default is \code{NA}
+#' @param collection the interested collection; the dafault collection is '\code{default}'
+#' @param biopsyDim.xyz is a vector with the c(x,y,z) dimensions of the cube for biopsy. The default is \code{NA} which means that no biopsy has to be perfomed.
+#' @param erosion.xyz is a vector with the c(x,y,z) dimensions of the erosion which should be applied to the voxelCubes respect the \code{ROIName.}
+#' @param applyToBorder can be \code{TRUE} if you want to apply the FUNCTION to the border of \code{FALSE} if you want to apply the FUNCTION to all the voxel within the \code{ROIName} (eventually eroded)
+#' @param FUNFunction is the FUNCTION which should be applied to any biopsy (or any single voxel)
+#' @param listOfFUNParameters in order to avoid the 'pork party' due to the abominable use of '\code{...}', the parameters for the FUNCTION can be put in this \code{list}.
+#' @param cropResult can be set to \code{TRUE} or \code{FALSE}. If \code{TRUE} the result will be cropped and will occupy much less RAM, otherwise it will have the original size (the default is \code{TRUE}).
+#' @return a list containing the wished output
+#' @examples \dontrun{
+#' # Create an instante of new.mmButo and load some cases
+#' obj<-new.mmButo()
+#' obj$loadCollection(Path = '/progetti/immagini/urinaEasy')
+#' 
+#' computeSDWithNoise<-function(a, listOfFUNParameters=list()) {	
+#'  b<-sd(a);
+#'  if(listOfFUNParameters$noise==TRUE)  b<-b+b*runif(1)
+#'  return(b)
+#' }  
+#' 
+#' # no noise, apply on an eroded GTV, 
+#' a<-RAD.imagesApplyFUN(obj.mmButo = obj,ROIName = "GTV",FUNFunction = calcolaSD,erosion.xyz = c(2,2,0),applyToBorder = FALSE,listOfFUNParameters = list("noise"=FALSE))
+#' 
+#' # no noise, apply on the BORDER
+#' a<-RAD.imagesApplyFUN(obj.mmButo = obj,ROIName = "GTV",FUNFunction = calcolaSD,erosion.xyz = c(2,2,0),applyToBorder = TRUE,listOfFUNParameters = list("noise"=FALSE))
+#' 
+#' # no noise, not BORDER, on biopsy of <2,2,0> and erosion of <2,2,0>
+#' a<-RAD.imagesApplyFUN(obj.mmButo = obj,ROIName = "GTV",FUNFunction = calcolaSD,erosion.xyz = c(5,5,3),applyToBorder = FALSE,listOfFUNParameters = list("noise"=FALSE),biopsyDim.xyz = c(2,2,0))
+#' 
+#' }#' 
+#' @export
+RAD.imagesApplyFUN<-function(obj.mmButo, ROIName, ROINameForNormalization = NA,collection="default",biopsyDim.xyz=NA,erosion.xyz = NA,applyToBorder = FALSE, FUNFunction =NA, listOfFUNParameters=NA, cropResult = TRUE ) {
+  if(applyToBorder==TRUE && is.na(erosion.xyz) ) stop("Impossibile procedere: non posso applicare nulla al bordo se non vien passata la dimensione di erosione tramite il parametro 'erosion.xyz'")
+  if( !is.function(FUNFunction)) stop("Impossibile procedere: Non è stata passata alcuna funzione")  
+  objS<-services();
+  # prendi le matrici dei voxel completi della ROI di interesse (croppati)
+  ROIVoxelData<-obj.mmButo$getROIVoxel(ROIName = ROIName)
+  if(!is.na(ROINameForNormalization)) {
+    ROIForCorrection<-obj.mmButo$getROIVoxel(ROIName = ROINameForNormalization)
+    ROIVoxelData<-obj.mmButo$getCorrectedROIVoxel(inputROIVoxel = ROIVoxelData,correctionROIVoxel = ROIForCorrection)
+  }
+  
+  # calcola l'erosione (se necessario)
+  eroded<-NA
+  if(!is.na(erosion.xyz[1]) && !is.na(erosion.xyz[2]) && !is.na(erosion.xyz[3])) { 
+    eroded<-RAD.applyErosion(ROIVoxelData = ROIVoxelData,margin.x = erosion.xyz[1],margin.y = erosion.xyz[2],margin.z = erosion.xyz[3])
+  }
+
+  # prendi la lista di oggetti geoLet
+  list_geoLet<-obj.mmButo$getAttribute("list_geoLet");
+  ct<-1
+  FUNMap<-list();
+  for(patient in names(ROIVoxelData)) {
+
+    print( paste("FUN - Now processing:",patient),collapse='' )
+    
+    voxelData.ready<-ROIVoxelData[[patient]]
+    
+    # calcola il bordo (come la differenza)
+    if(applyToBorder==TRUE) {
+      bordo<-ROIVoxelData[[patient]]$masked.images$voxelCube - eroded[[patient]]$masked.images$voxelCube
+      # prendi la struttura di VoxelData
+      # ed ad essa sostituisci l'immagine del bordo
+      voxelData.ready$masked.images$voxelCube<-bordo      
+    }
+    if(applyToBorder==FALSE && !is.na(eroded)  ) {
+      voxelData.ready$masked.images$voxelCube<-eroded[[patient]]$masked.images$voxelCube
+    }
+    
+    # ora sono pronto per estendere
+    voxelData.ready.espanso <- obj.mmButo$mmButoLittleCube.expand(   voxelData.ready   )
+    # ora vediamo se c'è da carotare
+    # i punti non a zero di tale struttura sono quindi quelli in cui posso "carotare".
+    centr<-which(voxelData.ready.espanso!=0,arr.ind = T)
+    originalMR<-list_geoLet[[collection]][[patient]]$getImageVoxelCube()
+    
+    # prepara la FUNMap
+    FUNMap[[patient]]<-array(0,dim=c(  dim(originalMR)[1],dim(originalMR)[2],dim(originalMR)[3]   ))
+    for ( i in seq(1,dim(centr)[1]) ) {
+      if(!is.na(biopsyDim.xyz[1]) && !is.na(biopsyDim.xyz[2]) && !is.na(biopsyDim.xyz[3]) ) {margin.x<-biopsyDim.xyz[1]; margin.y<-biopsyDim.xyz[2]; margin.z<-biopsyDim.xyz[3];}
+      else {margin.x=0; margin.y=0; margin.z=0;}
+      if( 
+        (centr[i,][3]+margin.z)<=dim(originalMR)[3] && (centr[i,][3]-margin.z)>=1 && 
+        (centr[i,][2]+margin.y)<=dim(originalMR)[2] && (centr[i,][2]-margin.y)>=1 &&
+        (centr[i,][1]+margin.x)<=dim(originalMR)[1] && (centr[i,][1]-margin.x)>=1
+      ) {      
+        subCube<-originalMR[  
+          (centr[i,][1]-margin.x):(centr[i,][1]+margin.x), 
+          (centr[i,][2]-margin.y):(centr[i,][2]+margin.y), 
+          (centr[i,][3]-margin.z):(centr[i,][3]+margin.z) ]
+        FUNMap[[patient]][ centr[i,][1] , centr[i,][2], centr[i,][3] ]<-FUNFunction(subCube,listOfFUNParameters)
+      }
+    }
+    # se richiesto, CROPPA!
+    if ( cropResult == TRUE )  FUNMap[[patient]]<-objS$cropCube( FUNMap[[patient]] )    
+    
+  }
+  return(FUNMap)
 }
