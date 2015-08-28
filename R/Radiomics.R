@@ -527,20 +527,21 @@ RAD.borderTextureMap<-function(obj.mmButo, ROIName, margin.x=3,margin.y=3,margin
   }  
   
 }
-#' Calculate whatever you want from a defined region of mmButo voxel maps
+
+#' Apply a user defined function over a defined region of mmButo voxel maps
 #' 
-#' @description  It applies a passed FUNCTION to the voxel maps of the new.mmButo objects. The maps can be the normal maps or maps obtained by erosion and/or biopsy
-#' @param obj.mmButo an object of class \code{new.mmButo}
-#' @param ROIName the name of the interested ROI
-#' @param normalizationROIName the name of the ROI used to normaliza the signal: default is \code{NA}
+#' @description  It applies a user defined \code{function} over a voxel maps of in a \code{new.mmButo} object. The maps can be the normal maps or maps obtained by erosion and/or biopsy.
+#' @param obj.mmButo an object of class \code{new.mmButo}. Ignored if \code{ROIName} and \code{normalizationROIName} are not character but \code{new.mmButo$getROIVoxel()} object types
+#' @param ROIName character with the ROI name the name of the structure to be analyzed
+#' @param normalizationROIName character with the name of the ROI used to normalize the signal: default is \code{NA}
 #' @param collection the interested collection; the dafault collection is '\code{default}'
-#' @param biopsyDim.xyz is a vector with the c(x,y,z) dimensions of the cube for biopsy. The default is \code{NA} which means that no biopsy has to be perfomed.
-#' @param erosion.xyz is a vector with the c(x,y,z) dimensions of the erosion which should be applied to the voxelCubes respect the \code{ROIName.}
-#' @param applyToBorder can be \code{TRUE} if you want to apply the FUNCTION to the border of \code{FALSE} if you want to apply the FUNCTION to all the voxel within the \code{ROIName} (eventually eroded)
-#' @param FUNFunction is the FUNCTION which should be applied to any biopsy (or any single voxel)
-#' @param listOfFUNParameters in order to avoid the 'pork party' due to the abominable use of '\code{...}', the parameters for the FUNCTION can be put in this \code{list}.
-#' @param cropResult can be set to \code{TRUE} or \code{FALSE}. If \code{TRUE} the result will be cropped and will occupy much less RAM, otherwise it will have the original size (the default is \code{TRUE}).
-#' @return a list containing the wished output
+#' @param biopsyDim.xyz is an integer numeric vector with the \code{c(x,y,z)} dimensions in voxels of the cube for biopsy. The default is \code{NA} which means that no biopsy is perfomed
+#' @param erosion.xyz is an integer vector with the \code{c(x,y,z)} dimensions of the erosion which has to be applied to the voxelCubes respect the \code{ROIName}
+#' @param applyToBorder a logical value, if \code{TRUE} the function \code{FUN} is applied to the border, if \code{FALSE} the FUNCTION is applied to all the voxel within the \code{ROIName} (eventually eroded)
+#' @param FUN is the \code{function} to be be applied to any biopsy (if a \code{biopsyDim.xyz}) is given, otherwise the function is applied to all voxels
+#' @param cropResult a logical value. If \code{TRUE} the result will be cropped and will occupy much less RAM, otherwise it will have the original size (default value is \code{TRUE})
+#' @param ... Other parameters to be passed to the function \code{FUN}
+#' @return a list containing the output of the function \code{FUN} applied over biopsies or over the whole ROI voxels series#'
 #' @examples \dontrun{
 #' # Create an instante of new.mmButo and load some cases
 #' obj<-new.mmButo()
@@ -563,15 +564,20 @@ RAD.borderTextureMap<-function(obj.mmButo, ROIName, margin.x=3,margin.y=3,margin
 #' 
 #' }#' 
 #' @export
-RAD.imagesApplyFUN<-function(obj.mmButo, ROIName, ROINameForNormalization = NA,collection="default",biopsyDim.xyz=NA,erosion.xyz = NA,applyToBorder = FALSE, FUNFunction =NA, listOfFUNParameters=NA, cropResult = TRUE ) {
-  if(applyToBorder==TRUE && is.na(erosion.xyz) ) stop("Impossibile procedere: non posso applicare nulla al bordo se non vien passata la dimensione di erosione tramite il parametro 'erosion.xyz'")
-  if( !is.function(FUNFunction)) stop("Impossibile procedere: Non è stata passata alcuna funzione")  
+RAD.imagesApplyFUN<-function(obj.mmButo, ROIName, ROINameForNormalization = NA,collection="default",
+                             biopsyDim.xyz=NA,erosion.xyz = NA,applyToBorder = FALSE, FUNFunction =NA, cropResult = TRUE, ... ) {
+  if(applyToBorder==TRUE && is.na(erosion.xyz) ) stop("Provide a valid 'erosion.xyz' value to apply a function on the border voxels")
+  if( !is.function(FUNFunction)) stop("No function provided")  
   objS<-services();
   # prendi le matrici dei voxel completi della ROI di interesse (croppati)
-  ROIVoxelData<-obj.mmButo$getROIVoxel(ROIName = ROIName)
+  if (!is.list(ROIName)) # controlla se c'è un oggetto mmButo dall'altra parte
+    ROIVoxelData<-obj.mmButo$getROIVoxel(ROIName = ROIName)
+  else ROIVoxelData <- ROIName
   if(!is.na(ROINameForNormalization)) {
-    ROIForCorrection<-obj.mmButo$getROIVoxel(ROIName = ROINameForNormalization)
-    ROIVoxelData<-obj.mmButo$getCorrectedROIVoxel(inputROIVoxel = ROIVoxelData,correctionROIVoxel = ROIForCorrection)
+    if (!is.list(ROINameForNormalization))
+      ROIForCorrection <- obj.mmButo$getROIVoxel(ROIName = ROINameForNormalization)
+    else ROIForCorrection <- ROINameForNormalization
+    ROIVoxelData<-obj.mmButo$getCorrectedROIVoxel(inputROIVoxel = ROIVoxelData, correctionROIVoxel = ROIForCorrection)
   }
   
   # calcola l'erosione (se necessario)
@@ -579,13 +585,13 @@ RAD.imagesApplyFUN<-function(obj.mmButo, ROIName, ROINameForNormalization = NA,c
   if(!is.na(erosion.xyz[1]) && !is.na(erosion.xyz[2]) && !is.na(erosion.xyz[3])) { 
     eroded<-RAD.applyErosion(ROIVoxelData = ROIVoxelData,margin.x = erosion.xyz[1],margin.y = erosion.xyz[2],margin.z = erosion.xyz[3])
   }
-
+  
   # prendi la lista di oggetti geoLet
   list_geoLet<-obj.mmButo$getAttribute("list_geoLet");
   ct<-1
   FUNMap<-list();
   for(patient in names(ROIVoxelData)) {
-
+    
     print( paste("FUN - Now processing:",patient),collapse='' )
     
     voxelData.ready<-ROIVoxelData[[patient]]
@@ -611,7 +617,9 @@ RAD.imagesApplyFUN<-function(obj.mmButo, ROIName, ROINameForNormalization = NA,c
     # prepara la FUNMap
     FUNMap[[patient]]<-array(0,dim=c(  dim(originalMR)[1],dim(originalMR)[2],dim(originalMR)[3]   ))
     for ( i in seq(1,dim(centr)[1]) ) {
-      if(!is.na(biopsyDim.xyz[1]) && !is.na(biopsyDim.xyz[2]) && !is.na(biopsyDim.xyz[3]) ) {margin.x<-biopsyDim.xyz[1]; margin.y<-biopsyDim.xyz[2]; margin.z<-biopsyDim.xyz[3];}
+      if(!is.na(biopsyDim.xyz[1]) && !is.na(biopsyDim.xyz[2]) && !is.na(biopsyDim.xyz[3]) ) {
+        margin.x<-biopsyDim.xyz[1]; margin.y<-biopsyDim.xyz[2]; margin.z<-biopsyDim.xyz[3]
+      }
       else {margin.x=0; margin.y=0; margin.z=0;}
       if( 
         (centr[i,][3]+margin.z)<=dim(originalMR)[3] && (centr[i,][3]-margin.z)>=1 && 
@@ -622,7 +630,7 @@ RAD.imagesApplyFUN<-function(obj.mmButo, ROIName, ROINameForNormalization = NA,c
           (centr[i,][1]-margin.x):(centr[i,][1]+margin.x), 
           (centr[i,][2]-margin.y):(centr[i,][2]+margin.y), 
           (centr[i,][3]-margin.z):(centr[i,][3]+margin.z) ]
-        FUNMap[[patient]][ centr[i,][1] , centr[i,][2], centr[i,][3] ]<-FUNFunction(subCube,listOfFUNParameters)
+        FUNMap[[patient]][ centr[i,][1] , centr[i,][2], centr[i,][3] ]<-FUNFunction(subCube , ...)
       }
     }
     # se richiesto, CROPPA!

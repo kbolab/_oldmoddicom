@@ -2,39 +2,38 @@
 % Please edit documentation in R/Radiomics.R
 \name{RAD.imagesApplyFUN}
 \alias{RAD.imagesApplyFUN}
-\title{Calculate whatever you want from a defined region of mmButo voxel maps}
+\title{Apply a user defined function over a defined region of mmButo voxel maps}
 \usage{
 RAD.imagesApplyFUN(obj.mmButo, ROIName, ROINameForNormalization = NA,
   collection = "default", biopsyDim.xyz = NA, erosion.xyz = NA,
-  applyToBorder = FALSE, FUNFunction = NA, listOfFUNParameters = NA,
-  cropResult = TRUE)
+  applyToBorder = FALSE, FUNFunction = NA, cropResult = TRUE, ...)
 }
 \arguments{
-\item{obj.mmButo}{an object of class \code{new.mmButo}}
+\item{obj.mmButo}{an object of class \code{new.mmButo}. Ignored if \code{ROIName} and \code{normalizationROIName} are not character but \code{new.mmButo$getROIVoxel()} object types}
 
-\item{ROIName}{the name of the interested ROI}
+\item{ROIName}{character with the ROI name the name of the structure to be analyzed}
 
 \item{collection}{the interested collection; the dafault collection is '\code{default}'}
 
-\item{biopsyDim.xyz}{is a vector with the c(x,y,z) dimensions of the cube for biopsy. The default is \code{NA} which means that no biopsy has to be perfomed.}
+\item{biopsyDim.xyz}{is an integer numeric vector with the \code{c(x,y,z)} dimensions in voxels of the cube for biopsy. The default is \code{NA} which means that no biopsy is perfomed}
 
-\item{erosion.xyz}{is a vector with the c(x,y,z) dimensions of the erosion which should be applied to the voxelCubes respect the \code{ROIName.}}
+\item{erosion.xyz}{is an integer vector with the \code{c(x,y,z)} dimensions of the erosion which has to be applied to the voxelCubes respect the \code{ROIName}}
 
-\item{applyToBorder}{can be \code{TRUE} if you want to apply the FUNCTION to the border of \code{FALSE} if you want to apply the FUNCTION to all the voxel within the \code{ROIName} (eventually eroded)}
+\item{applyToBorder}{a logical value, if \code{TRUE} the function \code{FUN} is applied to the border, if \code{FALSE} the FUNCTION is applied to all the voxel within the \code{ROIName} (eventually eroded)}
 
-\item{FUNFunction}{is the FUNCTION which should be applied to any biopsy (or any single voxel)}
+\item{cropResult}{a logical value. If \code{TRUE} the result will be cropped and will occupy much less RAM, otherwise it will have the original size (default value is \code{TRUE})}
 
-\item{listOfFUNParameters}{in order to avoid the 'pork party' due to the abominable use of '\code{...}', the parameters for the FUNCTION can be put in this \code{list}.}
+\item{...}{Other parameters to be passed to the function \code{FUN}}
 
-\item{cropResult}{can be set to \code{TRUE} or \code{FALSE}. If \code{TRUE} the result will be cropped and will occupy much less RAM, otherwise it will have the original size (the default is \code{TRUE}).}
+\item{normalizationROIName}{character with the name of the ROI used to normalize the signal: default is \code{NA}}
 
-\item{normalizationROIName}{the name of the ROI used to normaliza the signal: default is \code{NA}}
+\item{FUN}{is the \code{function} to be be applied to any biopsy (if a \code{biopsyDim.xyz}) is given, otherwise the function is applied to all voxels}
 }
 \value{
-a list containing the wished output
+a list containing the output of the function \code{FUN} applied over biopsies or over the whole ROI voxels series#'
 }
 \description{
-It applies a passed FUNCTION to the voxel maps of the new.mmButo objects. The maps can be the normal maps or maps obtained by erosion and/or biopsy
+It applies a user defined \code{function} over a voxel maps of in a \code{new.mmButo} object. The maps can be the normal maps or maps obtained by erosion and/or biopsy.
 }
 \examples{
 \dontrun{
