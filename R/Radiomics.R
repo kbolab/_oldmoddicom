@@ -554,20 +554,20 @@ RAD.borderTextureMap<-function(obj.mmButo, ROIName, margin.x=3,margin.y=3,margin
 #' }  
 #' 
 #' # no noise, apply on an eroded GTV, 
-#' a<-RAD.imagesApplyFUN(obj.mmButo = obj,ROIName = "GTV",FUNFunction = calcolaSD,erosion.xyz = c(2,2,0),applyToBorder = FALSE,listOfFUNParameters = list("noise"=FALSE))
+#' a<-RAD.imagesApplyFUN(obj.mmButo = obj,ROIName = "GTV",FUN = calcolaSD,erosion.xyz = c(2,2,0),applyToBorder = FALSE,listOfFUNParameters = list("noise"=FALSE))
 #' 
 #' # no noise, apply on the BORDER
-#' a<-RAD.imagesApplyFUN(obj.mmButo = obj,ROIName = "GTV",FUNFunction = calcolaSD,erosion.xyz = c(2,2,0),applyToBorder = TRUE,listOfFUNParameters = list("noise"=FALSE))
+#' a<-RAD.imagesApplyFUN(obj.mmButo = obj,ROIName = "GTV",FUN = calcolaSD,erosion.xyz = c(2,2,0),applyToBorder = TRUE,listOfFUNParameters = list("noise"=FALSE))
 #' 
 #' # no noise, not BORDER, on biopsy of <2,2,0> and erosion of <2,2,0>
-#' a<-RAD.imagesApplyFUN(obj.mmButo = obj,ROIName = "GTV",FUNFunction = calcolaSD,erosion.xyz = c(5,5,3),applyToBorder = FALSE,listOfFUNParameters = list("noise"=FALSE),biopsyDim.xyz = c(2,2,0))
+#' a<-RAD.imagesApplyFUN(obj.mmButo = obj,ROIName = "GTV",FUN = calcolaSD,erosion.xyz = c(5,5,3),applyToBorder = FALSE,listOfFUNParameters = list("noise"=FALSE),biopsyDim.xyz = c(2,2,0))
 #' 
 #' }#' 
 #' @export
 RAD.imagesApplyFUN<-function(obj.mmButo, ROIName, ROINameForNormalization = NA,collection="default",
-                             biopsyDim.xyz=NA,erosion.xyz = NA,applyToBorder = FALSE, FUNFunction =NA, cropResult = TRUE, ... ) {
+                             biopsyDim.xyz=NA,erosion.xyz = NA,applyToBorder = FALSE, FUN = NA, cropResult = TRUE, ... ) {
   if(applyToBorder==TRUE && is.na(erosion.xyz) ) stop("Provide a valid 'erosion.xyz' value to apply a function on the border voxels")
-  if( !is.function(FUNFunction)) stop("No function provided")  
+  if( !is.function(FUN)) stop("No function provided")  
   objS<-services();
   # prendi le matrici dei voxel completi della ROI di interesse (croppati)
   if (!is.list(ROIName)) # controlla se c'è un oggetto mmButo dall'altra parte
@@ -630,7 +630,7 @@ RAD.imagesApplyFUN<-function(obj.mmButo, ROIName, ROINameForNormalization = NA,c
           (centr[i,][1]-margin.x):(centr[i,][1]+margin.x), 
           (centr[i,][2]-margin.y):(centr[i,][2]+margin.y), 
           (centr[i,][3]-margin.z):(centr[i,][3]+margin.z) ]
-        FUNMap[[patient]][ centr[i,][1] , centr[i,][2], centr[i,][3] ]<-FUNFunction(subCube , ...)
+        FUNMap[[patient]][ centr[i,][1] , centr[i,][2], centr[i,][3] ]<-FUN(subCube , ...)
       }
     }
     # se richiesto, CROPPA!
