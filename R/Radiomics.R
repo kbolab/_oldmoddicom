@@ -626,50 +626,56 @@ RAD.imagesApplyFUN<-function(obj.mmButo, ROIName, ROINameForNormalization = NA,c
   FUNMap<-list();
   for(patient in names(ROIVoxelData)) {
     
-    print( paste("FUN - Now processing:",patient),collapse='' )
+    if((TRUE %in% is.na(ROIVoxelData[[patient]])) == FALSE  ) {
     
-    voxelData.ready<-ROIVoxelData[[patient]]
-    
-    # calcola il bordo (come la differenza)
-    if(applyToBorder==TRUE) {
-      bordo<-ROIVoxelData[[patient]]$masked.images$voxelCube - eroded[[patient]]$masked.images$voxelCube
-      # prendi la struttura di VoxelData
-      # ed ad essa sostituisci l'immagine del bordo
-      voxelData.ready$masked.images$voxelCube<-bordo      
-    }
-    if(applyToBorder==FALSE && !is.na(eroded)  ) {
-      voxelData.ready$masked.images$voxelCube<-eroded[[patient]]$masked.images$voxelCube
-    }
-    
-    # ora sono pronto per estendere
-    voxelData.ready.espanso <- obj.mmButo$mmButoLittleCube.expand(   voxelData.ready   )
-    # ora vediamo se c'è da carotare
-    # i punti non a zero di tale struttura sono quindi quelli in cui posso "carotare".
-    centr<-which(voxelData.ready.espanso!=0,arr.ind = T)
-    originalMR<-list_geoLet[[collection]][[patient]]$getImageVoxelCube()
-    
-    # prepara la FUNMap
-    FUNMap[[patient]]<-array(0,dim=c(  dim(originalMR)[1],dim(originalMR)[2],dim(originalMR)[3]   ))
-    for ( i in seq(1,dim(centr)[1]) ) {
-      if(!is.na(biopsyDim.xyz[1]) && !is.na(biopsyDim.xyz[2]) && !is.na(biopsyDim.xyz[3]) ) {
-        margin.x<-biopsyDim.xyz[1]; margin.y<-biopsyDim.xyz[2]; margin.z<-biopsyDim.xyz[3]
+      print( paste("FUN - Now processing:",patient),collapse='' )
+      
+      voxelData.ready<-ROIVoxelData[[patient]]
+      
+      # calcola il bordo (come la differenza)
+      if(applyToBorder==TRUE) {
+        bordo<-ROIVoxelData[[patient]]$masked.images$voxelCube - eroded[[patient]]$masked.images$voxelCube
+        # prendi la struttura di VoxelData
+        # ed ad essa sostituisci l'immagine del bordo
+        voxelData.ready$masked.images$voxelCube<-bordo      
       }
-      else {margin.x=0; margin.y=0; margin.z=0;}
-      if( 
-        (centr[i,][3]+margin.z)<=dim(originalMR)[3] && (centr[i,][3]-margin.z)>=1 && 
-        (centr[i,][2]+margin.y)<=dim(originalMR)[2] && (centr[i,][2]-margin.y)>=1 &&
-        (centr[i,][1]+margin.x)<=dim(originalMR)[1] && (centr[i,][1]-margin.x)>=1
-      ) {      
-        subCube<-originalMR[  
-          (centr[i,][1]-margin.x):(centr[i,][1]+margin.x), 
-          (centr[i,][2]-margin.y):(centr[i,][2]+margin.y), 
-          (centr[i,][3]-margin.z):(centr[i,][3]+margin.z) ]
-        FUNMap[[patient]][ centr[i,][1] , centr[i,][2], centr[i,][3] ]<-FUN(subCube , ...)
+      if(applyToBorder==FALSE && !is.na(eroded)  ) {
+        voxelData.ready$masked.images$voxelCube<-eroded[[patient]]$masked.images$voxelCube
       }
-    }
-    # se richiesto, CROPPA!
-    if ( cropResult == TRUE )  FUNMap[[patient]]<-objS$cropCube( FUNMap[[patient]] )    
+      
+      # ora sono pronto per estendere
+      voxelData.ready.espanso <- obj.mmButo$mmButoLittleCube.expand(   voxelData.ready   )
+      # ora vediamo se c'è da carotare
+      # i punti non a zero di tale struttura sono quindi quelli in cui posso "carotare".
+      centr<-which(voxelData.ready.espanso!=0,arr.ind = T)
+      originalMR<-list_geoLet[[collection]][[patient]]$getImageVoxelCube()
+      
+      # prepara la FUNMap
+      FUNMap[[patient]]<-array(0,dim=c(  dim(originalMR)[1],dim(originalMR)[2],dim(originalMR)[3]   ))
+      for ( i in seq(1,dim(centr)[1]) ) {
+        if(!is.na(biopsyDim.xyz[1]) && !is.na(biopsyDim.xyz[2]) && !is.na(biopsyDim.xyz[3]) ) {
+          margin.x<-biopsyDim.xyz[1]; margin.y<-biopsyDim.xyz[2]; margin.z<-biopsyDim.xyz[3]
+        }
+        else {margin.x=0; margin.y=0; margin.z=0;}
+        if( 
+          (centr[i,][3]+margin.z)<=dim(originalMR)[3] && (centr[i,][3]-margin.z)>=1 && 
+          (centr[i,][2]+margin.y)<=dim(originalMR)[2] && (centr[i,][2]-margin.y)>=1 &&
+          (centr[i,][1]+margin.x)<=dim(originalMR)[1] && (centr[i,][1]-margin.x)>=1
+        ) {      
+          subCube<-originalMR[  
+            (centr[i,][1]-margin.x):(centr[i,][1]+margin.x), 
+            (centr[i,][2]-margin.y):(centr[i,][2]+margin.y), 
+            (centr[i,][3]-margin.z):(centr[i,][3]+margin.z) ]
+          FUNMap[[patient]][ centr[i,][1] , centr[i,][2], centr[i,][3] ]<-FUN(subCube , ...)
+        }
+      }
+      # se richiesto, CROPPA!
+      if ( cropResult == TRUE )  FUNMap[[patient]]<-objS$cropCube( FUNMap[[patient]] )    
     
+    }
+    else {
+      FUNMap[[patient]]<-NA
+    }
   }
   return(FUNMap)
 }
