@@ -130,14 +130,19 @@ new.mmButo<-function( caching = FALSE, cacheDir='./cache') {
       print( paste( c("Now processing=",folderName)   , collapse='') );
       if( attributeList$caching == TRUE) list_geoLet[[collectionID]][[ folderName ]]$cacheLoad();
       a <- GLT.getROIVoxels(obj = list_geoLet[[collectionID]][[folderName]], Structure = singleROI )
-      list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]<-list()
-      list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$DOM<-a$DOM
-      list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$geometricalInformationOfImages<-a$geometricalInformationOfImages
-      list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images<-objS$cropCube( bigCube = a$masked.images)
-      list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$fe<-dim(a$masked.images)[1]
-      list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$se<-dim(a$masked.images)[2]
-      list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$te<-dim(a$masked.images)[3]
-      list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$geometricalInformationOfImages$koc<-"littleCube"
+      if((TRUE %in% is.na(a)) == FALSE  ) {
+          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]<-list()
+          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$DOM<-a$DOM
+          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$geometricalInformationOfImages<-a$geometricalInformationOfImages
+          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images<-objS$cropCube( bigCube = a$masked.images)
+          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$fe<-dim(a$masked.images)[1]
+          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$se<-dim(a$masked.images)[2]
+          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$te<-dim(a$masked.images)[3]
+          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$geometricalInformationOfImages$koc<-"littleCube"
+        }
+      else {
+        list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]<-NA
+      }
       if( attributeList$caching == TRUE) list_geoLet[[collectionID]][[ folderName ]]$cacheDrop();
     }
     arr2Return<-list();
@@ -159,11 +164,16 @@ new.mmButo<-function( caching = FALSE, cacheDir='./cache') {
     # The hyp now is that the mean value in Urina should be the same for all the MR, so try to normalize
     # all the GTV voxel cubes by the "rescale sclope" represented by the variable 'fattoreCorrezione'
     for( i in names(inputROIVoxel)) {
-      # calcola il fattore di correzione che è pari al rapporto fra maxUrina ed il valore medio in vescica del paziente in esame
-      fattoreCorrezione <- maxcorrectionROIVoxel / stats.correctionROIVoxel$details[[ i ]]$mean
-      
-      # normalizza i GTV
-      inputROIVoxel.corrected[[i]]$masked.images$voxelCube <- inputROIVoxel[[i]]$masked.images$voxelCube  * fattoreCorrezione;
+      if((TRUE %in% is.na(inputROIVoxel[[i]])) == FALSE  ) {
+        # calcola il fattore di correzione che è pari al rapporto fra maxUrina ed il valore medio in vescica del paziente in esame
+        fattoreCorrezione <- maxcorrectionROIVoxel / stats.correctionROIVoxel$details[[ i ]]$mean
+        
+        # normalizza i GTV
+        inputROIVoxel.corrected[[i]]$masked.images$voxelCube <- inputROIVoxel[[i]]$masked.images$voxelCube  * fattoreCorrezione;
+      }
+      else {
+        inputROIVoxel.corrected[[i]]<-NA
+      }
     }    
     return(inputROIVoxel.corrected);
   }
@@ -178,21 +188,26 @@ new.mmButo<-function( caching = FALSE, cacheDir='./cache') {
     min.arr<-c(); max.arr<-c(); mean.arr<-c(); sd.arr<-c(); median.arr<-c()
     # loop in order to calcualte min, max, mean, medians, sd
     for(i in names(ROIVoxelList)) {
-      # consider only the voxel which are NOT ZERO
-      listaGrigiDaConsiderare<-ROIVoxelList[[i]]$masked.images$voxelCube[which(ROIVoxelList[[i]]$masked.images$voxelCube!=0)]
-      dataInfo[[i]]<-list()
-      # collect the details
-      dataInfo[[i]]$mean<-mean(listaGrigiDaConsiderare)
-      dataInfo[[i]]$min<-min(listaGrigiDaConsiderare)
-      dataInfo[[i]]$max<-max(listaGrigiDaConsiderare)
-      dataInfo[[i]]$sd<-sd(listaGrigiDaConsiderare)
-      dataInfo[[i]]$median<-median(listaGrigiDaConsiderare)
-      # and get the summary
-      min.arr<-c( min.arr, dataInfo[[i]]$min )
-      max.arr<-c( max.arr, dataInfo[[i]]$max )
-      mean.arr<-c( mean.arr, dataInfo[[i]]$mean )
-      sd.arr<-c( sd.arr, dataInfo[[i]]$sd )
-      median.arr<-c( median.arr, dataInfo[[i]]$median )
+      if((TRUE %in% is.na(ROIVoxelList[[i]])) == FALSE  ) {
+        # consider only the voxel which are NOT ZERO
+        listaGrigiDaConsiderare<-ROIVoxelList[[i]]$masked.images$voxelCube[which(ROIVoxelList[[i]]$masked.images$voxelCube!=0)]
+        dataInfo[[i]]<-list()
+        # collect the details
+        dataInfo[[i]]$mean<-mean(listaGrigiDaConsiderare)
+        dataInfo[[i]]$min<-min(listaGrigiDaConsiderare)
+        dataInfo[[i]]$max<-max(listaGrigiDaConsiderare)
+        dataInfo[[i]]$sd<-sd(listaGrigiDaConsiderare)
+        dataInfo[[i]]$median<-median(listaGrigiDaConsiderare)
+        # and get the summary
+        min.arr<-c( min.arr, dataInfo[[i]]$min )
+        max.arr<-c( max.arr, dataInfo[[i]]$max )
+        mean.arr<-c( mean.arr, dataInfo[[i]]$mean )
+        sd.arr<-c( sd.arr, dataInfo[[i]]$sd )
+        median.arr<-c( median.arr, dataInfo[[i]]$median )
+      } 
+      else {
+        dataInfo[[i]]<-NA
+      }
     }    
     return(list(
       "details"=dataInfo,
@@ -254,7 +269,7 @@ new.mmButo<-function( caching = FALSE, cacheDir='./cache') {
 #'               }
 #' @import MASS colorRamps 
 #' @useDynLib moddicom
-mmButo<-function() {
+mmButoOLD<-function() {
   
   dataStructure<-list()
   attributeList<-list()

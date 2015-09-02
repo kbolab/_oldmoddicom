@@ -39,34 +39,42 @@ RAD.firstOrderFeatureImage <- function ( inputData )
   # loop on each patient
   for (i in 1:numPatient)  {
     istogr <- c();    freq <- c()
-
-    voxelCube.values<-unlist(inputData[[i]]$masked.images$voxelCube)
-    voxelCube.values<-voxelCube.values[ voxelCube.values!=0  ] 
-    # Calcola l'istogramma dei grigi
-    istogr <- hist(voxelCube.values, breaks = histSamples,  plot=FALSE)
-    # Calcola le frequenze da dover utilizzare nel calcolo dell'entropia
-    freq <- freqs(y = istogr$counts)
-    # Calcola l'entropia di Shannon per ogni paziente
-    ImageEntropy[i] <- entropy.plugin(freqs = freq, unit = c("log2"))
-    # Calcola la Kurtosis per ogni paziente (Kurtosis=0 distribuzione normale, Kurtosis > 0 distribuzione leptocurtica
-    # cioè stretta, Kurtosis < 0 distribuzione platicurtica cioè larga)
-    ImageKurtosis[i] <- kurtosis (x = voxelCube.values)
-    # Calcola la Skewness per ogni paziente (Skewness = 0 simmetria perfetta, Skewness > 0 asimmetrica verso destra
-    # Skewness < 0 asimmetrica verso sinistra)
-    ImageSkewness[i] <- skewness(x = voxelCube.values)
-    #Calcola media dei grigi dei singoli pazienti
-    ImageMean[i] <- mean(x = voxelCube.values)
-    #Calcola deviazione standard
-    ImageStandDeviat[i] <- sd (x = voxelCube.values)
-    
-    #Calcola la Enery, permette di valutare l'uniformità dell'immagine. Può assumere un valore tra 0 e 1:
-    # 0 = non uniforme; 1 = uniforme;
-    Energy <- 0
-    for (j in 1:length(istogr$density))
-    {
-      Energy <- Energy+(istogr$density[j])^2
+    if((TRUE %in% is.na(inputData[[i]])) == FALSE  ) {
+        voxelCube.values<-unlist(inputData[[i]]$masked.images$voxelCube)
+        voxelCube.values<-voxelCube.values[ voxelCube.values!=0  ] 
+        # Calcola l'istogramma dei grigi
+        istogr <- hist(voxelCube.values, breaks = histSamples,  plot=FALSE)
+        # Calcola le frequenze da dover utilizzare nel calcolo dell'entropia
+        freq <- freqs(y = istogr$counts)
+        # Calcola l'entropia di Shannon per ogni paziente
+        ImageEntropy[i] <- entropy.plugin(freqs = freq, unit = c("log2"))
+        # Calcola la Kurtosis per ogni paziente (Kurtosis=0 distribuzione normale, Kurtosis > 0 distribuzione leptocurtica
+        # cioè stretta, Kurtosis < 0 distribuzione platicurtica cioè larga)
+        ImageKurtosis[i] <- kurtosis (x = voxelCube.values)
+        # Calcola la Skewness per ogni paziente (Skewness = 0 simmetria perfetta, Skewness > 0 asimmetrica verso destra
+        # Skewness < 0 asimmetrica verso sinistra)
+        ImageSkewness[i] <- skewness(x = voxelCube.values)
+        #Calcola media dei grigi dei singoli pazienti
+        ImageMean[i] <- mean(x = voxelCube.values)
+        #Calcola deviazione standard
+        ImageStandDeviat[i] <- sd (x = voxelCube.values)
+        
+        #Calcola la Enery, permette di valutare l'uniformità dell'immagine. Può assumere un valore tra 0 e 1:
+        # 0 = non uniforme; 1 = uniforme;
+        Energy <- 0
+        for (j in 1:length(istogr$density))
+        {
+          Energy <- Energy+(istogr$density[j])^2
+        }
+        ImageEnergy[i] <- Energy
+    } else {
+      ImageEntropy[i] <-NA;
+      ImageKurtosis[i]<-NA;
+      ImageSkewness[i]<-NA;
+      ImageMean[i]<-NA;
+      ImageStandDeviat[i]<-NA;
+      ImageEnergy[i]<-NA;
     }
-    ImageEnergy[i] <- Energy
     
   }
   
@@ -101,22 +109,27 @@ RAD.areaVolume<-function( listaROIVoxels ) {
   pb = txtProgressBar(min = 0, max = length(listaROIVoxels), initial = 0)
   
   for ( i in names(listaROIVoxels) ) {
-    geometry<-listaROIVoxels[[ i ]]$geometricalInformationOfImages;
-    pSX<-geometry$pixelSpacing[1]
-    pSY<-geometry$pixelSpacing[2]
-    pSZ<-as.numeric(geometry$SliceThickness  )
-    # expand the cropped voxelCube
-    voxelCube <- obj.mmButo$mmButoLittleCube.expand(   listaROIVoxels[[i]] )
-    arrayAV[[ i ]]$Area<-objS$SV.rawSurface(voxelMatrix = voxelCube, pSX = pSX, pSY=pSY,pSZ=pSZ)    
-    if ( arrayAV[[ i ]]$Area == -1 ) {
-      arrayAV[[ i ]]$Volume<- -1
-      arrayAV[[ i ]]$equivolumetricSphericAreaRatio<- -1
+    if((TRUE %in% is.na(listaROIVoxels[[i]])) == FALSE  ) {
+      geometry<-listaROIVoxels[[ i ]]$geometricalInformationOfImages;
+      pSX<-geometry$pixelSpacing[1]
+      pSY<-geometry$pixelSpacing[2]
+      pSZ<-as.numeric(geometry$SliceThickness  )
+      # expand the cropped voxelCube
+      voxelCube <- obj.mmButo$mmButoLittleCube.expand(   listaROIVoxels[[i]] )
+      arrayAV[[ i ]]$Area<-objS$SV.rawSurface(voxelMatrix = voxelCube, pSX = pSX, pSY=pSY,pSZ=pSZ)    
+      if ( arrayAV[[ i ]]$Area == -1 ) {
+        arrayAV[[ i ]]$Volume<- -1
+        arrayAV[[ i ]]$equivolumetricSphericAreaRatio<- -1
+      }
+      else {
+        arrayAV[[ i ]]$Volume<-length(which(voxelCube!=0))*pSX*pSY*pSZ
+        arrayAV[[ i ]]$equivolumetricSphericAreaRatio<- ( 4*pi* (   (3/(4*pi))*arrayAV[[ i ]]$Volume   )^(2/3) ) / arrayAV[[ i ]]$Area
+      }
+    } else {
+      arrayAV[[ i ]]$Volume<-NA
+      arrayAV[[ i ]]$equivolumetricSphericAreaRatio<-NA
+      arrayAV[[ i ]]$Area<-NA
     }
-    else {
-      arrayAV[[ i ]]$Volume<-length(which(voxelCube!=0))*pSX*pSY*pSZ
-      arrayAV[[ i ]]$equivolumetricSphericAreaRatio<- ( 4*pi* (   (3/(4*pi))*arrayAV[[ i ]]$Volume   )^(2/3) ) / arrayAV[[ i ]]$Area
-    }
-    
     setTxtProgressBar(pb,iterazione)
     iterazione<-iterazione+1
     
@@ -161,84 +174,91 @@ RAD.VirtualBiopsy <- function ( ROIVoxelData, dx.min=2, dy.min=2, dz.min=0, dx.m
   # loop for each patient
   for (i in seq(1,NumPatients) )  {
     print(  paste(c("Processing: ",names(ROIVoxelData)[i]),collapse='' )  )
-    # set some variables
-  exam <- c();    carot <- c();
-    # estraggo i dati del paziente i-esimo con le relative dimensioni. I need to expand the because
-    # they are in the cropped format
-    exam <- obj.mmButo$mmButoLittleCube.expand(   ROIVoxelData[[i]] )
-    # get the dimension of the big voxel cube and set examArray
-    dim1 <- dim(exam)[1];    dim2 <- dim(exam)[2];    dim3 <- dim(exam)[3]
-    examArray <- array(data = exam, dim = (dim1*dim2*dim3))
-    # build the expand.grid for each <dx,dy,dz> possible values 
-    stepCheck <- expand.grid(
-      indiceX = seq (dx.min, dx.max), 
-      indiceY = seq (dy.min, dy.max), 
-      indiceZ = seq (dz.min, dz.max))
     
-    NumCheck <- nrow(stepCheck)
-    stepCheckX <- array(data = stepCheck[,1], dim = c(NumCheck))
-    stepCheckY <- array(data = stepCheck[,2], dim = c(NumCheck))
-    stepCheckZ <- array(data = stepCheck[,3], dim = c(NumCheck))
-    
-    # setting some variables;
-    lungh<-c();    expand<-c();    p<-1;    controlli<-c();    r<-c();  iteraz<-0;
-    # loop for each possible configuration of the interested <dx,dy,dz>
-    for ( s in seq(1,NumCheck) )   {
-      if (stepCheckX[s]!=0 && stepCheckY[s]!=0) {
-        iteraz <- iteraz+1
-        # calculates how many controls are needed for each expand.grid (? ask Carlotta)
-        expand <- expand.grid (indiceX=seq(-stepCheck[s,1],stepCheck[s,1]), 
-                               indiceY=seq(-stepCheck[s,2],stepCheck[s,2]),
-                               indiceZ=seq(-stepCheck[s,3],stepCheck[s,3]))        
-        lungh[p] <- nrow(expand)
-        controlli[p] <- s
-        p <- p+1
-      }
-    }
-    
-    # beginning from the first <dx,dy,dz>
-    for ( p in seq(1,iteraz) )    {
+    if((TRUE %in% is.na(ROIVoxelData[[i]])) == FALSE  ) {
+      
       # set some variables
-      stepX <- stepCheckX[(controlli[p])];  stepY <- stepCheckY[(controlli[p])];  stepZ <- stepCheckZ[(controlli[p])]
-      lunghezza <- lungh[p]; uni<-0;
-      esameCarot <- array(data = c(0), dim = dim1*dim2*dim3)
-      # call the .C procedure
-      prova.carot <- .C( "new_virtualBiopsy", as.double (examArray), as.integer (dim1), as.integer (dim2), 
-                         as.integer (dim3), as.integer(stepX), as.integer(stepY), 
-                         as.integer(stepZ), as.integer (lunghezza), as.integer(esameCarot) ,
-                         as.integer(uni) )
-      carot <- array(data = prova.carot[[9]], dim = c(dim1, dim2, dim3))
+      exam <- c();    carot <- c();
+      # estraggo i dati del paziente i-esimo con le relative dimensioni. I need to expand the because
+      # they are in the cropped format
+      exam <- obj.mmButo$mmButoLittleCube.expand(   ROIVoxelData[[i]] )
+      # get the dimension of the big voxel cube and set examArray
+      dim1 <- dim(exam)[1];    dim2 <- dim(exam)[2];    dim3 <- dim(exam)[3]
+      examArray <- array(data = exam, dim = (dim1*dim2*dim3))
+      # build the expand.grid for each <dx,dy,dz> possible values 
+      stepCheck <- expand.grid(
+        indiceX = seq (dx.min, dx.max), 
+        indiceY = seq (dy.min, dy.max), 
+        indiceZ = seq (dz.min, dz.max))
       
-      # calculates the coords <x,y,z> of the centroids
-      carot.index <- which(carot==1, arr.ind = T )
-      # save the desider output (hte <dx,dy,dz of the single analysis, the number of possible 
-      # samples and the coords of the centroids)
-      realX<-as.numeric(ROIVoxelData[[i]]$geometricalInformationOfImages$pixelSpacing[1])*stepX
-      realX<-realX*2+realX
-      realY<-as.numeric(ROIVoxelData[[i]]$geometricalInformationOfImages$pixelSpacing[2])*stepY
-      realY<-realY*2+realY
-      realZ<-as.numeric(ROIVoxelData[[i]]$geometricalInformationOfImages$SliceThickness)*stepZ
-      realZ<-realZ*2+realZ
-      listLabel<-paste(c(stepX,"_",stepY,"_",stepZ),collapse='')
-      # fai un resample se non interessa avere indietro TUTTI i punti carotabili
-      if( sampleResultAt != Inf  && dim(carot.index)[1]>sampleResultAt ) {
-        listaPossibiliSamples<-seq(1,dim(carot.index)[1])
-        listaPossibiliSamples<-sample(listaPossibiliSamples, size = sampleResultAt, replace = FALSE)
-        carot.index.resampled<-carot.index[ listaPossibiliSamples,  ]
-        prova.carot[[10]]<-listaPossibiliSamples
+      NumCheck <- nrow(stepCheck)
+      stepCheckX <- array(data = stepCheck[,1], dim = c(NumCheck))
+      stepCheckY <- array(data = stepCheck[,2], dim = c(NumCheck))
+      stepCheckZ <- array(data = stepCheck[,3], dim = c(NumCheck))
+      
+      # setting some variables;
+      lungh<-c();    expand<-c();    p<-1;    controlli<-c();    r<-c();  iteraz<-0;
+      # loop for each possible configuration of the interested <dx,dy,dz>
+      for ( s in seq(1,NumCheck) )   {
+        if (stepCheckX[s]!=0 && stepCheckY[s]!=0) {
+          iteraz <- iteraz+1
+          # calculates how many controls are needed for each expand.grid (? ask Carlotta)
+          expand <- expand.grid (indiceX=seq(-stepCheck[s,1],stepCheck[s,1]), 
+                                 indiceY=seq(-stepCheck[s,2],stepCheck[s,2]),
+                                 indiceZ=seq(-stepCheck[s,3],stepCheck[s,3]))        
+          lungh[p] <- nrow(expand)
+          controlli[p] <- s
+          p <- p+1
+        }
       }
-      else carot.index.resampled<-carot.index
       
-      lista[[ listLabel ]] <- list(
-        "dx_dy_dz"=c(stepX*2+1,stepY*2+1, stepZ*2+1), 
-        "volume"=(stepX*2+1) * (stepY*2+1) *(stepZ*2+1),
-        "real_dx_dy_dz"=c(realX,realY,realZ), 
-        "real_volume"=realX * realY *realZ,
-        "NumCarotaggi"=prova.carot[[10]], 
-        "IndexBiopsy"=carot.index.resampled)
-      
+      # beginning from the first <dx,dy,dz>
+      for ( p in seq(1,iteraz) )    {
+        # set some variables
+        stepX <- stepCheckX[(controlli[p])];  stepY <- stepCheckY[(controlli[p])];  stepZ <- stepCheckZ[(controlli[p])]
+        lunghezza <- lungh[p]; uni<-0;
+        esameCarot <- array(data = c(0), dim = dim1*dim2*dim3)
+        # call the .C procedure
+        prova.carot <- .C( "new_virtualBiopsy", as.double (examArray), as.integer (dim1), as.integer (dim2), 
+                           as.integer (dim3), as.integer(stepX), as.integer(stepY), 
+                           as.integer(stepZ), as.integer (lunghezza), as.integer(esameCarot) ,
+                           as.integer(uni) )
+        carot <- array(data = prova.carot[[9]], dim = c(dim1, dim2, dim3))
+
+        # calculates the coords <x,y,z> of the centroids
+        carot.index <- which(carot==1, arr.ind = T )
+        # save the desider output (hte <dx,dy,dz of the single analysis, the number of possible 
+        # samples and the coords of the centroids)
+        realX<-as.numeric(ROIVoxelData[[i]]$geometricalInformationOfImages$pixelSpacing[1])*stepX
+        realX<-realX*2+realX
+        realY<-as.numeric(ROIVoxelData[[i]]$geometricalInformationOfImages$pixelSpacing[2])*stepY
+        realY<-realY*2+realY
+        realZ<-as.numeric(ROIVoxelData[[i]]$geometricalInformationOfImages$SliceThickness)*stepZ
+        realZ<-realZ*2+realZ
+        listLabel<-paste(c(stepX,"_",stepY,"_",stepZ),collapse='')
+        # fai un resample se non interessa avere indietro TUTTI i punti carotabili
+        if( sampleResultAt != Inf  && dim(carot.index)[1]>sampleResultAt ) {
+          listaPossibiliSamples<-seq(1,dim(carot.index)[1])
+          listaPossibiliSamples<-sample(listaPossibiliSamples, size = sampleResultAt, replace = FALSE)
+          carot.index.resampled<-carot.index[ listaPossibiliSamples,  ]
+          prova.carot[[10]]<-listaPossibiliSamples
+        }
+        else carot.index.resampled<-carot.index
+        
+        lista[[ listLabel ]] <- list(
+          "dx_dy_dz"=c(stepX*2+1,stepY*2+1, stepZ*2+1), 
+          "volume"=(stepX*2+1) * (stepY*2+1) *(stepZ*2+1),
+          "real_dx_dy_dz"=c(realX,realY,realZ), 
+          "real_volume"=realX * realY *realZ,
+          "NumCarotaggi"=prova.carot[[10]], 
+          "IndexBiopsy"=carot.index.resampled)
+        
+      }
+      pazienti[[ names(ROIVoxelData)[i] ]] <- lista
     }
-    pazienti[[ names(ROIVoxelData)[i] ]] <- lista
+    else  {
+      pazienti[[ names(ROIVoxelData)[i] ]] <-NA;
+    }
   }
   # define the returning object as member of the class 'virtualBiopsy'
   class(pazienti)<-'virtualBiopsy'
@@ -270,27 +290,31 @@ RAD.applyErosion<-function(  ROIVoxelData, margin.x=2, margin.y=2, margin.z=1 ) 
   print("Beginnig erosion....");
   
   for ( i in names(ROIVoxelData) ) {
-    print( paste( c("Eroding: ",i)   ,collapse = '')    );
-    # declare the lists
-    res[[i]]<-list();    res[[i]]$stat<-list();
-    
-    # get the voxel cube and prepare the erosion
-    erodedVoxelCube<-ROIVoxelData[[i]]$masked.images$voxelCube;
-    # get the dimensions and set the desired margins
-    nX<-dim(erodedVoxelCube)[1];    nY<-dim(erodedVoxelCube)[2];    nZ<-dim(erodedVoxelCube)[3];
-    mx<-margin.x; my<-margin.y; mz<-margin.z;
-    iterator<-0; # this is just to avoid infinite loops...
-    # erode it!
-    
-    aa<-.C("erosion",as.double(erodedVoxelCube), as.integer(nX), as.integer(nY), 
-           as.integer(nZ),as.integer(margin.x),as.integer(margin.y), 
-           as.integer(margin.z), as.integer(iterator)) 
-    #    aa<-list();aa[[1]]<-erodedVoxelCube
-    
-    erodedVoxelCube<-array(aa[[1]], dim=c(nX,nY,nZ))
-#    res[[i]]$voxelCube<-erodedVoxelCube;
-#    res[[i]]$stat$number<-length(erodedVoxelCube!=0)
-    ROIVoxelData[[i]]$masked.images$voxelCube<-erodedVoxelCube;
+    if((TRUE %in% is.na(ROIVoxelData[[i]])) == FALSE  ) {
+      
+      print( paste( c("Eroding: ",i)   ,collapse = '')    );
+      # declare the lists
+      res[[i]]<-list();    res[[i]]$stat<-list();
+      
+      # get the voxel cube and prepare the erosion
+      erodedVoxelCube<-ROIVoxelData[[i]]$masked.images$voxelCube;
+      # get the dimensions and set the desired margins
+      nX<-dim(erodedVoxelCube)[1];    nY<-dim(erodedVoxelCube)[2];    nZ<-dim(erodedVoxelCube)[3];
+      mx<-margin.x; my<-margin.y; mz<-margin.z;
+      iterator<-0; # this is just to avoid infinite loops...
+      # erode it!
+      
+      aa<-.C("erosion",as.double(erodedVoxelCube), as.integer(nX), as.integer(nY), 
+             as.integer(nZ),as.integer(margin.x),as.integer(margin.y), 
+             as.integer(margin.z), as.integer(iterator)) 
+  
+      erodedVoxelCube<-array(aa[[1]], dim=c(nX,nY,nZ))
+      ROIVoxelData[[i]]$masked.images$voxelCube<-erodedVoxelCube;
+    }
+    else {
+      print( paste( c("Eroding: ",i)   ,collapse = '')    );
+      ROIVoxelData[[i]]<-NA
+    }
   }
   return( ROIVoxelData )
 }
@@ -308,17 +332,21 @@ RAD.compareSignals<-function( ROIVoxelData, bootStrappedTimes = 1000 ) {
   bootstrappedAddingMatrix<-c();
   
   for(i in names( ROIVoxelData )) {
-    valori<-ROIVoxelData[[i]]$masked.images$voxelCube[which(ROIVoxelData[[i]]$masked.images$voxelCube!=0)]
-    listaDensity[[i]]<-density(valori)
-    valoreMassimoX<-max(valoreMassimoX,listaDensity[[i]]$x)
-    valoreMassimoY<-max(valoreMassimoY,listaDensity[[i]]$y)
+    if((TRUE %in% is.na(ROIVoxelData[[i]])) == FALSE  ) {
+      valori<-ROIVoxelData[[i]]$masked.images$voxelCube[which(ROIVoxelData[[i]]$masked.images$voxelCube!=0)]
+      listaDensity[[i]]<-density(valori)
+      valoreMassimoX<-max(valoreMassimoX,listaDensity[[i]]$x)
+      valoreMassimoY<-max(valoreMassimoY,listaDensity[[i]]$y)
+    }
   }
   
   for(i in names( ROIVoxelData )) {
-    interpolatedDensity[[i]]<-approx(listaDensity[[i]]$x,listaDensity[[i]]$y,n=valoreMassimoX, xout=seq( from=0 , to=max(valoreMassimoX) )) 
-    # azzera gli NA
-    interpolatedDensity[[i]]$y[which(is.na(interpolatedDensity[[i]]$y))]<-0   
-    addingMatrix<-rbind(addingMatrix,interpolatedDensity[[i]]$y);
+    if((TRUE %in% is.na(ROIVoxelData[[i]])) == FALSE  ) {
+      interpolatedDensity[[i]]<-approx(listaDensity[[i]]$x,listaDensity[[i]]$y,n=valoreMassimoX, xout=seq( from=0 , to=max(valoreMassimoX) )) 
+      # azzera gli NA
+      interpolatedDensity[[i]]$y[which(is.na(interpolatedDensity[[i]]$y))]<-0   
+      addingMatrix<-rbind(addingMatrix,interpolatedDensity[[i]]$y);
+    } 
   }
 
   bootstrappedAddingMatrix<-apply(addingMatrix,2,sample,size=bootStrappedTimes,replace=T)
@@ -337,10 +365,7 @@ RAD.compareSignals<-function( ROIVoxelData, bootStrappedTimes = 1000 ) {
   polygon(c(x,rev(x)),c(meanMatrix,rev(quantileMatrixSPU$y)), col=rgb(.7, .7, .7, 0.2), lty = c("dashed"))
   polygon(c(x,rev(x)),c(meanMatrix,rev(quantileMatrixSPL$y)), col=rgb(.7, .7, .7, 0.2), lty = c("dashed"))
   lines( x = x , y=meanMatrix )   
-#   for( t in seq(1,dim(addingMatrix)[1])) {
-#     lines(x = x, y=addingMatrix[t,],type='l')
-#   }
-  
+
 }
 
 #' return a simple list of voxelcubes
@@ -363,7 +388,12 @@ RAD.compareSignals<-function( ROIVoxelData, bootStrappedTimes = 1000 ) {
 RAD.easyROI<-function( ROIVoxelData ) {
   res<-list();
   for(i in names(ROIVoxelData)) {
-    res[[i]]<-ROIVoxelData[[i]]$masked.images$voxelCube
+    if((TRUE %in% is.na(ROIVoxelData[[i]])) == FALSE  ) {
+      res[[i]]<-ROIVoxelData[[i]]$masked.images$voxelCube
+    } 
+    else {
+      res[[i]]<-NA
+    }
   }
   return(res);
 }
@@ -398,22 +428,27 @@ RAD.getBiopsy<-function(possBio, ROIVoxelData, x = 4, y = 4, z = 1) {
   #scorri tutti i pazienti
   for(paziente in names(possBio)) {
     print(paziente);
-    submatrix[[paziente]]<-list()
-    # prendi la lista dei centroidi per fare la biopsia
-    listaPunti<-possBio[[ paziente ]][[ stringaDim ]]$IndexBiopsy
-    # espandi il voxelCube
-    voxelCube <- obj.mmButo$mmButoLittleCube.expand(   ROIVoxelData[[ paziente ]] )
-    # per ogni centroide estrai la corrispondente biopsia
-    for( riga in seq(1,dim(listaPunti)[1])) {
-      # coordinate del centroide
-      xC<-listaPunti[riga,1]; yC<-listaPunti[riga,2]; zC<-listaPunti[riga,3];
-      # carota
-      submatrix[[paziente]][[riga]]<-voxelCube[  (xC-x):(xC+x),(yC-y):(yC+y),(zC-z):(zC+z)   ]
-      # se c'è anche solo uno '0', 'epic fail!'
-      if( length(which(submatrix[[paziente]][[riga]]==0)) !=0 ) { 
-        print("Epic fail");
-        browser();
+    if((TRUE %in% is.na(possBio[[paziente]])) == FALSE  ) {
+      submatrix[[paziente]]<-list()
+      # prendi la lista dei centroidi per fare la biopsia
+      listaPunti<-possBio[[ paziente ]][[ stringaDim ]]$IndexBiopsy
+      # espandi il voxelCube
+      voxelCube <- obj.mmButo$mmButoLittleCube.expand(   ROIVoxelData[[ paziente ]] )
+      # per ogni centroide estrai la corrispondente biopsia
+      for( riga in seq(1,dim(listaPunti)[1])) {
+        # coordinate del centroide
+        xC<-listaPunti[riga,1]; yC<-listaPunti[riga,2]; zC<-listaPunti[riga,3];
+        # carota
+        submatrix[[paziente]][[riga]]<-voxelCube[  (xC-x):(xC+x),(yC-y):(yC+y),(zC-z):(zC+z)   ]
+        # se c'è anche solo uno '0', 'epic fail!'
+        if( length(which(submatrix[[paziente]][[riga]]==0)) !=0 ) { 
+          print("Epic fail");
+          browser();
+        }
       }
+    }
+    else {
+      submatrix[[paziente]]<-NA
     }
   }
   return(submatrix);
@@ -446,7 +481,7 @@ RAD.getBiopsy<-function(possBio, ROIVoxelData, x = 4, y = 4, z = 1) {
 #' }#' 
 #' @import entropy  
 #' @export
-RAD.borderTextureMap<-function(obj.mmButo, ROIName, margin.x=3,margin.y=3,margin.z=1,collection="default", ROINameForNormalization = NA,erosion.x = 3,erosion.y = 3,erosion.z = 1, kindOfOutput="normal") {
+RAD.borderTextureMap<-function(obj.mmButo, ROIName, margin.x=3,margin.y=3,margin.z=1,collection="default", ROINameForNormalization = NA,erosion.x = 3,erosion.y = 3,erosion.z = 1, kindOfOutput="normal", usingCache = FALSE) {
   objS<-services();
   # prendi le matrici dei voxel completi della ROI di interesse (croppati)
   ROIVoxelData<-obj.mmButo$getROIVoxel(ROIName = ROIName)
@@ -454,7 +489,6 @@ RAD.borderTextureMap<-function(obj.mmButo, ROIName, margin.x=3,margin.y=3,margin
     ROIForCorrection<-obj.mmButo$getROIVoxel(ROIName = ROINameForNormalization)
     ROIVoxelData<-obj.mmButo$getCorrectedROIVoxel(inputROIVoxel = ROIVoxelData,correctionROIVoxel = ROIForCorrection)
   }
-  
   # calcola l'erosione
   eroded<-RAD.applyErosion(ROIVoxelData = ROIVoxelData,margin.x = erosion.x,margin.y = erosion.y,margin.z = erosion.z)
 
@@ -477,6 +511,7 @@ RAD.borderTextureMap<-function(obj.mmButo, ROIName, margin.x=3,margin.y=3,margin
     bordoEspanso <- obj.mmButo$mmButoLittleCube.expand(   voxelData.bordo )
     # i punti non a zero di tale struttura sono quindi quelli in cui posso "carotare".
     centr<-which(bordoEspanso!=0,arr.ind = T)
+    if ( usingCache == TRUE) list_geoLet[[collection]][[patient]]$cacheLoad()
     originalMR<-list_geoLet[[collection]][[patient]]$getImageVoxelCube()
 
     entropyMap[[patient]]<-array(0,dim=c(  dim(originalMR)[1],dim(originalMR)[2],dim(originalMR)[3]   ))
@@ -527,7 +562,6 @@ RAD.borderTextureMap<-function(obj.mmButo, ROIName, margin.x=3,margin.y=3,margin
   }  
   
 }
-
 #' Apply a user defined function over a defined region of mmButo voxel maps
 #' 
 #' @description  It applies a user defined \code{function} over a voxel maps of in a \code{new.mmButo} object. The maps can be the normal maps or maps obtained by erosion and/or biopsy.

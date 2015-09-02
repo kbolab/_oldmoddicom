@@ -762,7 +762,8 @@ geoLet<-function() {
     return( getROIVoxelsFromCTRMN( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) )
   }
   getROIVoxelsFromCTRMN<-function( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) {
-    objService<-services()    
+    objService<-services()  
+    if ( (Structure %in% getROIList()) == FALSE )  return(NA)
     # define some variables to make more clear the code
     numberOfRows<-as.numeric(dataStorage$info[[SeriesInstanceUID]][[1]]$Rows);
     #numberOfRows<-as.numeric(dataStorage$info[[1]][[1]]$Rows);
