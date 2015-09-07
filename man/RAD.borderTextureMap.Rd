@@ -6,7 +6,8 @@
 \usage{
 RAD.borderTextureMap(obj.mmButo, ROIName, margin.x = 3, margin.y = 3,
   margin.z = 1, collection = "default", ROINameForNormalization = NA,
-  erosion.x = 3, erosion.y = 3, erosion.z = 1, kindOfOutput = "normal")
+  erosion.x = 3, erosion.y = 3, erosion.z = 1, kindOfOutput = "normal",
+  usingCache = FALSE)
 }
 \arguments{
 \item{obj.mmButo}{an object of class \code{new.mmButo}}

@@ -18,6 +18,7 @@
 #' @export
 FIL.applyFilter<-function( arr2App, kernel.type , sigma=NA , alpha=NA, nx=NA, ny=NA ) {
   if(kernel.type=="gaussian" && (is.na(nx) || is.na(ny) || is.na(sigma))  )  stop("for gaussian filter nx,ny,sigma have to be specified (i.e.: 15,15,1)")
+  if(kernel.type=="LoG" && (is.na(nx) || is.na(ny) || is.na(sigma))  )  stop("for LoG filter nx,ny,sigma have to be specified (i.e.: 15,15,1)")
   if(kernel.type=="laplacian" && (is.na(alpha) )  )  stop("for laplacian filter alpha has to be specified (i.e.: 0)")
   if(kernel.type=="unsharp" && (is.na(alpha) )  )  stop("for unsharp filter alpha has to be specified (i.e.: 0)")  
   # se è in 2D passalo in 3D (una sola slice in 3D)  così la restante
@@ -30,7 +31,8 @@ FIL.applyFilter<-function( arr2App, kernel.type , sigma=NA , alpha=NA, nx=NA, ny
   # ora cicla per ogni slice
   for( z in seq(1,dim(arr2App)[3])  ) {
     
-    if(kernel.type=="gaussian") newIm<-kernel2dsmooth( arr2App[,,z] , kernel.type="gauss", nx=nx, ny=nx, sigma=sigma)
+    if(kernel.type=="gaussian") newIm<-kernel2dsmooth( arr2App[,,z] , kernel.type="gauss", nx=nx, ny=ny, sigma=sigma)
+    if(kernel.type=="LoG") newIm<-kernel2dsmooth( arr2App[,,z] , kernel.type="LoG", nx=nx, ny=ny, sigma=sigma)
     if(kernel.type=="laplacian")  newIm<-kernel2dsmooth( arr2App[,,z], K=kernel2dmeitsjer(type = "laplacian",alpha=alpha))
     if(kernel.type=="unsharp") newIm<-kernel2dsmooth( arr2App[,,z], kernel.type="unsharp", alpha=alpha)
     arr2App[,,z]<-newIm
