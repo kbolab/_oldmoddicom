@@ -29,13 +29,13 @@ It applies filter to an mButo object to simplify RADIOMICS issues
 \examples{
 \dontrun{
 # Create an instante of new.mmButo and load some cases
-obj<-new-mmButo()
+obj<-new.mmButo()
 obj$loadCollection("/progetti/immagini/urinaEasy")
 
 # build the filtering pipeline
 filterPipeline<- list()
-filterPipeline[[1]]<-list("kernel.type"="gaussian", "nx"=10, "ny"=10, "sigma"=1)
-filterPipeline[[2]]<-list("kernel.type"="laplacian", "alpha"=1.5)
+filterPipeline[[1]]<-list("kernel.type"="gaussian")
+filterPipeline[[2]]<-list("kernel.type"="emboss", "sigma"=1.5)
 
 # filter the images (normalizing the GTV signal with Urin) cropping the result
 a<-FIL.applyFilterToStudy(obj.mmButo = obj,ROIName = "GTV",ROINameForNormalization='Urina', filter.pipeline = filterPipeline )

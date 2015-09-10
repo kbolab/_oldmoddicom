@@ -4,21 +4,14 @@
 \alias{FIL.applyFilter}
 \title{Apply a filter to a 2d or a 3d array}
 \usage{
-FIL.applyFilter(arr2App, kernel.type, sigma = NA, alpha = NA, nx = NA,
-  ny = NA)
+FIL.applyFilter(arr2App, kernel.type, sigma = 1.4)
 }
 \arguments{
 \item{arr2App}{is the array containing the image that should be filtered}
 
-\item{kernel.type}{is the kernel you want to use: \code{gaussian}, \code{laplacian} or \code{unsharp}}
+\item{kernel.type}{is the kernel you want to use: \code{gaussian}, \code{laplacian}, \code{LoG},\code{shrpen}, \code{emboss}, \code{sobel}}
 
 \item{sigma}{is the \code{sigma} value for gaussian filter}
-
-\item{alpha}{is the \code{alpha} value for laplacian and unsharp filters}
-
-\item{nx}{is the \code{nx} value for gaussian filter}
-
-\item{ny}{is the \code{ny} value for gaussian filter}
 }
 \value{
 the filteres array (same geometry of the one in input)
@@ -31,7 +24,7 @@ It applies filter to a 2d or 3d array. '...' is banned, so shit cannot flies ( ;
 # Create an instante of new.mmButo and load some cases
 a<-array( 0, dim=c(10,10,10))
 a[5,5,5]<-177; a[5,6,5]<-198; a[6,6,5]<-45; a[6,5,5]<-12;
-b<-FIL.applyFilter( a , kernel.type="unsharp", alpha=1)
+b<-FIL.applyFilter( a , kernel.type="gaussian", sigma=1.4)
 }#'
 }
 
