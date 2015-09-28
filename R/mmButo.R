@@ -100,6 +100,15 @@ new.mmButo<-function( caching = FALSE, cacheDir='./cache') {
     }
   }
   # ========================================================================================
+  # addGeoLetObjFile: load a set of subfolders
+  # ========================================================================================
+  addGeoLetObjFile<-function( completeFileName, collectionID = "default") {
+    objService<-services();
+    ct<-1
+    if( length(list_geoLet[[collectionID]]) == 0 ) list_geoLet[[collectionID]]<<-list()
+    list_geoLet[[collectionID]][[ completeFileName ]]<<-readRDS( completeFileName )
+  }  
+  # ========================================================================================
   # getAttribute: the usual 'getAttribute' method
   # ======================================================================================== 
   getAttribute<-function( attributeName ) {
@@ -250,7 +259,8 @@ new.mmButo<-function( caching = FALSE, cacheDir='./cache') {
                 "getROIVoxel"=getROIVoxel,
                 "mmButoLittleCube.expand"=mmButoLittleCube.expand,
                 "getROIVoxelStats"=getROIVoxelStats,
-                "getCorrectedROIVoxel"=getCorrectedROIVoxel
+                "getCorrectedROIVoxel"=getCorrectedROIVoxel,
+                "addGeoLetObjFile"=addGeoLetObjFile
                 ) )
 }
 

@@ -27,7 +27,9 @@ viewer<-function() {
       if (is.null (parametri$mu ) ) parametri$mu = -0.53 
       if (is.null (parametri$lambda ) ) parametri$lambda = 0.5
       if (is.null (parametri$col ) ) parametri$col = 8
-      shade3d(vcgSmooth(mesh = mesh, lambda = parametri$lambda, mu = parametri$mu) , col = parametri$col)      
+      #shade3d(vcgSmooth(mesh = mesh, lambda = parametri$lambda, mu = parametri$mu) , col = parametri$col)
+      return(list(mesh=mesh, lambda=parametri$lambda, mu = parametri$mu))
+      shade3d(vcgSmooth(mesh = mesh, lambda = parametri$lambda, mu = parametri$mu) , color = "red")      
     } 
   }
   
