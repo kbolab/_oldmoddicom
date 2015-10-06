@@ -37,6 +37,7 @@
 #'               external side of the ROI boundaries). In this case, to overlap che cropped voxel cube with the original CT/MR voxel
 #'               cube this method can be used. It takes in input the ROIVoxelList in output from \code{..$getROIVoxel()} and return
 #'               a list with the expanded voxel volumes, ready to be overlapped with CT/MR voxel cubes.
+#'               \item \code{list getCorrectedROIVoxel<-function( inputROIVoxel, correctionROIVoxel, typeOfCorrection)} It returns the voxel within a ROI normalized by a second ROI. The normalization is done using the mean of the values of the second ROI and can consider the normal greylevel value ( \code{typeOfCorrection='linear'} ) or the log of such values ( \code{typeOfCorrection='log'} ). The default is \code{linear}.
 #'               
 #'               }         
 #' @export
@@ -160,14 +161,17 @@ new.mmButo<-function( caching = FALSE, cacheDir='./cache') {
     }
     return(arr2Return)
   }
-  getCorrectedROIVoxel<-function( inputROIVoxel, correctionROIVoxel) {
+  getCorrectedROIVoxel<-function( inputROIVoxel, correctionROIVoxel, typeOfCorrection="linear") {
+    if(!typeOfCorrection %in% c("linear","log")) stop("Error: The only available corrections are 'linear' and 'log'");
+    
     # create an object, just to be able to invocke static classes
     objmmButo<-new.mmButo();
     # get the stats of correctionROIVoxel
     stats.correctionROIVoxel<-objmmButo$getROIVoxelStats(correctionROIVoxel)
-    
     # Get the max of the averages
-    maxcorrectionROIVoxel<-max(stats.correctionROIVoxel$summary$mean)
+    if(typeOfCorrection=="log") meanToConsider = log(stats.correctionROIVoxel$summary$mean)
+    else meanToConsider = stats.correctionROIVoxel$summary$mean;
+    maxcorrectionROIVoxel<-max(meanToConsider)
     
     inputROIVoxel.corrected<-inputROIVoxel
     # The hyp now is that the mean value in Urina should be the same for all the MR, so try to normalize
@@ -175,7 +179,9 @@ new.mmButo<-function( caching = FALSE, cacheDir='./cache') {
     for( i in names(inputROIVoxel)) {
       if((TRUE %in% is.na(inputROIVoxel[[i]])) == FALSE  ) {
         # calcola il fattore di correzione che è pari al rapporto fra maxUrina ed il valore medio in vescica del paziente in esame
-        fattoreCorrezione <- maxcorrectionROIVoxel / stats.correctionROIVoxel$details[[ i ]]$mean
+        if(typeOfCorrection=="log") meanToConsider = log(stats.correctionROIVoxel$details[[ i ]]$mean)
+        else meanToConsider = stats.correctionROIVoxel$details[[ i ]]$mean;        
+        fattoreCorrezione <- maxcorrectionROIVoxel / meanToConsider
         
         # normalizza i GTV
         inputROIVoxel.corrected[[i]]$masked.images$voxelCube <- inputROIVoxel[[i]]$masked.images$voxelCube  * fattoreCorrezione;

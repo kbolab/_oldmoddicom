@@ -44,6 +44,7 @@ Instantiate an object of the class \code{new.mmButo}. This represents just the c
               external side of the ROI boundaries). In this case, to overlap che cropped voxel cube with the original CT/MR voxel
               cube this method can be used. It takes in input the ROIVoxelList in output from \code{..$getROIVoxel()} and return
               a list with the expanded voxel volumes, ready to be overlapped with CT/MR voxel cubes.
+              \item \code{list getCorrectedROIVoxel<-function( inputROIVoxel, correctionROIVoxel, typeOfCorrection)} It returns the voxel within a ROI normalized by a second ROI. The normalization is done using the mean of the values of the second ROI and can consider the normal greylevel value ( \code{typeOfCorrection='linear'} ) or the log of such values ( \code{typeOfCorrection='log'} ). The default is \code{linear}.
 
               }
 }
