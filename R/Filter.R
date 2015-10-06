@@ -36,28 +36,23 @@ FIL.applyFilter<-function( arr2App, kernel.type, sigma = 1.4 ) {
 #' obj<-new.mmButo()
 #' obj$loadCollection("/progetti/immagini/urinaEasy")
 #' 
+#' GTV<-obj$getROIVoxel(ROIName = "GTV")
+#' Urina<-obj$getROIVoxel(ROIName = "Urina")
+#' GTV.C<-obj$getCorrectedROIVoxel(inputROIVoxel = GTV,correctionROIVoxel = Urina,typeOfCorrection = "log")
+#'
 #' # build the filtering pipeline
 #' filterPipeline<- list()
 #' filterPipeline[[1]]<-list("kernel.type"="gaussian")
 #' filterPipeline[[2]]<-list("kernel.type"="emboss", "sigma"=1.5)
 #'
 #' # filter the images (normalizing the GTV signal with Urin) cropping the result
-#' a<-FIL.applyFilterToStudy(obj.mmButo = obj,ROIName = "GTV",ROINameForNormalization='Urina', filter.pipeline = filterPipeline )
+#' a<-FIL.applyFilterToStudy(obj.mmButo = obj,ROIVoxelData = GTV.C, filter.pipeline = filterPipeline )
 #'
 #' }#' 
-FIL.applyFilterToStudy<-function(obj.mmButo, ROINameForNormalization=NA, ROIName, filter.pipeline ,collection="default",cropResult=TRUE) {
+FIL.applyFilterToStudy<-function(obj.mmButo, ROIVoxelData, filter.pipeline ,collection="default",cropResult=TRUE) {
   objS<-services();
   FUNMap<-list();
-  # prendi la ROI
-  ROIVoxelData<-obj.mmButo$getROIVoxel(ROIName = ROIName)
-  # correggi se è il caso di farlo
-  if(!is.na(ROINameForNormalization)) {
-    if (!is.list(ROINameForNormalization))
-      ROIForCorrection <- obj.mmButo$getROIVoxel(ROIName = ROINameForNormalization)
-    else ROIForCorrection <- ROINameForNormalization
-    ROIVoxelData<-obj.mmButo$getCorrectedROIVoxel(inputROIVoxel = ROIVoxelData, correctionROIVoxel = ROIForCorrection)
-  }  
-  
+
   # prendi la lista di oggetti geoLet
   list_geoLet<-obj.mmButo$getAttribute("list_geoLet");
   for(patient in names(ROIVoxelData)) {

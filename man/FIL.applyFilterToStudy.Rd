@@ -4,21 +4,21 @@
 \alias{FIL.applyFilterToStudy}
 \title{Apply a filter to mmButo object}
 \usage{
-FIL.applyFilterToStudy(obj.mmButo, ROINameForNormalization = NA, ROIName,
-  filter.pipeline, collection = "default", cropResult = TRUE)
+FIL.applyFilterToStudy(obj.mmButo, ROIVoxelData, filter.pipeline,
+  collection = "default", cropResult = TRUE)
 }
 \arguments{
 \item{obj.mmButo}{is the \code{new.mmButo} object}
-
-\item{ROINameForNormalization}{if specified indicates which ROI should be used for signal normalization}
-
-\item{ROIName}{is the name of the ROI that should be extracted and filtered}
 
 \item{filter.pipeline}{is a \code{list} where is indicated the pipeline of filtering to be applied (in sequence)}
 
 \item{collection}{is the collection: the default is '\code{default}'}
 
 \item{cropResult}{is a boolean (\code{TRUE} or \code{FALSE}) which indicates if the result should be cropped or not, in order to save memory. Default is \code{TRUE}}
+
+\item{ROINameForNormalization}{if specified indicates which ROI should be used for signal normalization}
+
+\item{ROIName}{is the name of the ROI that should be extracted and filtered}
 }
 \value{
 a list containing the filtered images (cropped or not)
@@ -32,13 +32,17 @@ It applies filter to an mButo object to simplify RADIOMICS issues
 obj<-new.mmButo()
 obj$loadCollection("/progetti/immagini/urinaEasy")
 
+GTV<-obj$getROIVoxel(ROIName = "GTV")
+Urina<-obj$getROIVoxel(ROIName = "Urina")
+GTV.C<-obj$getCorrectedROIVoxel(inputROIVoxel = GTV,correctionROIVoxel = Urina,typeOfCorrection = "log")
+
 # build the filtering pipeline
 filterPipeline<- list()
 filterPipeline[[1]]<-list("kernel.type"="gaussian")
 filterPipeline[[2]]<-list("kernel.type"="emboss", "sigma"=1.5)
 
 # filter the images (normalizing the GTV signal with Urin) cropping the result
-a<-FIL.applyFilterToStudy(obj.mmButo = obj,ROIName = "GTV",ROINameForNormalization='Urina', filter.pipeline = filterPipeline )
+a<-FIL.applyFilterToStudy(obj.mmButo = obj,ROIVoxelData = GTV.C, filter.pipeline = filterPipeline )
 
 }#'
 }
