@@ -24,8 +24,7 @@ FIL.applyFilter<-function( arr2App, kernel.type, sigma = 1.4 ) {
 #' 
 #' @description  It applies filter to an mButo object to simplify RADIOMICS issues
 #' @param obj.mmButo is the \code{new.mmButo} object
-#' @param ROINameForNormalization if specified indicates which ROI should be used for signal normalization
-#' @param ROIName is the name of the ROI that should be extracted and filtered
+#' @param ROIVoxelData the ROIVoxelData as obtained from a \code{getROIVoxel()} or a \code{getCorrectedROIVoxel}
 #' @param filter.pipeline is a \code{list} where is indicated the pipeline of filtering to be applied (in sequence)
 #' @param collection is the collection: the default is '\code{default}'
 #' @param cropResult is a boolean (\code{TRUE} or \code{FALSE}) which indicates if the result should be cropped or not, in order to save memory. Default is \code{TRUE}
