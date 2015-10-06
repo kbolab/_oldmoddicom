@@ -567,9 +567,7 @@ RAD.borderTextureMap<-function(obj.mmButo, ROIName, margin.x=3,margin.y=3,margin
 #' 
 #' @description  It applies a user defined \code{function} over a voxel maps of in a \code{new.mmButo} object. The maps can be the normal maps or maps obtained by erosion and/or biopsy.
 #' @param obj.mmButo an object of class \code{new.mmButo}. Ignored if \code{ROIName} and \code{normalizationROIName} are not character but \code{new.mmButo$getROIVoxel()} object types
-#' @param ROIName character with the ROI name the name of the structure to be analyzed
-#' @param normalizationROIName character with the name of the ROI used to normalize the signal: default is \code{NA}
-#' @param typeOfCorrection indicates the kind of correction for the normalization: \code{'linear} or \code{'log}. Default is \code{'linear'}
+#' @param ROIVoxelData the ROIVoxelData as obtained from a \code{getROIVoxel()} or a \code{getCorrectedROIVoxel}
 #' @param collection the interested collection; the dafault collection is '\code{default}'
 #' @param biopsyDim.xyz is an integer numeric vector with the \code{c(x,y,z)} dimensions in voxels of the cube for biopsy. The default is \code{NA} which means that no biopsy is perfomed
 #' @param erosion.xyz is an integer vector with the \code{c(x,y,z)} dimensions of the erosion which has to be applied to the voxelCubes respect the \code{ROIName}
@@ -583,6 +581,8 @@ RAD.borderTextureMap<-function(obj.mmButo, ROIName, margin.x=3,margin.y=3,margin
 #' obj<-new.mmButo()
 #' obj$loadCollection(Path = '/progetti/immagini/urinaEasy')
 #' 
+#' GTV.C <- obj$getCorrectedROIVoxel(inputROIVoxel = GTV,correctionROIVoxel = Urina,typeOfCorrection = "log")
+#' 
 #' computeSDWithNoise<-function(a, listOfFUNParameters=list()) {	
 #'  b<-sd(a);
 #'  if(listOfFUNParameters$noise==TRUE)  b<-b+b*runif(1)
@@ -590,32 +590,22 @@ RAD.borderTextureMap<-function(obj.mmButo, ROIName, margin.x=3,margin.y=3,margin
 #' }  
 #' 
 #' # no noise, apply on an eroded GTV, 
-#' a<-RAD.imagesApplyFUN(obj.mmButo = obj,ROIName = "GTV",FUN = calcolaSD,erosion.xyz = c(2,2,0),applyToBorder = FALSE,listOfFUNParameters = list("noise"=FALSE))
+#' a<-RAD.imagesApplyFUN(obj.mmButo = obj,ROIVoxelData = GTV.C,FUN = calcolaSD,erosion.xyz = c(2,2,0),applyToBorder = FALSE,listOfFUNParameters = list("noise"=FALSE))
 #' 
 #' # no noise, apply on the BORDER
-#' a<-RAD.imagesApplyFUN(obj.mmButo = obj,ROIName = "GTV",FUN = calcolaSD,erosion.xyz = c(2,2,0),applyToBorder = TRUE,listOfFUNParameters = list("noise"=FALSE))
+#' a<-RAD.imagesApplyFUN(obj.mmButo = obj,ROIVoxelData = GTV.C,FUN = calcolaSD,erosion.xyz = c(2,2,0),applyToBorder = TRUE,listOfFUNParameters = list("noise"=FALSE))
 #' 
 #' # no noise, not BORDER, on biopsy of <2,2,0> and erosion of <2,2,0>
-#' a<-RAD.imagesApplyFUN(obj.mmButo = obj,ROIName = "GTV",FUN = calcolaSD,erosion.xyz = c(5,5,3),applyToBorder = FALSE,listOfFUNParameters = list("noise"=FALSE),biopsyDim.xyz = c(2,2,0))
+#' a<-RAD.imagesApplyFUN(obj.mmButo = obj,ROIVoxelData = GTV.C,FUN = calcolaSD,erosion.xyz = c(5,5,3),applyToBorder = FALSE,listOfFUNParameters = list("noise"=FALSE),biopsyDim.xyz = c(2,2,0))
 #' 
 #' }#' 
 #' @export
-RAD.imagesApplyFUN<-function(obj.mmButo, ROIName, ROINameForNormalization = NA,typeOfCorrection="linear", collection="default",
+RAD.imagesApplyFUN<-function(obj.mmButo, ROIVoxelData, collection="default",
                              biopsyDim.xyz=NA,erosion.xyz = NA,applyToBorder = FALSE, FUN = NA, cropResult = TRUE, ... ) {
   if(applyToBorder==TRUE && is.na(erosion.xyz) ) stop("Provide a valid 'erosion.xyz' value to apply a function on the border voxels")
   if( !is.function(FUN)) stop("No function provided")  
   objS<-services();
-  # prendi le matrici dei voxel completi della ROI di interesse (croppati)
-  if (!is.list(ROIName)) # controlla se c'è un oggetto mmButo dall'altra parte
-    ROIVoxelData<-obj.mmButo$getROIVoxel(ROIName = ROIName)
-  else ROIVoxelData <- ROIName
-  if(!is.na(ROINameForNormalization)) {
-    if (!is.list(ROINameForNormalization))
-      ROIForCorrection <- obj.mmButo$getROIVoxel(ROIName = ROINameForNormalization)
-    else ROIForCorrection <- ROINameForNormalization
-    ROIVoxelData<-obj.mmButo$getCorrectedROIVoxel(inputROIVoxel = ROIVoxelData, correctionROIVoxel = ROIForCorrection, typeOfCorrection = typeOfCorrection)
-  }
-  
+
   # calcola l'erosione (se necessario)
   eroded<-NA
   if(!is.na(erosion.xyz[1]) && !is.na(erosion.xyz[2]) && !is.na(erosion.xyz[3])) { 

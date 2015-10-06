@@ -4,14 +4,14 @@
 \alias{RAD.imagesApplyFUN}
 \title{Apply a user defined function over a defined region of mmButo voxel maps}
 \usage{
-RAD.imagesApplyFUN(obj.mmButo, ROIName, ROINameForNormalization = NA,
-  collection = "default", biopsyDim.xyz = NA, erosion.xyz = NA,
-  applyToBorder = FALSE, FUN = NA, cropResult = TRUE, ...)
+RAD.imagesApplyFUN(obj.mmButo, ROIVoxelData, collection = "default",
+  biopsyDim.xyz = NA, erosion.xyz = NA, applyToBorder = FALSE, FUN = NA,
+  cropResult = TRUE, ...)
 }
 \arguments{
 \item{obj.mmButo}{an object of class \code{new.mmButo}. Ignored if \code{ROIName} and \code{normalizationROIName} are not character but \code{new.mmButo$getROIVoxel()} object types}
 
-\item{ROIName}{character with the ROI name the name of the structure to be analyzed}
+\item{ROIVoxelData}{the ROIVoxelData as obtained from a \code{getROIVoxel()} or a \code{getCorrectedROIVoxel}}
 
 \item{collection}{the interested collection; the dafault collection is '\code{default}'}
 
@@ -26,8 +26,6 @@ RAD.imagesApplyFUN(obj.mmButo, ROIName, ROINameForNormalization = NA,
 \item{cropResult}{a logical value. If \code{TRUE} the result will be cropped and will occupy much less RAM, otherwise it will have the original size (default value is \code{TRUE})}
 
 \item{...}{Other parameters to be passed to the function \code{FUN}}
-
-\item{normalizationROIName}{character with the name of the ROI used to normalize the signal: default is \code{NA}}
 }
 \value{
 a list containing the output of the function \code{FUN} applied over biopsies or over the whole ROI voxels series#'
@@ -41,6 +39,8 @@ It applies a user defined \code{function} over a voxel maps of in a \code{new.mm
 obj<-new.mmButo()
 obj$loadCollection(Path = '/progetti/immagini/urinaEasy')
 
+GTV.C <- obj$getCorrectedROIVoxel(inputROIVoxel = GTV,correctionROIVoxel = Urina,typeOfCorrection = "log")
+
 computeSDWithNoise<-function(a, listOfFUNParameters=list()) {
  b<-sd(a);
  if(listOfFUNParameters$noise==TRUE)  b<-b+b*runif(1)
@@ -48,13 +48,13 @@ computeSDWithNoise<-function(a, listOfFUNParameters=list()) {
 }
 
 # no noise, apply on an eroded GTV,
-a<-RAD.imagesApplyFUN(obj.mmButo = obj,ROIName = "GTV",FUN = calcolaSD,erosion.xyz = c(2,2,0),applyToBorder = FALSE,listOfFUNParameters = list("noise"=FALSE))
+a<-RAD.imagesApplyFUN(obj.mmButo = obj,ROIVoxelData = GTV.C,FUN = calcolaSD,erosion.xyz = c(2,2,0),applyToBorder = FALSE,listOfFUNParameters = list("noise"=FALSE))
 
 # no noise, apply on the BORDER
-a<-RAD.imagesApplyFUN(obj.mmButo = obj,ROIName = "GTV",FUN = calcolaSD,erosion.xyz = c(2,2,0),applyToBorder = TRUE,listOfFUNParameters = list("noise"=FALSE))
+a<-RAD.imagesApplyFUN(obj.mmButo = obj,ROIVoxelData = GTV.C,FUN = calcolaSD,erosion.xyz = c(2,2,0),applyToBorder = TRUE,listOfFUNParameters = list("noise"=FALSE))
 
 # no noise, not BORDER, on biopsy of <2,2,0> and erosion of <2,2,0>
-a<-RAD.imagesApplyFUN(obj.mmButo = obj,ROIName = "GTV",FUN = calcolaSD,erosion.xyz = c(5,5,3),applyToBorder = FALSE,listOfFUNParameters = list("noise"=FALSE),biopsyDim.xyz = c(2,2,0))
+a<-RAD.imagesApplyFUN(obj.mmButo = obj,ROIVoxelData = GTV.C,FUN = calcolaSD,erosion.xyz = c(5,5,3),applyToBorder = FALSE,listOfFUNParameters = list("noise"=FALSE),biopsyDim.xyz = c(2,2,0))
 
 }#'
 }
