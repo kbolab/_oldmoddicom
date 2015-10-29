@@ -482,14 +482,14 @@ RAD.getBiopsy<-function(possBio, ROIVoxelData, x = 4, y = 4, z = 1) {
 #' }#' 
 #' @import entropy  
 #' @export
-RAD.borderTextureMap<-function(obj.mmButo, ROIName, margin.x=3,margin.y=3,margin.z=1,collection="default", ROINameForNormalization = NA, typeOfCorrection='linear', erosion.x = 3,erosion.y = 3,erosion.z = 1, kindOfOutput="normal", usingCache = FALSE) {
+RAD.borderTextureMap<-function(obj.mmButo, ROIVoxelData, margin.x=3,margin.y=3,margin.z=1,collection="default", ROINameForNormalization = NA, typeOfCorrection='linear', erosion.x = 3,erosion.y = 3,erosion.z = 1, kindOfOutput="normal", usingCache = FALSE) {
   objS<-services();
-  # prendi le matrici dei voxel completi della ROI di interesse (croppati)
-  ROIVoxelData<-obj.mmButo$getROIVoxel(ROIName = ROIName)
-  if(!is.na(ROINameForNormalization)) {
-    ROIForCorrection<-obj.mmButo$getROIVoxel(ROIName = ROINameForNormalization)
-    ROIVoxelData<-obj.mmButo$getCorrectedROIVoxel(inputROIVoxel = ROIVoxelData,correctionROIVoxel = ROIForCorrection, typeOfCorrection = typeOfCorrection)
-  }
+#   # prendi le matrici dei voxel completi della ROI di interesse (croppati)
+#   ROIVoxelData<-obj.mmButo$getROIVoxel(ROIName = ROIName)
+#   if(!is.na(ROINameForNormalization)) {
+#     ROIForCorrection<-obj.mmButo$getROIVoxel(ROIName = ROINameForNormalization)
+#     ROIVoxelData<-obj.mmButo$getCorrectedROIVoxel(inputROIVoxel = ROIVoxelData,correctionROIVoxel = ROIForCorrection, typeOfCorrection = typeOfCorrection)
+#   }
   # calcola l'erosione
   eroded<-RAD.applyErosion(ROIVoxelData = ROIVoxelData,margin.x = erosion.x,margin.y = erosion.y,margin.z = erosion.z)
 
