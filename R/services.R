@@ -16,6 +16,11 @@ services<-function() {
   SV.get3DPosFromNxNy<-function(Nx,Ny,oM) {
     return(xy<-t(oM%*%c(Nx,Ny,0,1)))
   }
+  SV.getNxNyFrom3D<-function(Px,Py,Pz,oM) {
+    Ny<-(oM[2,1]*(Px-oM[1,4])+oM[1,1]*(oM[2,4]-pY)) / (oM[1,2]*oM[2,1]-oM[2,2]*oM[1,1] )
+    Nx<-(oM[2,2]*(Px-oM[1,4])+oM[1,2]*(oM[2,4]-Py)) / (oM[1,1]*oM[2,2]-oM[2,1]*oM[1,2] )
+    return( list("Nx"=Nx, "Ny"=Ny)  )
+  }
   # ------------------------------------------------
   # SV.getPlaneEquationBetween3Points
   # ------------------------------------------------
@@ -85,6 +90,51 @@ services<-function() {
     result<-array( res[[14]] , dim=c(Nx.new,Ny.new,Nz.new) )
     return( result )      
   }  
+  new.SV.trilinearInterpolator.onGivenPoints<-function(voxelCube ,pixelSpacing.old , newPointCoords.x,newPointCoords.y,newPointCoords.z  ) {
+    
+    Nx.old<-dim(voxelCube)[1];	Ny.old<-dim(voxelCube)[2];	Nz.old<-dim(voxelCube)[3]
+    xDim.old<-pixelSpacing.old[1];	yDim.old<-pixelSpacing.old[2];	zDim.old<-pixelSpacing.old[3]
+
+#     Nx.new<-ceiling(Nx.old * fattoreDiScalaX)
+#     Ny.new<-ceiling(Ny.old * fattoreDiScalaY)
+#     Nz.new<-ceiling(Nz.old * fattoreDiScalaZ)
+    
+    punti.asseX<-length(newPointCoords.x);
+    punti.asseY<-length(newPointCoords.y);
+    punti.asseZ<-length(newPointCoords.z);
+    
+    result<-array(rep( 0 , punti.asseX * punti.asseY * punti.asseZ ))	
+
+    res<-.C("newnewtrilinearInterpolator_onGivenPoints", 
+            as.integer(Nx.old),as.integer(Ny.old),as.integer(Nz.old),
+            as.double(pixelSpacing.old[1]),as.double(pixelSpacing.old[2]),as.double(pixelSpacing.old[3]),
+            as.double(newPointCoords.x),as.double(newPointCoords.y),as.double(newPointCoords.z),as.integer(punti.asseX),as.integer(punti.asseY),as.integer(punti.asseZ),
+            as.double(voxelCube),as.double(result) );
+    # result<- res[[14]] 
+    result<-array( res[[14]] , dim=c(punti.asseX,punti.asseY,punti.asseZ) )
+    return( result )      
+  }  
+  old_new.SV.trilinearInterpolator.onGivenPoints<-function(voxelCube ,pixelSpacing.old , newPointCoords.x,newPointCoords.y,newPointCoords.z  ) {
+    
+    Nx.old<-dim(voxelCube)[1];	Ny.old<-dim(voxelCube)[2];	Nz.old<-dim(voxelCube)[3]
+    xDim.old<-pixelSpacing.old[1];	yDim.old<-pixelSpacing.old[2];	zDim.old<-pixelSpacing.old[3]
+    
+    #     Nx.new<-ceiling(Nx.old * fattoreDiScalaX)
+    #     Ny.new<-ceiling(Ny.old * fattoreDiScalaY)
+    #     Nz.new<-ceiling(Nz.old * fattoreDiScalaZ)
+    
+    quantiNuoviPunti<-length(newPointCoords.x);
+    
+    result<-array(rep( 0 , quantiNuoviPunti ))	
+    
+    res<-.C("newnewtrilinearInterpolator_onGivenPoints", 
+            as.integer(Nx.old),as.integer(Ny.old),as.integer(Nz.old),
+            as.double(pixelSpacing.old[1]),as.double(pixelSpacing.old[2]),as.double(pixelSpacing.old[3]),
+            as.double(newPointCoords.x),as.double(newPointCoords.y),as.double(newPointCoords.z),as.integer(quantiNuoviPunti),
+            as.double(voxelCube),as.double(result) );
+    result<- res[[12]] 
+    return( result )      
+  }   
   # ========================================================================================
   # cropCube: crop a voxel cube in order to limit its dimension to the needs
   # ========================================================================================   
@@ -175,7 +225,8 @@ services<-function() {
               triangle2mesh = triangle2mesh,
               cropCube = cropCube,
               expandCube = expandCube,
-              new.SV.trilinearInterpolator = new.SV.trilinearInterpolator
+              new.SV.trilinearInterpolator = new.SV.trilinearInterpolator,
+              new.SV.trilinearInterpolator.onGivenPoints= new.SV.trilinearInterpolator.onGivenPoints
               ))  
 }
 
