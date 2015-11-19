@@ -161,37 +161,64 @@ new.mmButo<-function( caching = FALSE, cacheDir='./cache') {
     }
     return(arr2Return)
   }
-  getCorrectedROIVoxel<-function( inputROIVoxel, correctionROIVoxel, typeOfCorrection="linear") {
+  # ========================================================================================
+  # getCorrectedROIVoxel: get the ROI Voxel corrected by another ROI and/or a given min/max value
+  # IN: inputROIVoxel - the ROIName to correct
+  #     correctionROIVoxel - the ROIName to be used to correct
+  #     typeOfCorrection - can be 'linear' or 'log' in order to differently weight the range
+  #     arrayOfMeans - to define manually the array of mean values for normalization
+  # ========================================================================================   
+  getCorrectedROIVoxel<-function( inputROIVoxel, correctionROIVoxel=c(), typeOfCorrection="linear", arrayOfMeans=c()) {
     if(!typeOfCorrection %in% c("linear","log")) stop("Error: The only available corrections are 'linear' and 'log'");
+    if(length(correctionROIVoxel)==0 & length(arrayOfMeans)==0) stop("Error: 'arrayOfMeans' or 'correctionROIVoxel' should be specified");
+    if(length(arrayOfMeans)!=0 & length(correctionROIVoxel)!=0) stop("Error: only 'arrayOfMeans' XOR 'correctionROIVoxel' can be set");    
     
-    # create an object, just to be able to invocke static classes
-    objmmButo<-new.mmButo();
-    # get the stats of correctionROIVoxel
-    stats.correctionROIVoxel<-objmmButo$getROIVoxelStats(correctionROIVoxel)
-    # Get the max of the averages
-    if(typeOfCorrection=="log") meanToConsider = log(stats.correctionROIVoxel$summary$mean)
-    else meanToConsider = stats.correctionROIVoxel$summary$mean;
-    maxcorrectionROIVoxel<-max(meanToConsider)
+    # if the 'correctionROIVoxel' is passed
+    if(length(correctionROIVoxel)!=0) {     
+      # create an object, just to be able to invocke static classes
+      objmmButo<-new.mmButo();
+      # get the stats of correctionROIVoxel
+      stats.correctionROIVoxel<-objmmButo$getROIVoxelStats(correctionROIVoxel)
+      # Get the max of the averages
+      if(typeOfCorrection=="log") meanToConsider = log(stats.correctionROIVoxel$summary$mean)
+      else meanToConsider = stats.correctionROIVoxel$summary$mean;
+      maxcorrectionROIVoxel<-max(meanToConsider)
+    }
+    # if the means are passed explicitely
+    if(length(arrayOfMeans)!=0) { 
+      # Get the max of the averages
+      if(typeOfCorrection=="log") meanToConsider = log(arrayOfMeans)
+      else meanToConsider = arrayOfMeans;
+      maxcorrectionROIVoxel<-max(meanToConsider)      
+    }
     
+    runningIndex<-1;
     inputROIVoxel.corrected<-inputROIVoxel
     # The hyp now is that the mean value in Urina should be the same for all the MR, so try to normalize
     # all the GTV voxel cubes by the "rescale sclope" represented by the variable 'fattoreCorrezione'
     for( i in names(inputROIVoxel)) {
       if((TRUE %in% is.na(inputROIVoxel[[i]])) == FALSE  ) {
         # calcola il fattore di correzione che è pari al rapporto fra maxUrina ed il valore medio in vescica del paziente in esame
-        if(typeOfCorrection=="log") meanToConsider = log(stats.correctionROIVoxel$details[[ i ]]$mean)
-        else meanToConsider = stats.correctionROIVoxel$details[[ i ]]$mean;        
+        if(length(correctionROIVoxel)!=0) { 
+          if(typeOfCorrection=="log") meanToConsider = log(stats.correctionROIVoxel$details[[ i ]]$mean)
+          else meanToConsider = stats.correctionROIVoxel$details[[ i ]]$mean;        
+        }
+        if(length(arrayOfMeans)!=0) { 
+          if(typeOfCorrection=="log") meanToConsider = log(arrayOfMeans[[runningIndex]])
+          else meanToConsider = arrayOfMeans[[runningIndex]];              
+        }
         fattoreCorrezione <- maxcorrectionROIVoxel / meanToConsider
         
         # normalizza i GTV
         inputROIVoxel.corrected[[i]]$masked.images$voxelCube <- inputROIVoxel[[i]]$masked.images$voxelCube  * fattoreCorrezione;
+        runningIndex<-runningIndex+1;
       }
       else {
         inputROIVoxel.corrected[[i]]<-NA
       }
     }    
     return(inputROIVoxel.corrected);
-  }
+  }  
   # ========================================================================================
   # getROIVoxelStats: give back the stats for a given ROIVoxelList in a compact form
   # useful, for example, for normalization issues....
