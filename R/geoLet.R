@@ -820,7 +820,9 @@ geoLet<-function() {
     # try to find out which Series is the CT/MR serie
     SeriesInstanceUID<-giveBackImageSeriesInstanceUID()
     if(SeriesInstanceUID == '' ) stop("ERROR: missing CT/MR series")
-    return( getROIVoxelsFromCTRMN( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) )
+    res<-getROIVoxelsFromCTRMN( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID)
+    class(res)<-"geoLetStructureVoxelList"
+    return( res )
   }
   getROIVoxelsFromCTRMN<-function( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) {
     objService<-services()  

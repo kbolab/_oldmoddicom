@@ -17,8 +17,66 @@
 #' aa$entropy
 #' }#' #' 
 #' @import entropy moments 
-RAD.firstOrderFeatureImage <- function ( inputData )
-{
+RAD.firstOrderFeatureImage <- function ( inputData ) {
+  if(class(inputData) == "geoLetStructureVoxelList") 
+    return(RAD.firstOrderFeatureImage.geoLet( inputData))
+  if(class(inputData) == "mmButoStructureVoxelList")  
+    return(RAD.firstOrderFeatureImage.mmButo( inputData))
+}
+RAD.firstOrderFeatureImage.geoLet<-function(inputData) {
+  numPatient<-1
+  ImageEntropy <- array(data = c(0), dim = c(numPatient))
+  ImageKurtosis <- array(data = c(0), dim = c(numPatient))
+  ImageSkewness <- array(data = c(0), dim = c(numPatient))
+  ImageMean <- array(data = c(0), dim = c(numPatient))
+  ImageStandDeviat <- array(data = c(0), dim = c(numPatient))
+  ImageEnergy <- array(data = c(0), dim = c(numPatient))
+  
+  histSamples<-500
+  maxVoxelValue<-max(inputData$masked.images);  minVoxelValue<-min(inputData$masked.images);
+  histSamples.array<-seq( from = minVoxelValue, to=maxVoxelValue, by = (maxVoxelValue-minVoxelValue)/histSamples   )
+  
+  istogr <- c();    freq <- c();  i<-1;
+  if(is.list(inputData) == TRUE  ) {
+    voxelCube.values<-inputData$masked.images[ inputData$masked.images!=0  ] 
+    # Calcola l'istogramma dei grigi
+    istogr <- hist(voxelCube.values, breaks = histSamples,  plot=FALSE)
+    # Calcola le frequenze da dover utilizzare nel calcolo dell'entropia
+    freq <- freqs(y = istogr$counts)
+    # Calcola l'entropia di Shannon per ogni paziente
+    ImageEntropy[i] <- entropy.plugin(freqs = freq, unit = c("log2"))
+    # Calcola la Kurtosis per ogni paziente (Kurtosis=0 distribuzione normale, Kurtosis > 0 distribuzione leptocurtica
+    # cioè stretta, Kurtosis < 0 distribuzione platicurtica cioè larga)
+    ImageKurtosis[i] <- kurtosis (x = voxelCube.values)
+    # Calcola la Skewness per ogni paziente (Skewness = 0 simmetria perfetta, Skewness > 0 asimmetrica verso destra
+    # Skewness < 0 asimmetrica verso sinistra)
+    ImageSkewness[i] <- skewness(x = voxelCube.values)
+    #Calcola media dei grigi dei singoli pazienti
+    ImageMean[i] <- mean(x = voxelCube.values)
+    #Calcola deviazione standard
+    ImageStandDeviat[i] <- sd (x = voxelCube.values)
+    
+    #Calcola la Enery, permette di valutare l'uniformità dell'immagine. Può assumere un valore tra 0 e 1:
+    # 0 = non uniforme; 1 = uniforme;
+    Energy <- 0
+    for (j in 1:length(istogr$density))
+    {
+      Energy <- Energy+(istogr$density[j])^2
+    }
+    ImageEnergy[i] <- Energy
+  } else {
+    ImageEntropy[i] <-NA;
+    ImageKurtosis[i]<-NA;
+    ImageSkewness[i]<-NA;
+    ImageMean[i]<-NA;
+    ImageStandDeviat[i]<-NA;
+    ImageEnergy[i]<-NA;
+  }  
+  #Restituisce una lista di array; ciascun valore corrisponde al singolo paziente ()
+  return(list ("entropy"=ImageEntropy, "kurtosis"=ImageKurtosis, "skewness"=ImageSkewness, "mean"=ImageMean, 
+               "standardDeviation"=ImageStandDeviat, "energy"=ImageEnergy))   
+}
+RAD.firstOrderFeatureImage.mmButo <- function ( inputData ) {
   # set some variables;
   numPatient<-length(inputData)
   obj.mButo<-new.mmButo()
@@ -75,13 +133,13 @@ RAD.firstOrderFeatureImage <- function ( inputData )
       ImageStandDeviat[i]<-NA;
       ImageEnergy[i]<-NA;
     }
-    
   }
-  
   #Restituisce una lista di array; ciascun valore corrisponde al singolo paziente ()
   return(list ("entropy"=ImageEntropy, "kurtosis"=ImageKurtosis, "skewness"=ImageSkewness, "mean"=ImageMean, 
-               "standard deviation"=ImageStandDeviat, "energy"=ImageEnergy)) 
+               "standardDeviation"=ImageStandDeviat, "energy"=ImageEnergy)) 
 }
+
+
 #' function to calculate Are/Volume and related measures
 #' 
 #' @description  calculates Are, Volume, Area/Volume Ratio and equivolumetric Spherical Area Ratio
@@ -99,7 +157,41 @@ RAD.firstOrderFeatureImage <- function ( inputData )
 #' # get the possible biopsy
 #' uu<-RAD.areaVolume(listaROIVoxels = Retto)
 #' }#' #' 
-RAD.areaVolume<-function( listaROIVoxels ) {
+RAD.areaVolume <- function ( listaROIVoxels ) {
+  if(class(listaROIVoxels) == "geoLetStructureVoxelList") 
+    return(RAD.areaVolume.geoLet( listaROIVoxels ))
+  if(class(listaROIVoxels) == "mmButoStructureVoxelList")  
+    return(RAD.areaVolume.mmButo( listaROIVoxels ))
+}
+RAD.areaVolume.geoLet<-function( listaROIVoxels ) {
+  objS<-services();  arrayAV<-list(); obj.mmButo<-new.mmButo(); i<-1;
+  
+  if(is.list(listaROIVoxels) == TRUE  ) {
+    arrayAV[[ i ]]<-list();
+    geometry<-listaROIVoxels$geometricalInformationOfImages;
+    pSX<-geometry$pixelSpacing[1]
+    pSY<-geometry$pixelSpacing[2]
+    pSZ<-as.numeric(geometry$SliceThickness  )
+    # expand the cropped voxelCube
+    voxelCube <- listaROIVoxels$masked.images
+    arrayAV[[ i ]]$Area<-objS$SV.rawSurface(voxelMatrix = voxelCube, pSX = pSX, pSY=pSY,pSZ=pSZ)    
+    if ( arrayAV[[ i ]]$Area == -1 ) {
+      arrayAV[[ i ]]$Volume<- -1
+      arrayAV[[ i ]]$equivolumetricSphericAreaRatio<- -1
+    }
+    else {
+      arrayAV[[ i ]]$Volume<-length(which(voxelCube!=0))*pSX*pSY*pSZ
+      arrayAV[[ i ]]$equivolumetricSphericAreaRatio<- ( 4*pi* (   (3/(4*pi))*arrayAV[[ i ]]$Volume   )^(2/3) ) / arrayAV[[ i ]]$Area
+    }
+  } else {
+    arrayAV[[ i ]]$Volume<-NA
+    arrayAV[[ i ]]$equivolumetricSphericAreaRatio<-NA
+    arrayAV[[ i ]]$Area<-NA
+  }
+
+  return(arrayAV[[i]])  
+}
+RAD.areaVolume.mmButo<-function( listaROIVoxels ) {
   objS<-services();
   obj.mmButo<-new.mmButo();
   arrayAV<-list()

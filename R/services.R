@@ -44,7 +44,6 @@ services<-function() {
       return(paste(library.name, ".so", sep=""))
   }
   SV.rawSurface<-function(voxelMatrix, pSX, pSY, pSZ) {
-
     nX<-dim(voxelMatrix)[1]
     nY<-dim(voxelMatrix)[2]
     nZ<-dim(voxelMatrix)[3]
@@ -53,6 +52,22 @@ services<-function() {
     res<-.C("rawSurface",as.double(arr),as.integer(nX), as.integer(nY), as.integer(nZ), as.double(pSX), as.double(pSY), as.double(pSZ), as.double(superficie) );
     return(res[[8]]);    
   } 
+  SV.list2XML<-function(  lista, livello=0 , type='1' , outputFileName='') {
+    if(!is.list( lista  ))   return (lista);
+    objS<-services();
+    stringa<-''
+    for( i in names(lista) ) {
+      if(!is.list(lista[[i]])) {lastLF<-'';} else {lastLF<-'\n';}
+      if(type=='1') stringa<- paste( c(stringa,"\n",rep(" ",livello),"<",i,">",objS$SV.list2XML(lista[[i]], livello+1 ),lastLF,rep(" ",livello),"</",i,">"    ),collapse = '' )
+    }
+    if(outputFileName!='' && livello==0) {
+      fileConn<-file(outputFileName)
+      writeLines(   paste(c("<xml>",stringa,"</xml>"),collapse='')   , fileConn)
+      close(fileConn)
+      return;
+    }
+    else return (stringa)
+  }
 #   SV.trilinearInterpolator<-function(campo,pixelSpacing,newNxNyNzDim) {
 #     
 #     Nx<-dim(campo)[1];	Ny<-dim(campo)[2];	Nz<-dim(campo)[3]
@@ -226,7 +241,8 @@ services<-function() {
               cropCube = cropCube,
               expandCube = expandCube,
               new.SV.trilinearInterpolator = new.SV.trilinearInterpolator,
-              new.SV.trilinearInterpolator.onGivenPoints= new.SV.trilinearInterpolator.onGivenPoints
+              new.SV.trilinearInterpolator.onGivenPoints= new.SV.trilinearInterpolator.onGivenPoints,
+              SV.list2XML = SV.list2XML
               ))  
 }
 

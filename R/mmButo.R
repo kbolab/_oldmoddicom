@@ -159,6 +159,7 @@ new.mmButo<-function( caching = FALSE, cacheDir='./cache') {
     for( folderName in names(list_extractROIVoxel[[collectionID]])) {
       arr2Return[[folderName]]<-list_extractROIVoxel[[collectionID]][[folderName]][[singleROI]]
     }
+    class(arr2Return)<-"mmButoStructureVoxelList"
     return(arr2Return)
   }
   # ========================================================================================
