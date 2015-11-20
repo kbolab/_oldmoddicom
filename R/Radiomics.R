@@ -581,19 +581,15 @@ RAD.borderTextureMap<-function(obj.mmButo, ROIVoxelData, margin.x=3,margin.y=3,m
 #' obj<-new.mmButo()
 #' obj$loadCollection(Path = '/progetti/immagini/urinaEasy')
 #' 
+#' Urina<-obj$getROIVoxel(ROIName = "Urina")
+#' GTV<-obj$getROIVoxel(ROIName = "GTV")
 #' GTV.C <- obj$getCorrectedROIVoxel(inputROIVoxel = GTV,correctionROIVoxel = Urina,typeOfCorrection = "log")
 #' 
-#' computeSDWithNoise<-function(a, listOfFUNParameters=list()) {	
+#' calcolaSD<-function(a, listOfFUNParameters=list()) {	
 #'  b<-sd(a);
 #'  if(listOfFUNParameters$noise==TRUE)  b<-b+b*runif(1)
 #'  return(b)
 #' }  
-#' 
-#' # no noise, apply on an eroded GTV, 
-#' a<-RAD.imagesApplyFUN(obj.mmButo = obj,ROIVoxelData = GTV.C,FUN = calcolaSD,erosion.xyz = c(2,2,0),applyToBorder = FALSE,listOfFUNParameters = list("noise"=FALSE))
-#' 
-#' # no noise, apply on the BORDER
-#' a<-RAD.imagesApplyFUN(obj.mmButo = obj,ROIVoxelData = GTV.C,FUN = calcolaSD,erosion.xyz = c(2,2,0),applyToBorder = TRUE,listOfFUNParameters = list("noise"=FALSE))
 #' 
 #' # no noise, not BORDER, on biopsy of <2,2,0> and erosion of <2,2,0>
 #' a<-RAD.imagesApplyFUN(obj.mmButo = obj,ROIVoxelData = GTV.C,FUN = calcolaSD,erosion.xyz = c(5,5,3),applyToBorder = FALSE,listOfFUNParameters = list("noise"=FALSE),biopsyDim.xyz = c(2,2,0))
@@ -617,11 +613,11 @@ RAD.imagesApplyFUN<-function(obj.mmButo, ROIVoxelData, collection="default",
   ct<-1
   FUNMap<-list();
   for(patient in names(ROIVoxelData)) {
-    
+  
     if((TRUE %in% is.na(ROIVoxelData[[patient]])) == FALSE  ) {
     
       print( paste("FUN - Now processing:",patient),collapse='' )
-      
+ 
       voxelData.ready<-ROIVoxelData[[patient]]
       
       # calcola il bordo (come la differenza)
@@ -661,9 +657,9 @@ RAD.imagesApplyFUN<-function(obj.mmButo, ROIVoxelData, collection="default",
           FUNMap[[patient]][ centr[i,][1] , centr[i,][2], centr[i,][3] ]<-FUN(subCube , ...)
         }
       }
+     
       # se richiesto, CROPPA!
       if ( cropResult == TRUE )  FUNMap[[patient]]<-objS$cropCube( FUNMap[[patient]] )    
-    
     }
     else {
       FUNMap[[patient]]<-NA
