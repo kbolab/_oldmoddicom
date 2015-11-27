@@ -57,7 +57,7 @@
 #'               }
 #' @export
 #' @import stringr XML 
-geoLet<-function() {
+geoLet<-function(ROIVoxelMemoryCache=FALSE) {
 
   dataStorage<-list();          # Attribute with ALL the data
   dataChache<-list();           # Cache (internal use)
@@ -65,6 +65,7 @@ geoLet<-function() {
   attributeList<-list()
   logObj<-list()               # log handler
   objServ<-list();
+  ROIVoxelMemoryCacheArray<-list() # ROIVoxelMemoryCache Array
   
   #=================================================================================
   # openDICOMFolder
@@ -665,6 +666,7 @@ geoLet<-function() {
     if(attribute=="PixelSpacing" | attribute=="(0028,0030)")  return(splittaTAG(getDICOMTag(fileName,"0028,0030")))
     if(attribute=="PixelSpacing" | attribute=="(0028,0030)")  return(splittaTAG(getDICOMTag(fileName,"0028,0030")))
     if(attribute=="GridFrameOffsetVector" | attribute=="(3004,000c)")  return(splittaTAG(getDICOMTag(fileName,"3004,000c")))
+    if(attribute=="ROIVoxelMemoryCache") return (ROIVoxelMemoryCache);
     
     if(attribute=="orientationMatrix")  return( buildOrientationMatrix(fileName)  )
     return(getDICOMTag(fileName,attribute))  
@@ -817,11 +819,15 @@ geoLet<-function() {
   }
 
   getROIVoxels<-function( Structure = Structure ) {
+    if(ROIVoxelMemoryCache==TRUE  & !is.null(ROIVoxelMemoryCacheArray[[Structure]]) ) {
+      return(ROIVoxelMemoryCacheArray[[Structure]]);
+    }
     # try to find out which Series is the CT/MR serie
     SeriesInstanceUID<-giveBackImageSeriesInstanceUID()
     if(SeriesInstanceUID == '' ) stop("ERROR: missing CT/MR series")
     res<-getROIVoxelsFromCTRMN( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID)
     class(res)<-"geoLetStructureVoxelList"
+    if(ROIVoxelMemoryCache==TRUE) ROIVoxelMemoryCacheArray[[Structure]]<<-res;
     return( res )
   }
   getROIVoxelsFromCTRMN<-function( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) {
@@ -1052,7 +1058,7 @@ geoLet<-function() {
   #=================================================================================
   # Constructor
   #=================================================================================
-  constructor<-function() {
+  constructor<-function( ROIVoxelMemoryCache = FALSE) {
     dataStorage <<- list();   
     dataChache <<- list();
     attributeList<<-list()
@@ -1066,8 +1072,9 @@ geoLet<-function() {
     attributeList$virtualMemory$path<<-'./cache';
     attributeList$virtualMemory$kindOfCache<<-'dataStorage';
     attributeList$virtualMemory$fileName<<-paste(c(format(Sys.time(), "%a%b%d_%H%M%S%Y_"),as.integer(runif(1)*10000),"_",as.integer(runif(1)*10000) ) , collapse='');
+    ROIVoxelMemoryCache<<-ROIVoxelMemoryCache;
   }
-  constructor()
+  constructor( ROIVoxelMemoryCache )
   return(list(openDICOMFolder=openDICOMFolder,getAttribute=getAttribute,
               getDICOMTag=getDICOMTag,getROIList=getROIList,getROIPointList=getROIPointList,
               setAttribute=setAttribute,getFolderContent=getFolderContent,getROIVoxels=getROIVoxels,
