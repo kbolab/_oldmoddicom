@@ -57,7 +57,7 @@
 #'               }
 #' @export
 #' @import stringr XML 
-geoLet<-function(ROIVoxelMemoryCache=FALSE) {
+geoLet<-function(ROIVoxelMemoryCache=TRUE) {
 
   dataStorage<-list();          # Attribute with ALL the data
   dataChache<-list();           # Cache (internal use)
