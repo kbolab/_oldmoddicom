@@ -819,17 +819,51 @@ geoLet<-function(ROIVoxelMemoryCache=FALSE) {
   }
 
   getROIVoxels<-function( Structure = Structure ) {
+    objS<-services();
+    # cerca nella cache di memoria, se attivata, la presenza della ROI già estratta
     if(ROIVoxelMemoryCache==TRUE  & !is.null(ROIVoxelMemoryCacheArray[[Structure]]) ) {
       return(ROIVoxelMemoryCacheArray[[Structure]]);
     }
+    
+    # try to find out which Series is the CT/MR serie
+    SeriesInstanceUID<-giveBackImageSeriesInstanceUID()
+    if(SeriesInstanceUID == '' ) stop("ERROR: missing CT/MR series")
+    res<-getROIVoxelsFromCTRMN( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID)
+    
+    croppedRes<-list()
+    croppedRes$DOM<-res$DOM
+    croppedRes$geometricalInformationOfImages<-res$geometricalInformationOfImages
+    croppedRes$masked.images<-objS$cropCube( bigCube = res$masked.images)
+    croppedRes$masked.images$location$fe<-dim(res$masked.images)[1]
+    croppedRes$masked.images$location$se<-dim(res$masked.images)[2]
+    croppedRes$masked.images$location$te<-dim(res$masked.images)[3]
+    croppedRes$geometricalInformationOfImages$koc<-"littleCube"   
+    class(croppedRes)<-"geoLetStructureVoxelList"
+
+    # se la cache in memoria è attiva, salvane una copia
+    if(ROIVoxelMemoryCache==TRUE) ROIVoxelMemoryCacheArray[[Structure]]<<-croppedRes;
+    return( croppedRes )
+  }
+  old_getROIVoxels<-function( Structure = Structure ) {
+    
+    # cerca nella cache di memoria, se attivata, la presenza della ROI già estratta
+    if(ROIVoxelMemoryCache==TRUE  & !is.null(ROIVoxelMemoryCacheArray[[Structure]]) ) {
+      return(ROIVoxelMemoryCacheArray[[Structure]]);
+    }
+    
     # try to find out which Series is the CT/MR serie
     SeriesInstanceUID<-giveBackImageSeriesInstanceUID()
     if(SeriesInstanceUID == '' ) stop("ERROR: missing CT/MR series")
     res<-getROIVoxelsFromCTRMN( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID)
     class(res)<-"geoLetStructureVoxelList"
+    
+    
+    
+    
+    # se la cache in memoria è attiva, salvane una copia
     if(ROIVoxelMemoryCache==TRUE) ROIVoxelMemoryCacheArray[[Structure]]<<-res;
     return( res )
-  }
+  }  
   getROIVoxelsFromCTRMN<-function( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) {
     objService<-services()  
     if ( (Structure %in% getROIList()) == FALSE )  return(NA)

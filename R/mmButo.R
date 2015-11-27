@@ -141,14 +141,15 @@ new.mmButo<-function( caching = FALSE, cacheDir='./cache') {
       if( attributeList$caching == TRUE) list_geoLet[[collectionID]][[ folderName ]]$cacheLoad();
       a <- GLT.getROIVoxels(obj = list_geoLet[[collectionID]][[folderName]], Structure = singleROI )
       if((TRUE %in% is.na(a)) == FALSE  ) {
-          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]<-list()
-          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$DOM<-a$DOM
-          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$geometricalInformationOfImages<-a$geometricalInformationOfImages
-          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images<-objS$cropCube( bigCube = a$masked.images)
-          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$fe<-dim(a$masked.images)[1]
-          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$se<-dim(a$masked.images)[2]
-          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$te<-dim(a$masked.images)[3]
-          list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$geometricalInformationOfImages$koc<-"littleCube"
+#           list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]<-list()
+#           list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$DOM<-a$DOM
+#           list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$geometricalInformationOfImages<-a$geometricalInformationOfImages
+#           list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images<-objS$cropCube( bigCube = a$masked.images)
+#           list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$fe<-dim(a$masked.images)[1]
+#           list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$se<-dim(a$masked.images)[2]
+#           list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$te<-dim(a$masked.images)[3]
+#           list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$geometricalInformationOfImages$koc<-"littleCube"
+            list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]<-a;
         }
       else {
         list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]<-NA
@@ -162,6 +163,43 @@ new.mmButo<-function( caching = FALSE, cacheDir='./cache') {
     class(arr2Return)<-"mmButoStructureVoxelList"
     return(arr2Return)
   }
+  old_getROIVoxel<-function(  ROIName, collectionID = "default") {
+    objS<-services();
+    singleROI<-ROIName
+    print("=================================================================");
+    print( paste( c("getROIVoxel for ROI: ",ROIName)   , collapse='') );
+    print("=================================================================");
+    list_extractROIVoxel<-list();
+    list_extractROIVoxel[[collectionID]]<-list();    
+    
+    for(folderName in names(list_geoLet[[collectionID]])) {
+      list_extractROIVoxel[[collectionID]][[ folderName ]]<-list();
+      
+      print( paste( c("Now processing=",folderName)   , collapse='') );
+      if( attributeList$caching == TRUE) list_geoLet[[collectionID]][[ folderName ]]$cacheLoad();
+      a <- GLT.getROIVoxels(obj = list_geoLet[[collectionID]][[folderName]], Structure = singleROI )
+      if((TRUE %in% is.na(a)) == FALSE  ) {
+        list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]<-list()
+        list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$DOM<-a$DOM
+        list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$geometricalInformationOfImages<-a$geometricalInformationOfImages
+        list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images<-objS$cropCube( bigCube = a$masked.images)
+        list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$fe<-dim(a$masked.images)[1]
+        list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$se<-dim(a$masked.images)[2]
+        list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$te<-dim(a$masked.images)[3]
+        list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$geometricalInformationOfImages$koc<-"littleCube"
+      }
+      else {
+        list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]<-NA
+      }
+      if( attributeList$caching == TRUE) list_geoLet[[collectionID]][[ folderName ]]$cacheDrop();
+    }
+    arr2Return<-list();
+    for( folderName in names(list_extractROIVoxel[[collectionID]])) {
+      arr2Return[[folderName]]<-list_extractROIVoxel[[collectionID]][[folderName]][[singleROI]]
+    }
+    class(arr2Return)<-"mmButoStructureVoxelList"
+    return(arr2Return)
+  }  
   # ========================================================================================
   # getCorrectedROIVoxel: get the ROI Voxel corrected by another ROI and/or a given min/max value
   # IN: inputROIVoxel - the ROIName to correct
