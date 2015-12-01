@@ -45,13 +45,23 @@ FIL.applyFilter<-function( arr2App, kernel.type, sigma = 1.4 ) {
 #' filterPipeline[[2]]<-list("kernel.type"="emboss", "sigma"=1.5)
 #'
 #' # filter the images (normalizing the GTV signal with Urin) cropping the result
-#' a<-FIL.applyFilterToStudy(obj.mmButo = obj,ROIVoxelData = GTV.C, filter.pipeline = filterPipeline )
+#' a<-FIL.applyFilterToStudy(obj.mmButo = obj,ROIName = "GTV",ROINameForNormalization='Urina', filter.pipeline = filterPipeline )
 #'
 #' }#' 
-FIL.applyFilterToStudy<-function(obj.mmButo, ROIVoxelData, filter.pipeline ,collection="default",cropResult=TRUE) {
+FIL.applyFilterToStudy<-function(obj.mmButo, ROINameForNormalization=NA, ROIName, filter.pipeline ,collection="default",cropResult=TRUE) {
   objS<-services();
   FUNMap<-list();
 
+  # prendi la ROI
+  ROIVoxelData<-obj.mmButo$getROIVoxel(ROIName = ROIName)
+  # correggi se è il caso di farlo
+  if(!is.na(ROINameForNormalization)) {
+    if (!is.list(ROINameForNormalization))
+      ROIForCorrection <- obj.mmButo$getROIVoxel(ROIName = ROINameForNormalization)
+    else ROIForCorrection <- ROINameForNormalization
+    ROIVoxelData<-obj.mmButo$getCorrectedROIVoxel(inputROIVoxel = ROIVoxelData, correctionROIVoxel = ROIForCorrection)
+  }  
+  
   # prendi la lista di oggetti geoLet
   list_geoLet<-obj.mmButo$getAttribute("list_geoLet");
   for(patient in names(ROIVoxelData)) {
@@ -67,7 +77,7 @@ FIL.applyFilterToStudy<-function(obj.mmButo, ROIVoxelData, filter.pipeline ,coll
       voxelData.ready.espanso[voxelData.ready.espanso!=0]<-1
       
       # prendi l'original voxelCute non tagliato dalla ROI
-      # è su questo ceh dovrò applicare il filtro
+      # è su questo che dovrò applicare il filtro
       originalMR<-list_geoLet[[collection]][[patient]]$getImageVoxelCube()
       
       for(i in seq(1,length(filter.pipeline))) {
@@ -77,8 +87,12 @@ FIL.applyFilterToStudy<-function(obj.mmButo, ROIVoxelData, filter.pipeline ,coll
                                      kernel.type = filter.pipeline[[i]]$kernel.type,
                                      sigma = filter.pipeline[[i]]$sigma)
       }
+      browser();
       # l'output deve essere mascherato
-      FUNMap[[patient]]<-originalMR * voxelData.ready.espanso;
+      u<-voxelData.ready.espanso
+      u[u[,,]!=0]<-1
+      #FUNMap[[patient]]<-originalMR * voxelData.ready.espanso;
+      FUNMap[[patient]]<-originalMR * u;
       
       # se richiesto, CROPPA!
       if ( cropResult == TRUE )  FUNMap[[patient]]<-objS$cropCube( FUNMap[[patient]] )         
@@ -90,6 +104,47 @@ FIL.applyFilterToStudy<-function(obj.mmButo, ROIVoxelData, filter.pipeline ,coll
   return(FUNMap)
 }
 
+# FIL.applyFilterToStudy<-function(obj.mmButo, ROIVoxelData, filter.pipeline ,collection="default",cropResult=TRUE) {
+#   objS<-services();
+#   FUNMap<-list();
+#   
+#   # prendi la lista di oggetti geoLet
+#   list_geoLet<-obj.mmButo$getAttribute("list_geoLet");
+#   for(patient in names(ROIVoxelData)) {
+#     
+#     if((TRUE %in% is.na(ROIVoxelData[[patient]])) == FALSE  ) {
+#       print( paste("FUN - Now filtering:",patient),collapse='' )
+#       
+#       # prendi i voxelData
+#       voxelData.ready<-ROIVoxelData[[patient]]
+#       # ora sono pronto per estendere
+#       voxelData.ready.espanso <- obj.mmButo$mmButoLittleCube.expand(   voxelData.ready   ) 
+#       # e creare la relativa maschera
+#       voxelData.ready.espanso[voxelData.ready.espanso!=0]<-1
+#       
+#       # prendi l'original voxelCute non tagliato dalla ROI
+#       # è su questo ceh dovrò applicare il filtro
+#       originalMR<-list_geoLet[[collection]][[patient]]$getImageVoxelCube()
+#       
+#       for(i in seq(1,length(filter.pipeline))) {
+#         print( paste("     => applying",filter.pipeline[[i]]$kernel.type),collapse='' )
+#         
+#         originalMR<-FIL.applyFilter( originalMR, 
+#                                      kernel.type = filter.pipeline[[i]]$kernel.type,
+#                                      sigma = filter.pipeline[[i]]$sigma)
+#       }
+#       # l'output deve essere mascherato
+#       FUNMap[[patient]]<-originalMR * voxelData.ready.espanso;
+#       
+#       # se richiesto, CROPPA!
+#       if ( cropResult == TRUE )  FUNMap[[patient]]<-objS$cropCube( FUNMap[[patient]] )         
+#     }
+#     else {
+#       FUNMap[[patient]]<-NA
+#     }
+#   }
+#   return(FUNMap)
+# }
 
 
 # 
