@@ -28,6 +28,7 @@ FIL.applyFilter<-function( arr2App, kernel.type, sigma = 1.4 ) {
 #' @param filter.pipeline is a \code{list} where is indicated the pipeline of filtering to be applied (in sequence)
 #' @param collection is the collection: the default is '\code{default}'
 #' @param cropResult is a boolean (\code{TRUE} or \code{FALSE}) which indicates if the result should be cropped or not, in order to save memory. Default is \code{TRUE}
+#' @param scaleFactor can be 'voxel' or 'space'. If 'voxel' (the default) it consider the sam sigma values (if specified) for all the geoLet object, if 'space' it normalize the sigma according to the different pixelSpacing.
 #' @return a list containing the filtered images (cropped or not)
 #' @export
 #' @examples \dontrun{
