@@ -19,8 +19,6 @@
 #'               because of are object built by closures. Each \code{geoLet} object should be handled by with
 #'               its own methods (i.e. \code{...$getAttribute("dataStorage")} or \code{...$getROIList()}, etc..).
 #'               }
-#'               \item \code{list getCollection(collectionID='default')} this methods returns list of geoLet objects, 
-#'               exactly as \code{getAttribute("list_geoLet")} does, with the exception that it returns only the list of 
 #'               \code{geoLet} objects which refers to the specified collection.
 #'               \item \code{list getROIVoxel(string ROIName, string collectionID)} returns a list of a voxel within 
 #'               the indicated ROIs, for the specified collection. If no collection is specified, the default is
@@ -114,14 +112,20 @@ new.mmButo<-function( caching = FALSE, cacheDir='./cache') {
   # ======================================================================================== 
   getAttribute<-function( attributeName ) {
     if( attributeName == 'list_geoLet' ) return( list_geoLet );
+    if( attributeName == 'list_PixelSpacing' ) return( list_PixelSpacing() );
     stop("behaviour not recognized")
   }
   # ========================================================================================
-  # getCollection: give back the wished collection
-  # ======================================================================================== 
-  getCollection<-function( collectionID='default' ) {
-    return( list_geoLet[[ collectionID ]] )
-  }  
+  # list_pixelspacing: return the pixelSpacings of all the loaded geoLet object
+  # ========================================================================================   
+  list_PixelSpacing<-function( collectionID='default' ) {
+    elArr<-list();
+    for(patName in names(list_geoLet[[ collectionID ]]) ) {
+      elArr[[patName]]<-list_geoLet[[ collectionID ]][[patName]]$getAttribute("PixelSpacing")
+      elArr[[patName]]<-as.numeric(c(elArr[[patName]],list_geoLet[[ collectionID ]][[patName]]$getAttribute("SliceThickness") ) )
+    }
+    return(elArr);    
+  }
   # ========================================================================================
   # extractROIs: extract one or more ROIs voxels
   # ======================================================================================== 
@@ -327,7 +331,6 @@ new.mmButo<-function( caching = FALSE, cacheDir='./cache') {
   costructor( caching = caching );
   return( list( "loadCollection"=loadCollection,
                 "getAttribute"=getAttribute,
-                "getCollection"=getCollection,
                 "getROIVoxel"=getROIVoxel,
                 "mmButoLittleCube.expand"=mmButoLittleCube.expand,
                 "getROIVoxelStats"=getROIVoxelStats,
