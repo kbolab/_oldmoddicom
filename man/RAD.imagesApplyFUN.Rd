@@ -39,19 +39,15 @@ It applies a user defined \code{function} over a voxel maps of in a \code{new.mm
 obj<-new.mmButo()
 obj$loadCollection(Path = '/progetti/immagini/urinaEasy')
 
+Urina<-obj$getROIVoxel(ROIName = "Urina")
+GTV<-obj$getROIVoxel(ROIName = "GTV")
 GTV.C <- obj$getCorrectedROIVoxel(inputROIVoxel = GTV,correctionROIVoxel = Urina,typeOfCorrection = "log")
 
-computeSDWithNoise<-function(a, listOfFUNParameters=list()) {
+calcolaSD<-function(a, listOfFUNParameters=list()) {
  b<-sd(a);
  if(listOfFUNParameters$noise==TRUE)  b<-b+b*runif(1)
  return(b)
 }
-
-# no noise, apply on an eroded GTV,
-a<-RAD.imagesApplyFUN(obj.mmButo = obj,ROIVoxelData = GTV.C,FUN = calcolaSD,erosion.xyz = c(2,2,0),applyToBorder = FALSE,listOfFUNParameters = list("noise"=FALSE))
-
-# no noise, apply on the BORDER
-a<-RAD.imagesApplyFUN(obj.mmButo = obj,ROIVoxelData = GTV.C,FUN = calcolaSD,erosion.xyz = c(2,2,0),applyToBorder = TRUE,listOfFUNParameters = list("noise"=FALSE))
 
 # no noise, not BORDER, on biopsy of <2,2,0> and erosion of <2,2,0>
 a<-RAD.imagesApplyFUN(obj.mmButo = obj,ROIVoxelData = GTV.C,FUN = calcolaSD,erosion.xyz = c(5,5,3),applyToBorder = FALSE,listOfFUNParameters = list("noise"=FALSE),biopsyDim.xyz = c(2,2,0))

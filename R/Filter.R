@@ -87,7 +87,7 @@ FIL.applyFilterToStudy<-function(obj.mmButo, ROINameForNormalization=NA, ROIName
       
       for(i in seq(1,length(filter.pipeline))) {
         print( paste("     => applying",filter.pipeline[[i]]$kernel.type),collapse='' )
-        if (scaleFactor != "space") {
+        if (scaleFactor == "space") {
           normalizedSigma<-sqrt((filter.pipeline[[i]]$sigma^2)/(pixelSpacingArr[[patient]][1]*pixelSpacingArr[[patient]][2]))
         } else {
           normalizedSigma<-filter.pipeline[[i]]$sigma
