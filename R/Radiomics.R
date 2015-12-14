@@ -17,13 +17,15 @@
 #' aa$entropy
 #' }#' #' 
 #' @import entropy moments 
-RAD.firstOrderFeatureImage <- function ( inputData ) {
+RAD.firstOrderFeatureImage <- function ( inputData ) { 
+  # NON USATA, DA RANZARE?
   if(class(inputData) == "geoLetStructureVoxelList") 
     return(RAD.firstOrderFeatureImage.geoLet( inputData))
   if(class(inputData) == "mmButoStructureVoxelList")  
     return(RAD.firstOrderFeatureImage.mmButo( inputData))
 }
 RAD.firstOrderFeatureImage.geoLet<-function(inputData) {
+  # NON USATA, DA RANZARE?
   numPatient<-1
   ImageEntropy <- array(data = c(0), dim = c(numPatient))
   ImageKurtosis <- array(data = c(0), dim = c(numPatient))
@@ -33,12 +35,12 @@ RAD.firstOrderFeatureImage.geoLet<-function(inputData) {
   ImageEnergy <- array(data = c(0), dim = c(numPatient))
   
   histSamples<-500
-  maxVoxelValue<-max(inputData$masked.images);  minVoxelValue<-min(inputData$masked.images);
+  maxVoxelValue<-max(inputData$masked.images$voxelCube);  minVoxelValue<-min(inputData$masked.images$voxelCube);
   histSamples.array<-seq( from = minVoxelValue, to=maxVoxelValue, by = (maxVoxelValue-minVoxelValue)/histSamples   )
   
   istogr <- c();    freq <- c();  i<-1;
   if(is.list(inputData) == TRUE  ) {
-    voxelCube.values<-inputData$masked.images[ inputData$masked.images!=0  ] 
+    voxelCube.values<-inputData$masked.images$voxelCube[ inputData$masked.images$voxelCube!=0  ] 
     # Calcola l'istogramma dei grigi
     istogr <- hist(voxelCube.values, breaks = histSamples,  plot=FALSE)
     # Calcola le frequenze da dover utilizzare nel calcolo dell'entropia
@@ -77,6 +79,7 @@ RAD.firstOrderFeatureImage.geoLet<-function(inputData) {
                "standardDeviation"=ImageStandDeviat, "energy"=ImageEnergy))   
 }
 RAD.firstOrderFeatureImage.mmButo <- function ( inputData ) {
+  
   # set some variables;
   numPatient<-length(inputData)
   obj.mButo<-new.mmButo()
@@ -165,7 +168,6 @@ RAD.areaVolume <- function ( listaROIVoxels ) {
 }
 RAD.areaVolume.geoLet<-function( listaROIVoxels ) {
   objS<-services();  arrayAV<-list(); obj.mmButo<-new.mmButo(); i<-1;
-  
   if(is.list(listaROIVoxels) == TRUE  ) {
     arrayAV[[ i ]]<-list();
     geometry<-listaROIVoxels$geometricalInformationOfImages;
@@ -173,7 +175,7 @@ RAD.areaVolume.geoLet<-function( listaROIVoxels ) {
     pSY<-geometry$pixelSpacing[2]
     pSZ<-as.numeric(geometry$SliceThickness  )
     # expand the cropped voxelCube
-    voxelCube <- listaROIVoxels$masked.images
+    voxelCube <- listaROIVoxels$masked.images$voxelCube
     arrayAV[[ i ]]$Area<-objS$SV.rawSurface(voxelMatrix = voxelCube, pSX = pSX, pSY=pSY,pSZ=pSZ)    
     if ( arrayAV[[ i ]]$Area == -1 ) {
       arrayAV[[ i ]]$Volume<- -1

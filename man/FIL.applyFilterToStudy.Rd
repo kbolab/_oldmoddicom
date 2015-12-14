@@ -4,9 +4,9 @@
 \alias{FIL.applyFilterToStudy}
 \title{Apply a filter to mmButo object}
 \usage{
-FIL.applyFilterToStudy(obj.mmButo, ROINameForNormalization = NA, ROIName,
-  filter.pipeline, collection = "default", cropResult = TRUE,
-  scaleFactor = "voxel")
+FIL.applyFilterToStudy(obj.mmButo, ROINameForNormalization = NA,
+  valueForNormalization = NA, ROIName, filter.pipeline,
+  collection = "default", cropResult = TRUE, scaleFactor = "voxel")
 }
 \arguments{
 \item{obj.mmButo}{is the \code{new.mmButo} object}

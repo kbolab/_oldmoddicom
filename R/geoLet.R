@@ -376,7 +376,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE) {
   # the voxelCube of the original dimensions, otherwise it gives back the interpolated
   # voxelCube according to the wished pixelSpacing along x,y or z
   #=================================================================================     
-  getImageVoxelCube<-function( ps.x=NA, ps.y=NA, ps.z=NA ) {
+  getImageVoxelCube<-function( ps.x=NA, ps.y=NA, ps.z=NA) {
     objS<-services();
     # prendi il cubone
     voxelCube<-createImageVoxelCube()

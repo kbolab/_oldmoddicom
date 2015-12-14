@@ -787,6 +787,7 @@ mmButoOLD<-function() {
     getAttribute=getAttribute,
     execAlgorithm=execAlgorithm,
     plotResults=plotResults,
+    getROIVoxelStats = getROIVoxelStats,
     ROIStats=ROIStats))
 }
 
