@@ -18,7 +18,7 @@ RAD.borderTextureMap(obj.mmButo, ROIVoxelData, margin.x = 3, margin.y = 3,
 
 \item{margin.z}{for the biopsy; default is 1 (the box has 3 voxels along z direction)}
 
-\item{collection}{the interested collection; the dafault collection is '\code{default}'}
+\item{collection}{the interested collection; the dafault collection is \code{default}}
 
 \item{erosion.x}{for the erosion; default is 3}
 
@@ -32,7 +32,7 @@ RAD.borderTextureMap(obj.mmButo, ROIVoxelData, margin.x = 3, margin.y = 3,
 
 \item{normalizationROIName}{the name of the ROI used to normaliza the signal: default is \code{NA}}
 
-\item{kindOfNormalization}{the kind of normalization: \code{'linear'} or \code{'log'}. Default is \code{'linear}}
+\item{kindOfNormalization}{the kind of normalization: \code{'linear'} or \code{'log'}. Default is \code{'linear'}}
 }
 \value{
 a list containing the entropy maps and the stdev maps.

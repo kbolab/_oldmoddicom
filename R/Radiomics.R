@@ -558,9 +558,9 @@ RAD.getBiopsy<-function(possBio, ROIVoxelData, x = 4, y = 4, z = 1) {
 #' @param erosion.x for the erosion; default is 3 
 #' @param erosion.y for the erosion; default is 3 
 #' @param erosion.z for the erosion; default is 1 
-#' @param collection the interested collection; the dafault collection is '\code{default}'
+#' @param collection the interested collection; the dafault collection is \code{default}
 #' @param normalizationROIName the name of the ROI used to normaliza the signal: default is \code{NA}
-#' @param kindOfNormalization the kind of normalization: \code{'linear'} or \code{'log'}. Default is \code{'linear}
+#' @param kindOfNormalization the kind of normalization: \code{'linear'} or \code{'log'}. Default is \code{'linear'}
 #' @param kindOfOutput is a string which can be '\code{normal}' or '\code{extended}'. In the first case it returna a complex list, cropped, with all the information needed to extend the images; in the second it provides the extended images avoiding to return all the ancillary (geometry) data
 #' @return a list containing the entropy maps and the stdev maps.
 #' @examples \dontrun{

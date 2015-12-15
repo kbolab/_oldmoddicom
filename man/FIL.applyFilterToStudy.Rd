@@ -11,6 +11,12 @@ FIL.applyFilterToStudy(obj.mmButo, ROINameForNormalization = NA,
 \arguments{
 \item{obj.mmButo}{is the \code{new.mmButo} object}
 
+\item{ROINameForNormalization}{the name of the ROI used to normalize the signal}
+
+\item{valueForNormalization}{the highest value used to normalize the 'ROINameForNormalization' voxel values}
+
+\item{ROIName}{the name of the ROI to extract}
+
 \item{filter.pipeline}{is a \code{list} where is indicated the pipeline of filtering to be applied (in sequence)}
 
 \item{collection}{is the collection: the default is '\code{default}'}
@@ -18,8 +24,6 @@ FIL.applyFilterToStudy(obj.mmButo, ROINameForNormalization = NA,
 \item{cropResult}{is a boolean (\code{TRUE} or \code{FALSE}) which indicates if the result should be cropped or not, in order to save memory. Default is \code{TRUE}}
 
 \item{scaleFactor}{can be 'voxel' or 'space'. If 'voxel' (the default) it consider the sam sigma values (if specified) for all the geoLet object, if 'space' it normalize the sigma according to the different pixelSpacing.}
-
-\item{ROIVoxelData}{the ROIVoxelData as obtained from a \code{getROIVoxel()} or a \code{getCorrectedROIVoxel}}
 }
 \value{
 a list containing the filtered images (cropped or not)
@@ -43,7 +47,7 @@ filterPipeline[[1]]<-list("kernel.type"="gaussian")
 filterPipeline[[2]]<-list("kernel.type"="emboss", "sigma"=1.5)
 
 # filter the images (normalizing the GTV signal with Urin) cropping the result
-a<-FIL.applyFilterToStudy(obj.mmButo = obj,ROIName = "GTV",ROINameForNormalization='Urina', filter.pipeline = filterPipeline )
+a<-FIL.applyFilterToStudy(obj.mmButo = obj,ROIName = "GTV",ROINameForNormalization='Urina', valueForNormalization=10000,filter.pipeline = filterPipeline )
 
 }#'
 }

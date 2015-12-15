@@ -61,32 +61,44 @@ FIL.applyFilterToStudy<-function(obj.mmButo, ROINameForNormalization=NA, valueFo
   
   # prendi la ROI
   ROIVoxelData<-obj.mmButo$getROIVoxel(ROIName = ROIName)
-  # correggi se è il caso di farlo
-  if(is.na(ROINameForNormalization) | is.na(valueForNormalization)) {
-    stop("ERROR: 'ROINameforNormalization' and 'valueForNormalization' must be specified");
+  
+  # ERRORE se non è indicata una ROI per la normalizzazione
+  if(is.na(ROINameForNormalization)) {
+    stop("ERROR: 'ROINameforNormalization' must be specified");
   }  
-
+  # prendi le ROI per la normalizzazione e calcolane le statistiche
   ROIVoxelDataForNormalization<-obj.mmButo$getROIVoxel(ROIName = ROINameForNormalization)
   statsForNormalization<-obj.mmButo$getROIVoxelStats(ROIVoxelList = ROIVoxelDataForNormalization)
 
+  # se non è stato passato un valore di normalizzazione prendi il massimo delle medie della ROI
+  # utilizzata per normalizzare
+  if(is.na(valueForNormalization)) {
+    arrayNormalizationROIVoxelValue<-c();
+    for ( patient in names(statsForNormalization$details) ) {
+      arrayNormalizationROIVoxelValue<-c(arrayNormalizationROIVoxelValue,statsForNormalization$details[[ patient ]]$mean)
+    }  
+    valueForNormalization<-max(arrayNormalizationROIVoxelValue)
+  }
+  
+  # calcola l'array dei fattori moltiplicativi
   multiplier<-list();
   for ( patient in names(statsForNormalization$details) ) {
     multiplier[[ patient ]] <- valueForNormalization / statsForNormalization$details[[ patient ]]$mean 
   }  
 
-  
   # prendi la lista di oggetti geoLet
   list_geoLet<-obj.mmButo$getAttribute("list_geoLet");
+  
+  # inizia a ciclare su tutti i pazienti
   for(patient in names(ROIVoxelData)) {
     
     if((TRUE %in% is.na(ROIVoxelData[[patient]])) == FALSE  ) {
       print( paste("FUN - Now filtering:",patient),collapse='' )
-      # prendi i voxelData
+      # prendi i voxelData ed estendili
       voxelData.ready<-ROIVoxelData[[patient]]
-      # ora sono pronto per estendere
       voxelData.ready.espanso <- obj.mmButo$mmButoLittleCube.expand(   voxelData.ready   ) 
       voxelDataDaRiapplicare <- voxelData.ready.espanso;
-      # e creare la relativa maschera
+      # e crea la relativa maschera
       voxelData.ready.espanso[voxelData.ready.espanso!=0]<-1
       
       # prendi l'original voxelCute non tagliato dalla ROI
@@ -111,8 +123,10 @@ FIL.applyFilterToStudy<-function(obj.mmButo, ROINameForNormalization=NA, valueFo
       u<-voxelData.ready.espanso
       u[u[,,]!=0]<-1
       #FUNMap[[patient]]<-originalMR * voxelData.ready.espanso;
-
+      
+      # Applica la maschera
       FUNMap[[patient]]<-originalMR * u;
+      
       # se richiesto, CROPPA!
       if ( cropResult == TRUE )  FUNMap[[patient]]<-objS$cropCube( FUNMap[[patient]] )   
     }
