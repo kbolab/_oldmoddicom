@@ -57,7 +57,7 @@
 #'               }
 #' @export
 #' @import stringr XML 
-geoLet<-function(ROIVoxelMemoryCache=TRUE) {
+geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
 
   dataStorage<-list();          # Attribute with ALL the data
   dataChache<-list();           # Cache (internal use)
@@ -66,7 +66,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE) {
   logObj<-list()               # log handler
   objServ<-list();
   ROIVoxelMemoryCacheArray<-list() # ROIVoxelMemoryCache Array
-  
+
   #=================================================================================
   # openDICOMFolder
   # Loads a Folder containing one or more DICOM Studies
@@ -82,6 +82,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE) {
     if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("Load Images")
     if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("---------------------------------------")
     imageStructure<-loadCTRMNRDScans(SOPClassUIDList,setValidCTRMNSeriesInstanceUID);
+    
     # put images into dataStorage
     dataStorage<<-imageStructure;
     # Load RTStruct Files
@@ -480,7 +481,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE) {
     
     # dcmodify -i "(0008,0005)=ISO_IR 100" ./RTSTRUCT999.61977.8337.20150525122026787.dcm
     
-    if(!file.exists( fileNameXML )) {
+    if(!file.exists( fileNameXML ) | folderCleanUp==TRUE) {
       # now check the problem of viewRAY is the 0008,0005 present?
       stringa1<-"dcmdump";
       stringa2<-paste(" ",fileName," | grep '0008,0005'",collapse='')
@@ -569,7 +570,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE) {
     fileNameRAW<-paste(fileName,".0.raw")    
     fileNameRAW<-str_replace_all(string = fileNameRAW , pattern = " .0.raw",replacement = ".0.raw")
     pathToStore<-substr(fileName,1,tail(which(strsplit(fileName, '')[[1]]=='/'),1)-1)
-    if(!file.exists( fileNameRAW )) {
+    if(!file.exists( fileNameRAW )  | folderCleanUp==TRUE) {
       stringa1<-"dcmdump";
       stringa2<-paste(" +W  ",pathToStore,fileName,collapse='')
       options(warn=-1)
@@ -578,9 +579,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE) {
     }
     rowsDICOM<-as.numeric(getDICOMTag(fileName,'0028,0010'))
     columnsDICOM<-as.numeric(getDICOMTag(fileName,'0028,0011'))
-    
     bitsAllocated<-as.numeric(getDICOMTag(fileName,'0028,0100'))
-
     if(SOPClassUIDList[[fileName]]$kind!="RTDoseStorage"){
       if(bitsAllocated!=16) stop("16bit pixel are allowed only for non-RTDoseStorage")
       rn<-readBin(con = fileNameRAW, what="integer", size=2, endian="little",n=rowsDICOM*columnsDICOM)    
@@ -739,8 +738,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE) {
     pathToStore<-substr(fileName,1,tail(which(strsplit(fileName, '')[[1]]=='/'),1)-1)
     
     # dcmodify -i "(0008,0005)=ISO_IR 100" ./RTSTRUCT999.61977.8337.20150525122026787.dcm
-    
-    if(!file.exists( fileNameXML )) {
+    if(!file.exists( fileNameXML )  | folderCleanUp==TRUE ) {
       # now check the problem of viewRAY is the 0008,0005 present?
       stringa1<-"dcmdump";
       stringa2<-paste(" ",fileName," | grep '0008,0005'",collapse='')
@@ -754,17 +752,14 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE) {
         system2(stringa1,stringa2,stdout=NULL)
         options(warn=0)        
       }
-      
       stringa1<-"dcm2xml";
       stringa2<-paste(" +M  ",fileName,fileNameXML,collapse='')
       options(warn=-1)
       system2(stringa1,stringa2,stdout=NULL)
       options(warn=0)
     }
-    
     # Load the XML file
     doc = xmlInternalTreeParse(fileNameXML)
-    
     # SEQUENCES: the one with the attribute  tag="3006,0020"  and name="StructureSetROISequence" 
     # is the one with association NAME<->ID
     stringaQuery<-paste(c('/file-format/data-set/element[@tag="',tag,'"]'),collapse='');
@@ -1092,7 +1087,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE) {
   #=================================================================================
   # Constructor
   #=================================================================================
-  constructor<-function( ROIVoxelMemoryCache = FALSE) {
+  constructor<-function( ROIVoxelMemoryCache = TRUE , folderCleanUp = FALSE) {
     dataStorage <<- list();   
     dataChache <<- list();
     attributeList<<-list()
@@ -1107,8 +1102,9 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE) {
     attributeList$virtualMemory$kindOfCache<<-'dataStorage';
     attributeList$virtualMemory$fileName<<-paste(c(format(Sys.time(), "%a%b%d_%H%M%S%Y_"),as.integer(runif(1)*10000),"_",as.integer(runif(1)*10000) ) , collapse='');
     ROIVoxelMemoryCache<<-ROIVoxelMemoryCache;
+    folderCleanUp<<-folderCleanUp;
   }
-  constructor( ROIVoxelMemoryCache )
+  constructor( ROIVoxelMemoryCache , folderCleanUp)
   return(list(openDICOMFolder=openDICOMFolder,getAttribute=getAttribute,
               getDICOMTag=getDICOMTag,getROIList=getROIList,getROIPointList=getROIPointList,
               setAttribute=setAttribute,getFolderContent=getFolderContent,getROIVoxels=getROIVoxels,

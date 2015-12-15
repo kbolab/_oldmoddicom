@@ -62,29 +62,39 @@ FIL.applyFilterToStudy<-function(obj.mmButo, ROINameForNormalization=NA, valueFo
   # prendi la ROI
   ROIVoxelData<-obj.mmButo$getROIVoxel(ROIName = ROIName)
   
-  # ERRORE se non è indicata una ROI per la normalizzazione
-  if(is.na(ROINameForNormalization)) {
-    stop("ERROR: 'ROINameforNormalization' must be specified");
-  }  
-  # prendi le ROI per la normalizzazione e calcolane le statistiche
-  ROIVoxelDataForNormalization<-obj.mmButo$getROIVoxel(ROIName = ROINameForNormalization)
-  statsForNormalization<-obj.mmButo$getROIVoxelStats(ROIVoxelList = ROIVoxelDataForNormalization)
+#   # ERRORE se non è indicata una ROI per la normalizzazione
+#   if(is.na(ROINameForNormalization)) {
+#     stop("ERROR: 'ROINameforNormalization' must be specified");
+#   }  
 
-  # se non è stato passato un valore di normalizzazione prendi il massimo delle medie della ROI
-  # utilizzata per normalizzare
-  if(is.na(valueForNormalization)) {
-    arrayNormalizationROIVoxelValue<-c();
+  if(!is.na(ROINameForNormalization)) {
+    # prendi le ROI per la normalizzazione e calcolane le statistiche
+    ROIVoxelDataForNormalization<-obj.mmButo$getROIVoxel(ROIName = ROINameForNormalization)
+    statsForNormalization<-obj.mmButo$getROIVoxelStats(ROIVoxelList = ROIVoxelDataForNormalization)
+
+    # se non è stato passato un valore di normalizzazione prendi il massimo delle medie della ROI
+    # utilizzata per normalizzare
+    if(is.na(valueForNormalization)) {
+      arrayNormalizationROIVoxelValue<-c();
+      for ( patient in names(statsForNormalization$details) ) {
+        arrayNormalizationROIVoxelValue<-c(arrayNormalizationROIVoxelValue,statsForNormalization$details[[ patient ]]$mean)
+      }  
+      valueForNormalization<-max(arrayNormalizationROIVoxelValue)
+    }
+    # calcola l'array dei fattori moltiplicativi
+    multiplier<-list();
     for ( patient in names(statsForNormalization$details) ) {
-      arrayNormalizationROIVoxelValue<-c(arrayNormalizationROIVoxelValue,statsForNormalization$details[[ patient ]]$mean)
+      multiplier[[ patient ]] <- valueForNormalization / statsForNormalization$details[[ patient ]]$mean 
     }  
-    valueForNormalization<-max(arrayNormalizationROIVoxelValue)
-  }
-  
-  # calcola l'array dei fattori moltiplicativi
-  multiplier<-list();
-  for ( patient in names(statsForNormalization$details) ) {
-    multiplier[[ patient ]] <- valueForNormalization / statsForNormalization$details[[ patient ]]$mean 
-  }  
+  } 
+  else {
+    # calcola l'array dei fattori moltiplicativi nel caso in cui non si voglia normalizzazione 
+    # (piazzali tutti a uno)
+    multiplier<-list();
+    for ( patient in names(ROIVoxelData)) {
+      multiplier[[ patient ]] <- 1
+    }      
+  } 
 
   # prendi la lista di oggetti geoLet
   list_geoLet<-obj.mmButo$getAttribute("list_geoLet");
