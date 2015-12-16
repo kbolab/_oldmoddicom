@@ -58,7 +58,12 @@ services<-function() {
     stringa<-''
     for( i in names(lista) ) {
       if(!is.list(lista[[i]])) {lastLF<-'';} else {lastLF<-'\n';}
-      if(type=='1') stringa<- paste( c(stringa,"\n",rep(" ",livello),"<",i,">",objS$SV.list2XML(lista[[i]], livello+1 ),lastLF,rep(" ",livello),"</",i,">"    ),collapse = '' )
+      if(type=='1') {
+        roiName<-i
+        roiName<-str_replace_all(string = roiName,pattern = " ",replacement = "_")
+        roiName<-str_replace_all(string = roiName,pattern = ",",replacement = "_")
+        stringa<- paste( c(stringa,"\n",rep(" ",livello),"<",roiName,">",objS$SV.list2XML(lista[[i]], livello+1 ),lastLF,rep(" ",livello),"</",roiName,">"    ),collapse = '' )
+      }
     }
     if(outputFileName!='' && livello==0) {
       fileConn<-file(outputFileName)
@@ -167,14 +172,25 @@ services<-function() {
   # ========================================================================================     
   expandCube<-function( littleCube,  x.start, y.start, z.start, fe, se, te) {
     
-    bigCube<-array(0,dim=c(fe,se,te) )
-    for(z in seq(1,dim(littleCube)[3] ) ) {
-      for(y in seq(1,dim(littleCube)[2] ) ) {
-        for(x in seq(1,dim(littleCube)[1] ) ) {
-          bigCube[ x+x.start-1 , y+y.start-1, z+z.start-1  ]<-littleCube[x,y,z]
+    if(length(dim(littleCube))==3) {
+      bigCube<-array(0,dim=c(fe,se,te) )
+      for(z in seq(1,dim(littleCube)[3] ) ) {
+        for(y in seq(1,dim(littleCube)[2] ) ) {
+          for(x in seq(1,dim(littleCube)[1] ) ) {
+            bigCube[ x+x.start-1 , y+y.start-1, z+z.start-1  ]<-littleCube[x,y,z]
+          }
         }
       }
     }
+    if(length(dim(littleCube))==2) {
+      bigCube<-array(0,dim=c(fe,se,te) )
+      for(y in seq(1,dim(littleCube)[2] ) ) {
+        for(x in seq(1,dim(littleCube)[1] ) ) {
+          bigCube[ x+x.start-1 , y+y.start-1, 1+z.start-1  ]<-littleCube[x,y]
+        }
+      }
+    }
+    if(length(dim(littleCube))==1) stop("FY!");
     return( bigCube )    
   }   
   triangle2mesh <- function(x) {

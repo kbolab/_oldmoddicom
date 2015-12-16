@@ -71,7 +71,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
   # openDICOMFolder
   # Loads a Folder containing one or more DICOM Studies
   #=================================================================================
-  #' Open a folder and load the content
+  # Open a folder and load the content
   openDICOMFolder<-function(pathToOpen, setValidCTRMNSeriesInstanceUID='any') {
 
     if( attributeList$verbose$lv1 == TRUE ) logObj$sendLog(pathToOpen)
