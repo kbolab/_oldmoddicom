@@ -108,6 +108,22 @@ new.mmButo<-function( caching = FALSE, cacheDir='./cache') {
     list_geoLet[[collectionID]][[ completeFileName ]]<<-readRDS( completeFileName )
   }  
   # ========================================================================================
+  # dropGeoLetObj: load a set of subfolders
+  # ========================================================================================
+  dropGeoLetObj<-function( geoLet_id, collectionID = "default") {
+    aa<-list_geoLet[[collectionID]];
+    list_geoLet[[collectionID]] <<-list();
+    for( i in names(aa)) {
+      if(i!=geoLet_id)  {list_geoLet[[collectionID]][[i]] <<-aa[[i]]}
+    }
+  }   
+  # ========================================================================================
+  # addGeoLetObj: load a set of subfolders
+  # ========================================================================================
+  addGeoLetObj<-function( geoLet_id, geoLet_obj, collectionID = "default") {
+    list_geoLet[[collectionID]][[ geoLet_id ]]<<-geoLet_obj
+  }     
+  # ========================================================================================
   # getAttribute: the usual 'getAttribute' method
   # ======================================================================================== 
   getAttribute<-function( attributeName ) {
@@ -335,7 +351,9 @@ new.mmButo<-function( caching = FALSE, cacheDir='./cache') {
                 "mmButoLittleCube.expand"=mmButoLittleCube.expand,
                 "getROIVoxelStats"=getROIVoxelStats,
                 "getCorrectedROIVoxel"=getCorrectedROIVoxel,
-                "addGeoLetObjFile"=addGeoLetObjFile
+                "addGeoLetObjFile"=addGeoLetObjFile,
+                "dropGeoLetObj"=dropGeoLetObj,
+                "addGeoLetObj"=addGeoLetObj
                 ) )
 }
 
@@ -788,6 +806,9 @@ mmButoOLD<-function() {
     execAlgorithm=execAlgorithm,
     plotResults=plotResults,
     getROIVoxelStats = getROIVoxelStats,
+    dropGeoLetObj = dropGeoLetObj,
+    addGeoLetObj = addGeoLetObj,
+    killGeoLetObj = killGeoLetObj,
     ROIStats=ROIStats))
 }
 
