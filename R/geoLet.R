@@ -58,7 +58,7 @@
 #' @export
 #' @import stringr XML 
 geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
-
+  
   dataStorage<-list();          # Attribute with ALL the data
   dataChache<-list();           # Cache (internal use)
   SOPClassUIDList<-list();      # SOPClassUIDList
@@ -66,14 +66,14 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
   logObj<-list()               # log handler
   objServ<-list();
   ROIVoxelMemoryCacheArray<-list() # ROIVoxelMemoryCache Array
-
+  
   #=================================================================================
   # openDICOMFolder
   # Loads a Folder containing one or more DICOM Studies
   #=================================================================================
   # Open a folder and load the content
   openDICOMFolder<-function(pathToOpen, setValidCTRMNSeriesInstanceUID='any') {
-
+    
     if( attributeList$verbose$lv1 == TRUE ) logObj$sendLog(pathToOpen)
     # get the dcm file type
     SOPClassUIDList<<-getFolderContent(pathToOpen);
@@ -92,13 +92,13 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     dataStorage[["structures"]]<<-loadRTStructFiles(SOPClassUIDList);   
     # Associate ROI and Images
     if(is.list(dataStorage[["structures"]])) {
-       associateROIandImageSlices();
+      associateROIandImageSlices();
     }
     # calculate the ImageVoxelCube
-#    if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("---------------------------------------")
-#    if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("Creating image Voxel cubes")
-#    if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("---------------------------------------")
-#    createImageVoxelCube();
+    #    if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("---------------------------------------")
+    #    if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("Creating image Voxel cubes")
+    #    if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("---------------------------------------")
+    #    createImageVoxelCube();
     # set the internal attribute indicating the path
     attributeList[["path"]]<<-pathToOpen
   }
@@ -109,7 +109,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
   loadRTStructFiles<-function(SOPClassUIDList) {    
     imageSerie<-list()
     listaPuntiROI<-list()
-
+    
     # loop over the list    
     # even if the assumption is that only one RTStruct is admitted for a CT scan serie
     TMP<-NA
@@ -125,7 +125,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     # now let me use some more easy to handle variable names
     matrice2<-TMP$IDROINameAssociation;
     matrice3<-TMP$tableROIPointList;
-
+    
     listaROI<-list()
     
     # for each ROI
@@ -134,7 +134,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
       subMatrix<-matrice3[which(matrice3[,2]==i,arr.ind = TRUE),]
       # if some points exist
       quantiElementiTrovati<--1
-
+      
       if(is.list(subMatrix) & !is.array(subMatrix)) quantiElementiTrovati<-1
       if(is.matrix(subMatrix) & is.array(subMatrix)) quantiElementiTrovati<-dim(subMatrix)[1]
       if(quantiElementiTrovati==-1) stop("Errore inatteso nel caricamento delle slides. Error code:#0001");
@@ -144,7 +144,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
         
         # add properly the points to the 'listaROI' structure
         for(contatore in seq(1,quantiElementiTrovati) ) {
-        
+          
           if( quantiElementiTrovati == 1) {
             ROIPointStringList<-subMatrix[[3]]
             SOPInstance<-subMatrix[[4]]
@@ -163,7 +163,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
         }   
       }
     }
-
+    
     return(listaROI); 
   }  
   #=================================================================================
@@ -183,12 +183,12 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     list.index<-''
     for(whichIdentifier in seq(1,length(dataStorage$info) )) {
       if(dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'CTImageStorage' ||
-           dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'MRImageStorage' ||
-           dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'PositronEmissionTomographyImageStorage'
-         ) list.index<-whichIdentifier
+         dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'MRImageStorage' ||
+         dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'PositronEmissionTomographyImageStorage'
+      ) list.index<-whichIdentifier
     }
     if(list.index=='') stop("list.index is empty!")
-#    browser();
+    #    browser();
     # ok now try to find out which is the RMN plane
     lista<-dataStorage$info[[list.index]]
     planes<-list()
@@ -198,7 +198,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
       
       planes[[i]]<-dataStorage$info[[list.index]][[i]]$planeEquation
       dataStorage$info[[list.index]][[i]][["ROIList"]]<<-matrix("",ncol=2);
-
+      
       for(k in names(dataStorage$structures)) {
         for(t in names(dataStorage$structures[[k]])) {
           # se non trovi nulla (ROI non associata ad alcuna lisce)
@@ -206,28 +206,28 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
             assignedSCANSandROI<-rbind(assignedSCANSandROI,c(i,k,t,NA))
           }
           else # se invece c'è una slice cui associare la ROI
-            {          
-              punto<-dataStorage$structures[[k]][[t]][[1]][1,]
-              distanza<-objServ$SV.getPointPlaneDistance(Punto=punto, Piano=planes[[i]])
-              
-              sliceThickness<-as.numeric(dataStorage$info[[list.index]][[i]]$SliceThickness)
-              
-#              if(distanza<(sliceThickness/2)) print(distanza)
-#              browser();
-              if( abs(distanza)<0.1 |  ( abs(distanza)<=(sliceThickness/2) & relaxCoPlanarity==TRUE   ) ) {
-                if(dataStorage$info[[list.index]][[i]][["ROIList"]][1]==''  ) {
-                  dataStorage$info[[list.index]][[i]][["ROIList"]]<<-matrix(c(k,t),ncol=2)
-                }
-                else {
-                  dataStorage$info[[list.index]][[i]][["ROIList"]]<<-rbind(dataStorage$info[[list.index]][[i]][["ROIList"]],c(k,t))   #   <<
-                }
-                assignedSCANSandROI<-rbind(assignedSCANSandROI,c(i,k,t,distanza))
+          {          
+            punto<-dataStorage$structures[[k]][[t]][[1]][1,]
+            distanza<-objServ$SV.getPointPlaneDistance(Punto=punto, Piano=planes[[i]])
+            
+            sliceThickness<-as.numeric(dataStorage$info[[list.index]][[i]]$SliceThickness)
+            
+            #              if(distanza<(sliceThickness/2)) print(distanza)
+            #              browser();
+            if( abs(distanza)<0.1 |  ( abs(distanza)<=(sliceThickness/2) & relaxCoPlanarity==TRUE   ) ) {
+              if(dataStorage$info[[list.index]][[i]][["ROIList"]][1]==''  ) {
+                dataStorage$info[[list.index]][[i]][["ROIList"]]<<-matrix(c(k,t),ncol=2)
               }
+              else {
+                dataStorage$info[[list.index]][[i]][["ROIList"]]<<-rbind(dataStorage$info[[list.index]][[i]][["ROIList"]],c(k,t))   #   <<
+              }
+              assignedSCANSandROI<-rbind(assignedSCANSandROI,c(i,k,t,distanza))
             }
+          }
         }
       }      
     }  
-
+    
     # now check if it has assigned all the ROIs
     for( i in names(dataStorage$structures) )  {
       lunghezzaAssegnate<-length(which(assignedSCANSandROI[,2]==i))
@@ -243,80 +243,80 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
   # Loads a DICOM CT/MR Scans
   #=================================================================================  
   loadCTRMNRDScans<-function(SOPClassUIDList,setValidCTRMNSeriesInstanceUID='any') {   
-
+    
     imageSerie<-list()
     objServ<-services()
-
+    
     # loop over the list    
     for(i in names(SOPClassUIDList)) {
-##      if(SOPClassUIDList[[i]]$kind=="RTDoseStorage" | 
-       if(  (
-         SOPClassUIDList[[i]]$kind=="CTImageStorage" ||
-           SOPClassUIDList[[i]]$kind=="MRImageStorage"  ||
-           SOPClassUIDList[[i]]$kind=="PositronEmissionTomographyImageStorage")  ) {
-              # get the Series number
-#              seriesInstanceUID<-getDICOMTag(i,"0020,000e")
-              seriesInstanceUID<-getDICOMTagFromXML(i,"0020,000e")
-
-              i<-i
-              if(seriesInstanceUID == setValidCTRMNSeriesInstanceUID || 
-                 setValidCTRMNSeriesInstanceUID=='any') {
-                
-                # get the Instance number (number of CT in the serie)
-                instanceNumber<-getDICOMTag(i,"0020,0013")              
-                imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]]<-list()
-                # get the Patient Position
-                imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]]<-getAttribute(attribute<-"PatientPosition",fileName=i)
-                # get the image data
-                immagine<-getDICOMTag(i,"7fe0,0010");
-                # Do I have to rotate the image?
-                imageToBeRotated <- -1
-                if( imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "HFS" ) imageToBeRotated<-1
-                if( imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "FFS" ) imageToBeRotated<-1
-                if( imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "HFP" ) imageToBeRotated<-1
-                
-                if( imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "FFP" ) imageToBeRotated<-1
-                if ( imageToBeRotated != -1 ) {
-                  immagine <- objServ$SV.rotateMatrix( immagine, imageToBeRotated )
-                }
-                
-                # now update the structure in memory
-                imageSerie[["img"]][[seriesInstanceUID]][[instanceNumber]]<-immagine              
-                imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["SOPClassUID"]]<-SOPClassUIDList[[i]]$kind
-                imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["SOPInstanceUID"]]<-getDICOMTag(i,"0008,0018")
-                imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["fileName"]]<-i
-                pixelSpacing<-getAttribute(attribute<-"PixelSpacing",fileName=i)
-                #pixSeriesInstanceUIDelSpacing<-getDICOMTag(i,"0028,0030")
-                oM<-getAttribute(attribute<-"orientationMatrix",fileName=i)              
-                imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["ImagePositionPatient"]]<-getAttribute(attribute<-"ImagePositionPatient",fileName=i)
-                imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["ImageOrientationPatient"]]<-getAttribute(attribute<-"ImageOrientationPatient",fileName=i)
-                oM[1,1]<-oM[1,1]*pixelSpacing[1]
-                oM[2,1]<-oM[2,1]*pixelSpacing[1]
-                oM[3,1]<-oM[3,1]*pixelSpacing[1]
-                oM[1,2]<-oM[1,2]*pixelSpacing[2]
-                oM[2,2]<-oM[2,2]*pixelSpacing[2]
-                oM[3,2]<-oM[3,2]*pixelSpacing[2]
-                imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["orientationMatrix"]]<-oM
-                imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["pixelSpacing"]]<-pixelSpacing
-                imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["Rows"]]<-getDICOMTag(i,"0028,0010")
-                imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["Columns"]]<-getDICOMTag(i,"0028,0011")
-                imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["SliceThickness"]]<-getDICOMTag(i,"0018,0050")
-                imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["RepetitionTime"]]<-getDICOMTag(i,"0018,0080")
-                imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["EchoTime"]]<-getDICOMTag(i,"0018,0081")
-                instanceNumber<-getDICOMTag(i,"0020,0013")
-                
-                # three points to find out plane equation
-                Pa<-c(oM[1,4],oM[2,4],oM[3,4])  
-                Pb<-objServ$SV.get3DPosFromNxNy(1000,0,oM)
-                Pc<-objServ$SV.get3DPosFromNxNy(0,1000,oM)
-  
-                abcd<-objServ$SV.getPlaneEquationBetween3Points(Pa,Pb,Pc) 
-                  
-                piano<-matrix(abcd,nrow=1)
-                colnames(piano)<-c("a","b","c","d")
-                imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["planeEquation"]]<-piano
-                if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog(i)
-              }
+      ##      if(SOPClassUIDList[[i]]$kind=="RTDoseStorage" | 
+      if(  (
+        SOPClassUIDList[[i]]$kind=="CTImageStorage" ||
+        SOPClassUIDList[[i]]$kind=="MRImageStorage"  ||
+        SOPClassUIDList[[i]]$kind=="PositronEmissionTomographyImageStorage")  ) {
+        # get the Series number
+        #              seriesInstanceUID<-getDICOMTag(i,"0020,000e")
+        seriesInstanceUID<-getDICOMTagFromXML(i,"0020,000e")
+        
+        i<-i
+        if(seriesInstanceUID == setValidCTRMNSeriesInstanceUID || 
+           setValidCTRMNSeriesInstanceUID=='any') {
+          
+          # get the Instance number (number of CT in the serie)
+          instanceNumber<-getDICOMTag(i,"0020,0013")              
+          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]]<-list()
+          # get the Patient Position
+          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]]<-getAttribute(attribute<-"PatientPosition",fileName=i)
+          # get the image data
+          immagine<-getDICOMTag(i,"7fe0,0010");
+          # Do I have to rotate the image?
+          imageToBeRotated <- -1
+          if( imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "HFS" ) imageToBeRotated<-1
+          if( imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "FFS" ) imageToBeRotated<-1
+          if( imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "HFP" ) imageToBeRotated<-1
+          
+          if( imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "FFP" ) imageToBeRotated<-1
+          if ( imageToBeRotated != -1 ) {
+            immagine <- objServ$SV.rotateMatrix( immagine, imageToBeRotated )
+          }
+          
+          # now update the structure in memory
+          imageSerie[["img"]][[seriesInstanceUID]][[instanceNumber]]<-immagine              
+          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["SOPClassUID"]]<-SOPClassUIDList[[i]]$kind
+          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["SOPInstanceUID"]]<-getDICOMTag(i,"0008,0018")
+          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["fileName"]]<-i
+          pixelSpacing<-getAttribute(attribute<-"PixelSpacing",fileName=i)
+          #pixSeriesInstanceUIDelSpacing<-getDICOMTag(i,"0028,0030")
+          oM<-getAttribute(attribute<-"orientationMatrix",fileName=i)              
+          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["ImagePositionPatient"]]<-getAttribute(attribute<-"ImagePositionPatient",fileName=i)
+          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["ImageOrientationPatient"]]<-getAttribute(attribute<-"ImageOrientationPatient",fileName=i)
+          oM[1,1]<-oM[1,1]*pixelSpacing[1]
+          oM[2,1]<-oM[2,1]*pixelSpacing[1]
+          oM[3,1]<-oM[3,1]*pixelSpacing[1]
+          oM[1,2]<-oM[1,2]*pixelSpacing[2]
+          oM[2,2]<-oM[2,2]*pixelSpacing[2]
+          oM[3,2]<-oM[3,2]*pixelSpacing[2]
+          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["orientationMatrix"]]<-oM
+          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["pixelSpacing"]]<-pixelSpacing
+          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["Rows"]]<-getDICOMTag(i,"0028,0010")
+          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["Columns"]]<-getDICOMTag(i,"0028,0011")
+          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["SliceThickness"]]<-getDICOMTag(i,"0018,0050")
+          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["RepetitionTime"]]<-getDICOMTag(i,"0018,0080")
+          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["EchoTime"]]<-getDICOMTag(i,"0018,0081")
+          instanceNumber<-getDICOMTag(i,"0020,0013")
+          
+          # three points to find out plane equation
+          Pa<-c(oM[1,4],oM[2,4],oM[3,4])  
+          Pb<-objServ$SV.get3DPosFromNxNy(1000,0,oM)
+          Pc<-objServ$SV.get3DPosFromNxNy(0,1000,oM)
+          
+          abcd<-objServ$SV.getPlaneEquationBetween3Points(Pa,Pb,Pc) 
+          
+          piano<-matrix(abcd,nrow=1)
+          colnames(piano)<-c("a","b","c","d")
+          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["planeEquation"]]<-piano
+          if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog(i)
+        }
       }
       
       if(  SOPClassUIDList[[i]]$kind=="RTDoseStorage") {
@@ -386,13 +386,13 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     if(is.na(ps.x) && is.na(ps.y) && is.na(ps.z) ) return(voxelCube)
     
     # se invece serve interpolare: prendi i pixelSpacing lungo la X, la Y e la Z (slice thickness)
-#     seriesInstanceUID<-giveBackImageSeriesInstanceUID();   
-#     oldPixelSpacing<-c();
-#     oldPixelSpacing[1]<-as.numeric(dataStorage$info[[seriesInstanceUID]][[1]]$pixelSpacing[1])
-#     oldPixelSpacing[2]<-as.numeric(dataStorage$info[[seriesInstanceUID]][[1]]$pixelSpacing[2])
-#     oldPixelSpacing[3]<-as.numeric(dataStorage$info[[seriesInstanceUID]][[1]]$SliceThickness)
+    #     seriesInstanceUID<-giveBackImageSeriesInstanceUID();   
+    #     oldPixelSpacing<-c();
+    #     oldPixelSpacing[1]<-as.numeric(dataStorage$info[[seriesInstanceUID]][[1]]$pixelSpacing[1])
+    #     oldPixelSpacing[2]<-as.numeric(dataStorage$info[[seriesInstanceUID]][[1]]$pixelSpacing[2])
+    #     oldPixelSpacing[3]<-as.numeric(dataStorage$info[[seriesInstanceUID]][[1]]$SliceThickness)
     oldPixelSpacing<-getPixelSpacing();
-
+    
     if(is.na(ps.x))  ps.x <- oldPixelSpacing[1];
     if(is.na(ps.y))  ps.y <- oldPixelSpacing[2];
     if(is.na(ps.z))  ps.z <- oldPixelSpacing[3];
@@ -443,7 +443,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
       if(dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'CTImageStorage' ||
          dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'MRImageStorage' ||
          dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'PositronEmissionTomographyImageStorage'
-         ) list.index<-whichIdentifier
+      ) list.index<-whichIdentifier
     }
     return(list.index)
   }
@@ -502,7 +502,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
       system2(stringa1,stringa2,stdout=NULL)
       options(warn=0)
     }
-  
+    
     # Load the XML file
     doc = xmlInternalTreeParse(fileNameXML)
     
@@ -522,16 +522,16 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     matrice2<-t(matrice2)
     # ROI Point list
     massimo<-0
-
+    
     matrice3<-c()
     for(i in n3XML) {
       ROINumber<-xpathApply(xmlDoc(i),'/item/element[@tag="3006,0084"]',xmlValue)[[1]]
       ROIName<-matrice2[2,which(matrice2[1,]==ROINumber)]
       listaPuntiDaRavanare<-getNodeSet(xmlDoc(i),'/item/sequence/item')
-
+      
       for(i2 in listaPuntiDaRavanare)   {
         # ReferencedSOPInstanceUID<-xpathApply(xmlDoc(i2),'//element[@tag="0008,1155"]',xmlValue)[[1]]
-              
+        
         ROIPointList<-xpathApply(xmlDoc(i2),'/item/element[@tag="3006,0050"]',xmlValue)        
         splittedROIPointList<-as.numeric(strsplit(ROIPointList[[1]],split = "\\\\")[[1]])
         fPoint.x<-splittedROIPointList[1]
@@ -540,12 +540,12 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
         
         assegnato<-FALSE
         ReferencedSOPInstanceUID<-''
-#        list.index<-''
+        #        list.index<-''
         list.index<-giveBackImageSeriesInstanceUID()
-#         for(whichIdentifier in seq(1,length(dataStorage$info) )) {
-#           if(dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'CTImageStorage' ||
-#                dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'MRImageStorage' ) list.index<-whichIdentifier
-#         }
+        #         for(whichIdentifier in seq(1,length(dataStorage$info) )) {
+        #           if(dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'CTImageStorage' ||
+        #                dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'MRImageStorage' ) list.index<-whichIdentifier
+        #         }
         if(list.index=='') stop("list.index is empty!")
         for(slice.index in seq(1,length(dataStorage$info[[list.index]]))) {
           distanza<-obj.S$SV.getPointPlaneDistance(c(fPoint.x,fPoint.y,fPoint.z),dataStorage$info[[list.index]][[slice.index]]$planeEquation)
@@ -569,10 +569,14 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     objSV<-services()
     fileNameRAW<-paste(fileName,".0.raw")    
     fileNameRAW<-str_replace_all(string = fileNameRAW , pattern = " .0.raw",replacement = ".0.raw")
+    
     pathToStore<-substr(fileName,1,tail(which(strsplit(fileName, '')[[1]]=='/'),1)-1)
     if(!file.exists( fileNameRAW )  | folderCleanUp==TRUE) {
       stringa1<-"dcmdump";
-      stringa2<-paste(" +W  ",pathToStore,fileName,collapse='')
+      #fileNameFS<-str_replace_all(string = fileName,pattern = "/",replacement = "\\\\")
+      if ( Sys.info()["sysname"] == "Windows") folderNameFS<-chartr("\\","/",fileName)
+      else fileNameFS<-fileName;
+      stringa2<-paste(" +W  ",pathToStore,fileNameFS,collapse='')
       options(warn=-1)
       system2(stringa1,stringa2,stdout=NULL)
       options(warn=0)
@@ -582,7 +586,10 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     bitsAllocated<-as.numeric(getDICOMTag(fileName,'0028,0100'))
     if(SOPClassUIDList[[fileName]]$kind!="RTDoseStorage"){
       if(bitsAllocated!=16) stop("16bit pixel are allowed only for non-RTDoseStorage")
-      rn<-readBin(con = fileNameRAW, what="integer", size=2, endian="little",n=rowsDICOM*columnsDICOM)    
+      #fileNameRAWFS<-str_replace_all(string = fileNameRAW,pattern = "/",replacement = "\\\\")
+      if ( Sys.info()["sysname"] == "Windows") fileNameRAWFS<-chartr("\\","/",fileNameRAW)
+      else fileNameRAWFS<-fileNameRAW;
+      rn<-readBin(con = fileNameRAWFS, what="integer", size=2, endian="little",n=rowsDICOM*columnsDICOM)    
       rn<-matrix(rn,ncol=columnsDICOM, byrow = TRUE)
       #rn<-matrix(rn,ncol=columnsDICOM)
     }
@@ -590,7 +597,10 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
       if(bitsAllocated==32) {
         if(SOPClassUIDList[[fileName]]$kind!="RTDoseStorage") stop("32bit pixel are allowed only for RTDoseStorage")
         numberOfFrames<-as.numeric(getDICOMTag(fileName,'0028,0008'))
-        rn<-readBin(con = fileNameRAW, what="integer", size=4, endian="little",n=rowsDICOM*columnsDICOM*numberOfFrames) 
+        # fileNameRAWFS<-str_replace_all(string = fileNameRAW,pattern = "/",replacement = "\\\\")
+        if ( Sys.info()["sysname"] == "Windows") fileNameRAWFS<-chartr("\\","/",fileNameRAW)
+        else fileNameRAWFS<-fileNameRAW;
+        rn<-readBin(con = fileNameRAWFS, what="integer", size=4, endian="little",n=rowsDICOM*columnsDICOM*numberOfFrames) 
         # per ora va via come ciclo FOR, poi ci ragioniamo....        
         matRN<-array(0,c(rowsDICOM,columnsDICOM,numberOfFrames))
         ct<-1
@@ -609,7 +619,10 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
         rn<-new_atRN
       } else  {
         numberOfFrames<-as.numeric(getDICOMTag(fileName,'0028,0008'))
-        rn<-readBin(con = fileNameRAW, what="integer", size=2, endian="little",n=rowsDICOM*columnsDICOM*numberOfFrames)
+        #fileNameRAWFS<-str_replace_all(string = fileNameRAW,pattern = "/",replacement = "\\\\")
+        if ( Sys.info()["sysname"] == "Windows") fileNameRAWFS<-chartr("\\","/",fileNameRAW)
+        else fileNameRAWFS<-fileNameRAW;
+        rn<-readBin(con = fileNameRAWFS, what="integer", size=2, endian="little",n=rowsDICOM*columnsDICOM*numberOfFrames)
         matRN<-array(0,c(rowsDICOM,columnsDICOM,numberOfFrames))
         ct<-1
         for( z in seq(1,numberOfFrames)) {
@@ -626,7 +639,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
         }
         rn<-new_atRN        
       }
-        #stop("RTDose must have 32 bit words!")
+      #stop("RTDose must have 32 bit words!")
     }    
     return(rn)
   }
@@ -641,10 +654,10 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
   # getAttribute
   # getAttribute: what else?
   #=================================================================================
-
+  
   getAttribute<-function(attribute,seriesInstanceUID="",fileName="") {
     if(fileName == "" ) fileName<-getDefaultFileName(seriesInstanceUID)    
-
+    
     # internal DATA
     if(attribute=="dataStorage")  return(dataStorage)  
     # DICOM TAGS
@@ -704,15 +717,16 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
   #=================================================================================
   getDICOMTag<-function(fileName="",tag=tag) {
     stringa1<-"dcmdump"
- 
+    
     # if he want an image, grab it by a raw dump
     if(tag == "7fe0,0010") return( getImageFromRAW(fileName) );
     
     # otherwise go on
-    stringa2<-paste(" +L -Un +P '",tag,"'  ",fileName,collapse='')
+    stringa2<-objServ$adjCommandLinePar(paste(" +L -Un +P '",tag,"'  ",fileName,collapse=''))
     options(warn=-1)
     
     a<-as.character(system2(stringa1,stringa2,stdout=TRUE))
+    
     if( length(a) == 0) return ("");
     options(warn=0)
     valore<-"unknown";
@@ -812,7 +826,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     }
     attributeList[[ attribute ]]<<-value    
   }
-
+  
   getROIVoxels<-function( Structure = Structure ) {
     objS<-services();
     # cerca nella cache di memoria, se attivata, la presenza della ROI già estratta
@@ -834,7 +848,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     croppedRes$masked.images$location$te<-dim(res$masked.images)[3]
     croppedRes$geometricalInformationOfImages$koc<-"littleCube"   
     class(croppedRes)<-"geoLetStructureVoxelList"
-
+    
     # se la cache in memoria è attiva, salvane una copia
     if(ROIVoxelMemoryCache==TRUE) ROIVoxelMemoryCacheArray[[Structure]]<<-croppedRes;
     return( croppedRes )
@@ -868,7 +882,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     numberOfColumns<-as.numeric(dataStorage$info[[SeriesInstanceUID]][[1]]$Columns);
     #numberOfRows<-as.numeric(dataStorage$info[[1]][[1]]$Columns);
     numberOfSlices<-length(dataStorage$img[[SeriesInstanceUID]]);
-
+    
     # initialize the image array with the right dimension
     image.arr<-array( data = -1, dim = c(numberOfRows, numberOfColumns, numberOfSlices ) )
     # index values listed as characters: creates empty array of DICOM orientation matrices
@@ -886,7 +900,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     TotalX<- -10000;  TotalY<- -10000;  arrayAssociationROIandSlice<- -10000;
     OriginX<- -10000;   OriginY<- -10000
     associatedInstanceNumberVect<- -10000
-#    browser();
+    #    browser();
     contatoreROI<-1; indiceDOM<-1;
     # for each instance number
     for (n in index) {
@@ -919,7 +933,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
       }      
       indiceDOM<-indiceDOM+1;
     }
-#browser();
+    #browser();
     # ok, call the Wrapper!
     final.array<-NewMultiPointInPolyObl(
       # array of DICOM Orientation Matrices
@@ -953,10 +967,10 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     
     
     for ( i in seq(1,dim(image.arr)[3] )) {
-#      image.arr[,,i]<-objService$SV.rotateMatrix(image.arr[,,i])
+      #      image.arr[,,i]<-objService$SV.rotateMatrix(image.arr[,,i])
       final.array[,,i]<-t(objService$SV.rotateMatrix(final.array[,,i],rotations=3))
     }
-
+    
     #    return(list(TotalX=TotalX, TotalY=TotalY, FullZ=FullZ, Offset=Offset, 
     #                DOM=array(DOM, dim = c(3,3,length(index))), final.array=final.array, masked.images=final.array*image.arr))
     return(list(
@@ -964,7 +978,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
       "final.array"=final.array, 
       "masked.images"=final.array*image.arr,
       "geometricalInformationOfImages"=getGeometricalInformationOfImage()
-      )
+    )
     )
   }
   
@@ -1114,7 +1128,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
               getAlignedStructureAndVoxelCube = getAlignedStructureAndVoxelCube,
               getPixelSpacing = getPixelSpacing,
               importStructures=importStructures
-              ))
+  ))
 }
 
 # ========================================================================================

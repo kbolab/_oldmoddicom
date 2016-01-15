@@ -167,6 +167,14 @@ services<-function() {
     location<-list( "min.x"=min.x, "max.x"=max.x, "min.y"=min.y, "max.y"=max.y, "min.z"=min.z, "max.z"=max.z  )
     return( list ( "voxelCube"=newCube, "location"=location) )
   }    
+  adjCommandLinePar<-function(stringa) {
+    if ( Sys.info()["sysname"] == "Windows") {
+      nuovaStringa<-str_replace_all(string = stringa,pattern = "'",replacement = "")
+    }
+    else nuovaStringa<-stringa;
+    
+    return(nuovaStringa);
+  }  
   # ========================================================================================
   # expandCube: expand a cropped voxel cube
   # ========================================================================================     
@@ -258,7 +266,8 @@ services<-function() {
               expandCube = expandCube,
               new.SV.trilinearInterpolator = new.SV.trilinearInterpolator,
               new.SV.trilinearInterpolator.onGivenPoints= new.SV.trilinearInterpolator.onGivenPoints,
-              SV.list2XML = SV.list2XML
+              SV.list2XML = SV.list2XML,
+              adjCommandLinePar = adjCommandLinePar
               ))  
 }
 

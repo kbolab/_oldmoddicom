@@ -89,12 +89,19 @@ new.mmButo<-function( caching = FALSE, cacheDir='./cache') {
     ct<-1
     if( length(list_geoLet[[collectionID]]) == 0 ) list_geoLet[[collectionID]]<<-list()
     for( folderName in listaFolders[2:length(listaFolders)] ) {
-      list_geoLet[[collectionID]][[ folderName ]]<<-geoLet()
-      list_geoLet[[collectionID]][[ folderName ]]$openDICOMFolder( folderName ) 
+      
+      if ( Sys.info()["sysname"] == "Windows") {
+        folderNameFS<-chartr("\\","/",folderName)
+      }
+      else folderNameFS<-folderName;
+      
+      list_geoLet[[collectionID]][[ folderNameFS ]]<<-geoLet()
+      #ist_geoLet[[collectionID]][[ folderNameFS ]]$openDICOMFolder( folderName )
+      list_geoLet[[collectionID]][[ folderNameFS ]]$openDICOMFolder( folderNameFS )
       if( attributeList$caching == TRUE) {
         print("saving cache....")
-        list_geoLet[[collectionID]][[ folderName ]]$setAttribute("cacheDir",attributeList$cacheDir)
-        list_geoLet[[collectionID]][[ folderName ]]$cacheSave();
+        list_geoLet[[collectionID]][[ folderNameFS ]]$setAttribute("cacheDir",attributeList$cacheDir)
+        list_geoLet[[collectionID]][[ folderNameFS ]]$cacheSave();
       }
     }
   }
@@ -156,21 +163,21 @@ new.mmButo<-function( caching = FALSE, cacheDir='./cache') {
     
     for(folderName in names(list_geoLet[[collectionID]])) {
       list_extractROIVoxel[[collectionID]][[ folderName ]]<-list();
-
+      
       print( paste( c("Now processing=",folderName)   , collapse='') );
       if( attributeList$caching == TRUE) list_geoLet[[collectionID]][[ folderName ]]$cacheLoad();
       a <- GLT.getROIVoxels(obj = list_geoLet[[collectionID]][[folderName]], Structure = singleROI )
       if((TRUE %in% is.na(a)) == FALSE  ) {
-#           list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]<-list()
-#           list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$DOM<-a$DOM
-#           list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$geometricalInformationOfImages<-a$geometricalInformationOfImages
-#           list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images<-objS$cropCube( bigCube = a$masked.images)
-#           list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$fe<-dim(a$masked.images)[1]
-#           list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$se<-dim(a$masked.images)[2]
-#           list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$te<-dim(a$masked.images)[3]
-#           list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$geometricalInformationOfImages$koc<-"littleCube"
-            list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]<-a;
-        }
+        #           list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]<-list()
+        #           list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$DOM<-a$DOM
+        #           list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$geometricalInformationOfImages<-a$geometricalInformationOfImages
+        #           list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images<-objS$cropCube( bigCube = a$masked.images)
+        #           list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$fe<-dim(a$masked.images)[1]
+        #           list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$se<-dim(a$masked.images)[2]
+        #           list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$masked.images$location$te<-dim(a$masked.images)[3]
+        #           list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$geometricalInformationOfImages$koc<-"littleCube"
+        list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]<-a;
+      }
       else {
         list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]<-NA
       }
@@ -354,7 +361,7 @@ new.mmButo<-function( caching = FALSE, cacheDir='./cache') {
                 "addGeoLetObjFile"=addGeoLetObjFile,
                 "dropGeoLetObj"=dropGeoLetObj,
                 "addGeoLetObj"=addGeoLetObj
-                ) )
+  ) )
 }
 
 
@@ -994,7 +1001,7 @@ diagnostica<-function() {
       print(  cat("[1] names(a$img[[1]]):", names(a$img[[1]]) )  )
       print(  cat("[1] ROIs:",list_geoLet[[collectionID]][[i]]$getROIList())[2,] ) 
       for( tt in list_geoLet[[collectionID]][[i]]$getROIList()[2,]  ) {
-          print(  cat("[1] ROIPointList for ",tt,": ",length(list_geoLet[[collectionID]][[i]]$getROIPointList( tt )))   )
+        print(  cat("[1] ROIPointList for ",tt,": ",length(list_geoLet[[collectionID]][[i]]$getROIPointList( tt )))   )
       }
     }
   }
