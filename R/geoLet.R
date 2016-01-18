@@ -574,7 +574,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     if(!file.exists( fileNameRAW )  | folderCleanUp==TRUE) {
       stringa1<-"dcmdump";
       #fileNameFS<-str_replace_all(string = fileName,pattern = "/",replacement = "\\\\")
-      if ( Sys.info()["sysname"] == "Windows") folderNameFS<-chartr("\\","/",fileName)
+      if ( Sys.info()["sysname"] == "Windows") fileNameFS<-chartr("\\","/",fileName)
       else fileNameFS<-fileName;
       stringa2<-paste(" +W  ",pathToStore,fileNameFS,collapse='')
       options(warn=-1)
