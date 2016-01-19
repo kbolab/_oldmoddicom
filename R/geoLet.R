@@ -574,10 +574,12 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     if(!file.exists( fileNameRAW )  | folderCleanUp==TRUE) {
       stringa1<-"dcmdump";
       #fileNameFS<-str_replace_all(string = fileName,pattern = "/",replacement = "\\\\")
-      if ( Sys.info()["sysname"] == "Windows") fileNameFS<-chartr("\\","/",fileName)
+      if ( Sys.info()["sysname"] == "Windows") {
+        fileNameFS<-chartr("\\","/",fileName);
+        stringa2<-chartr("/","\\\\",stringa2)
+      }
       else fileNameFS<-fileName;
       stringa2<-paste(" +W  ",pathToStore,fileNameFS,collapse='')
-      stringa2<-chartr("/","\\\\",stringa2)
       options(warn=-1)
       system2(stringa1,stringa2,stdout=NULL)
       options(warn=0)
@@ -588,9 +590,12 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     if(SOPClassUIDList[[fileName]]$kind!="RTDoseStorage"){
       if(bitsAllocated!=16) stop("16bit pixel are allowed only for non-RTDoseStorage")
       #fileNameRAWFS<-str_replace_all(string = fileNameRAW,pattern = "/",replacement = "\\\\")
-      if ( Sys.info()["sysname"] == "Windows") fileNameRAWFS<-chartr("\\","/",fileNameRAW)
+      if ( Sys.info()["sysname"] == "Windows") {
+        fileNameRAWFS<-chartr("\\","/",fileNameRAW);
+        fileNameRAWFS<-chartr("/","\\\\",fileNameRAWFS);
+        }
       else fileNameRAWFS<-fileNameRAW;
-      fileNameRAWFS<-chartr("/","\\\\",fileNameRAWFS)
+      
       rn<-readBin(con = fileNameRAWFS, what="integer", size=2, endian="little",n=rowsDICOM*columnsDICOM)    
       rn<-matrix(rn,ncol=columnsDICOM, byrow = TRUE)
       #rn<-matrix(rn,ncol=columnsDICOM)
@@ -600,9 +605,12 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
         if(SOPClassUIDList[[fileName]]$kind!="RTDoseStorage") stop("32bit pixel are allowed only for RTDoseStorage")
         numberOfFrames<-as.numeric(getDICOMTag(fileName,'0028,0008'))
         # fileNameRAWFS<-str_replace_all(string = fileNameRAW,pattern = "/",replacement = "\\\\")
-        if ( Sys.info()["sysname"] == "Windows") fileNameRAWFS<-chartr("\\","/",fileNameRAW)
+        if ( Sys.info()["sysname"] == "Windows") {
+          fileNameRAWFS<-chartr("\\","/",fileNameRAW);
+          fileNameRAWFS<-chartr("/","\\\\",fileNameRAWFS);
+        }
         else fileNameRAWFS<-fileNameRAW;
-        fileNameRAWFS<-chartr("/","\\\\",fileNameRAWFS)
+        
         rn<-readBin(con = fileNameRAWFS, what="integer", size=4, endian="little",n=rowsDICOM*columnsDICOM*numberOfFrames) 
         # per ora va via come ciclo FOR, poi ci ragioniamo....        
         matRN<-array(0,c(rowsDICOM,columnsDICOM,numberOfFrames))
@@ -623,9 +631,11 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
       } else  {
         numberOfFrames<-as.numeric(getDICOMTag(fileName,'0028,0008'))
         #fileNameRAWFS<-str_replace_all(string = fileNameRAW,pattern = "/",replacement = "\\\\")
-        if ( Sys.info()["sysname"] == "Windows") fileNameRAWFS<-chartr("\\","/",fileNameRAW)
+        if ( Sys.info()["sysname"] == "Windows") {
+          fileNameRAWFS<-chartr("\\","/",fileNameRAW);
+          fileNameRAWFS<-chartr("/","\\\\",fileNameRAWFS)
+        }
         else fileNameRAWFS<-fileNameRAW;
-        fileNameRAWFS<-chartr("/","\\\\",fileNameRAWFS)
         rn<-readBin(con = fileNameRAWFS, what="integer", size=2, endian="little",n=rowsDICOM*columnsDICOM*numberOfFrames)
         matRN<-array(0,c(rowsDICOM,columnsDICOM,numberOfFrames))
         ct<-1
