@@ -322,6 +322,16 @@ void newnewtrilinearInterpolator_onGivenMatrix(
   free(punt);
   
 }
+
+/*
+ * NAME: newnewtrilinearInterpolator_onGivenPoints
+ * NXold,NYold,NZold : numero di voxel della matrice in ingresso
+ * oldXps,oldYps,oldZps : pixelSpacing lungo le 3 direzioni della matrice in ingresso
+ * newXpts,newYpts,newZpts : lista dei punti su cui andare ad interpolare
+ * pts_x,pts_y,pts_z : numero di voxel della nuova matrice
+ * values : matrice in ingresso (in forma di array)
+ * returnMatrix : matrice di uscita (in forma di array)
+ */
 void newnewtrilinearInterpolator_onGivenPoints(
   int *NXold, int *NYold,int *NZold,
   double *oldXps, double *oldYps, double *oldZps,
@@ -343,8 +353,6 @@ void newnewtrilinearInterpolator_onGivenPoints(
   punt->xNVoxel = *NXold; punt->yNVoxel = *NYold; punt->zNVoxel = *NZold;
   punt->xDim = *oldXps; punt->yDim = *oldYps; punt->zDim = *oldZps;
   int maxNewXVoxel,maxNewYVoxel,maxNewZVoxel;
-
-
   
   // Pulisci la matrice di destinazione
   for(int ct=0;ct< ((*pts_x) * (*pts_y) * (*pts_z)); ct++ ) returnMatrix[ct]=0;  
@@ -354,17 +362,13 @@ void newnewtrilinearInterpolator_onGivenPoints(
   for( zIndex = 0; zIndex < *pts_z; zIndex++ )   {
 //    printf("\n ===> %d",zIndex);
     for( yIndex = 0; yIndex < *pts_y; yIndex++ )   {
-      
       for( xIndex = 0; xIndex < *pts_x; xIndex++ )   {
-        
         xPos = newXpts[xIndex];
         yPos = newYpts[yIndex];
         zPos = newZpts[zIndex];
         // acquisisci i dati relativi ai voxel della vecchia matrice i cui centroidi sono
         // ai vertici del cubo da interpolare
         _c_getCubeVertex( punt , xPos , yPos , zPos ,ct );
-        
-  
 
         // reperisci i valori di tali voxel dalla vecchia matrice
         // ed effettua l'interpolazione rispetto a tali centroidi
@@ -385,25 +389,6 @@ void newnewtrilinearInterpolator_onGivenPoints(
           *oldZps, //dz1z0,
           xPos, yPos, zPos);
         
-/*
-        if(xPos>=3.4179 && yPos>=-213.1 && zPos<=-813.1) {
-          printf("\n ==============================================");
-          printf("\n\n xPos,yPos,zPos=(%lf,%lf,%lf) punt->xInf,punt->xSup=%d,%d  punt->yInf,punt->ySup=%d,%d  punt->zInf,punt->zSup=%d,%d",
-                 xPos,yPos,zPos,punt->xInf,punt->xSup,punt->yInf,punt->ySup,punt->zInf,punt->zSup);
-          printf("\n\n x0y0z0=%lf, x0y0z1=%lf, x0y1z0=%lf, x0y1z1=%lf, x1y0z0=%lf, x1y0z1=%lf, x1y1z0=%lf, x1y1z1=%lf",
-            values[punt->zInf*(*NXold)*(*NYold)+punt->yInf*(*NXold)+punt->xInf], 
-            values[punt->zSup*(*NXold)*(*NYold)+punt->yInf*(*NXold)+punt->xInf],  
-            values[punt->zInf*(*NXold)*(*NYold)+punt->ySup*(*NXold)+punt->xInf],  
-            values[punt->zSup*(*NXold)*(*NYold)+punt->ySup*(*NXold)+punt->xInf],  
-            values[punt->zInf*(*NXold)*(*NYold)+punt->yInf*(*NXold)+punt->xSup], 
-            values[punt->zSup*(*NXold)*(*NYold)+punt->yInf*(*NXold)+punt->xSup],  
-            values[punt->zInf*(*NXold)*(*NYold)+punt->ySup*(*NXold)+punt->xSup],  
-            values[punt->zSup*(*NXold)*(*NYold)+punt->ySup*(*NXold)+punt->xSup]  );
-          printf("\n\nNx,Ny=%d,%d values=%lf",*NXold,*NYold,values[punt->zInf*(*NXold)*(*NYold)+punt->yInf*(*NXold)+punt->xInf]);
-                  return;          
-        }*/
-        
-        
         // memorizza il risultato nella nuova struttura
         returnMatrix[ ct ] = valoreCalcolato; 
         ct++;
@@ -412,6 +397,14 @@ void newnewtrilinearInterpolator_onGivenPoints(
   }
   free(punt);
 }
+/*
+ * NAME: newnewtrilinearInterpolator_onGivenPoints
+ * NXold,NYold,NZold : numero di voxel della matrice in ingresso
+ * oldXps,oldYps,oldZps : pixelSpacing lungo le 3 direzioni della matrice in ingresso
+ * newXpts,newYpts,newZpts : lista dei punti su cui andare ad interpolare
+ * numberOfPts : numero di punti da interpolare
+ * pts_x,pts_y,pts_z :
+ */
 void old_newnewtrilinearInterpolator_onGivenPoints(
     int *NXold, int *NYold,int *NZold,
     double *oldXps, double *oldYps, double *oldZps,
@@ -478,3 +471,5 @@ void old_newnewtrilinearInterpolator_onGivenPoints(
   }
   free(punt);
 }
+
+

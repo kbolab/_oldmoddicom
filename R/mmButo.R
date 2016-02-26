@@ -166,7 +166,9 @@ new.mmButo<-function( caching = FALSE, cacheDir='./cache') {
       
       print( paste( c("Now processing=",folderName)   , collapse='') );
       if( attributeList$caching == TRUE) list_geoLet[[collectionID]][[ folderName ]]$cacheLoad();
-      a <- GLT.getROIVoxels(obj = list_geoLet[[collectionID]][[folderName]], Structure = singleROI )
+      #a <- GLT.getROIVoxels(obj = list_geoLet[[collectionID]][[folderName]], Structure = singleROI )
+      a <- list_geoLet[[collectionID]][[folderName]]$getROIVoxels(Structure = singleROI );
+      
       if((TRUE %in% is.na(a)) == FALSE  ) {
         #           list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]<-list()
         #           list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$DOM<-a$DOM
@@ -204,7 +206,8 @@ new.mmButo<-function( caching = FALSE, cacheDir='./cache') {
       
       print( paste( c("Now processing=",folderName)   , collapse='') );
       if( attributeList$caching == TRUE) list_geoLet[[collectionID]][[ folderName ]]$cacheLoad();
-      a <- GLT.getROIVoxels(obj = list_geoLet[[collectionID]][[folderName]], Structure = singleROI )
+      #a <- GLT.getROIVoxels(obj = list_geoLet[[collectionID]][[folderName]], Structure = singleROI )
+      a <- list_geoLet[[collectionID]][[folderName]]$getROIVoxels( Structure = singleROI );
       if((TRUE %in% is.na(a)) == FALSE  ) {
         list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]<-list()
         list_extractROIVoxel[[collectionID]][[ folderName ]][[ singleROI ]]$DOM<-a$DOM
@@ -669,13 +672,13 @@ mmButoOLD<-function() {
   # virtualBiopsy
   # Calculates the position of elements which is possible to do virtual Biopsy
   # ======================================================================================== 
-  #' Calculates the position of elements which is possible to do virtual Biopsy
-  #' description: This function can be used to calculate the index of elements for virtual Biopsy along a given distance along x,y,z
-  #' param: voxelCubes is the voxel space along x
-  #' param: nx is the voxel space along x
-  #' param: ny is the voxel space along y
-  #' param: nz is the voxel space along z
-  #' return: a list 
+  # Calculates the position of elements which is possible to do virtual Biopsy
+  # description: This function can be used to calculate the index of elements for virtual Biopsy along a given distance along x,y,z
+  # param: voxelCubes is the voxel space along x
+  # param: nx is the voxel space along x
+  # param: ny is the voxel space along y
+  # param: nz is the voxel space along z
+  # return: a list 
   
   virtualBiopsy <- function (voxelCubes,nx,ny,nz) {
     

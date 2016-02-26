@@ -56,7 +56,7 @@
 #'               \item \code{getAlignedStructureAndVoxelCube( double ps.x, double ps.y, double ps.z, string ROIName )} this function resample the image voxel cube and give back the interested ROI rotated on such cube ad adapted according with the new geometry. ps.x,y and z are optional: if not specified the normal pixel Spacing are used.
 #'               }
 #' @export
-#' @import stringr XML 
+#' @import stringr XML misc3d rgl Rvcg
 geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
   
   dataStorage<-list();          # Attribute with ALL the data
@@ -66,25 +66,31 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
   logObj<-list()               # log handler
   objServ<-list();
   ROIVoxelMemoryCacheArray<-list() # ROIVoxelMemoryCache Array
+  mainFrameOfReferenceUID<-NA
   
   #=================================================================================
   # openDICOMFolder
   # Loads a Folder containing one or more DICOM Studies
   #=================================================================================
   # Open a folder and load the content
-  openDICOMFolder<-function(pathToOpen, setValidCTRMNSeriesInstanceUID='any') {
+  openDICOMFolder<-function(pathToOpen, setValidCTRMNSeriesInstanceUID='any', setValidRTPLANSOPInstanceUID='first') {
     
     if( attributeList$verbose$lv1 == TRUE ) logObj$sendLog(pathToOpen)
+    
     # get the dcm file type
     SOPClassUIDList<<-getFolderContent(pathToOpen);
+    # Load RTPLan (if exists)
+    if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("---------------------------------------")
+    if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("Load RTPlan")
+    if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("---------------------------------------")
+    loadRTPlan(SOPClassUIDList,setValidRTPLANSeriesInstanceUID);
+
     # Load CT/RMN Scans
     if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("---------------------------------------")
     if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("Load Images")
     if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("---------------------------------------")
-    imageStructure<-loadCTRMNRDScans(SOPClassUIDList,setValidCTRMNSeriesInstanceUID);
+    loadCTRMNRDScans(SOPClassUIDList);
     
-    # put images into dataStorage
-    dataStorage<<-imageStructure;
     # Load RTStruct Files
     if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("---------------------------------------")
     if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog("Load RTStruct")
@@ -121,6 +127,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     if(length(TMP)==0) {
       return( TMP );
     }
+   
     # now let me use some more easy to handle variable names
     matrice2<-c(); matrice3<-c(); FORUID.m<-NA;
     for(i in names(TMP)) {
@@ -132,6 +139,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
       for( nomeROI in TMP[[i]]$IDROINameAssociation[2,] ) {
         dataStorage$info[["structures"]][[nomeROI]]<<-list();
         dataStorage$info[["structures"]][[nomeROI]]$FrameOfReferenceUID<<-TMP[[i]]$FORUID.m
+        dataStorage$info[["structures"]][[nomeROI]]$SeriesInstanceUID<<-TMP[[i]]$RTStructSeriesInstanceUID
       }      
       # .fm
     }
@@ -174,73 +182,17 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     }
     return(listaROI); 
   }  
-  
-  old_loadRTStructFiles<-function(SOPClassUIDList) {    
-    imageSerie<-list()
-    listaPuntiROI<-list()
-    # loop over the list    
-    # even if the assumption is that only one RTStruct is admitted for a CT scan serie
-    TMP<-NA
-    for(i in names(SOPClassUIDList)) {
-      if(  SOPClassUIDList[[i]]$kind=="RTStructureSetStorage") {
-        if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog(i) 
-        TMP<-getStructuresFromXML( i );
-      }
-    }
-    
-    if(!is.list(TMP)) {
-      if(is.na(TMP)) return( TMP );
-    }
-    # now let me use some more easy to handle variable names
-    matrice2<-TMP$IDROINameAssociation;
-    matrice3<-TMP$tableROIPointList;
-    
-    listaROI<-list()
-    
-    # for each ROI
-    for(i in matrice2[2,]) {
-      # get the points
-      subMatrix<-matrice3[which(matrice3[,2]==i,arr.ind = TRUE),]
-      # if some points exist
-      quantiElementiTrovati<--1
-      
-      if(is.list(subMatrix) & !is.array(subMatrix)) quantiElementiTrovati<-1
-      if(is.matrix(subMatrix) & is.array(subMatrix)) quantiElementiTrovati<-dim(subMatrix)[1]
-      if(quantiElementiTrovati==-1) stop("Errore inatteso nel caricamento delle slides. Error code:#0001");
-      
-      if( quantiElementiTrovati >0 ) {
-        listaROI[[i]]<-list()
-        
-        # add properly the points to the 'listaROI' structure
-        for(contatore in seq(1,quantiElementiTrovati) ) {
-          
-          if( quantiElementiTrovati == 1) {
-            ROIPointStringList<-subMatrix[[3]]
-            SOPInstance<-subMatrix[[4]]
-          }
-          else {
-            ROIPointStringList<-subMatrix[contatore,3][[1]]
-            SOPInstance<-subMatrix[contatore,4][[1]]
-          }
-          listaCoords<-strsplit(ROIPointStringList,"\\\\");
-          listaCoords<-as.numeric(listaCoords[[1]])
-          # if a ROI already exists for the slice, well append it to the list
-          if( !( SOPInstance  %in% names(listaROI[[i]])  ) )  listaROI[[i]][[   SOPInstance  ]]<-list()          
-          listaROI[[i]][[   SOPInstance  ]][[ length(listaROI[[i]][[   SOPInstance  ]])+1  ]]<-matrix(listaCoords,ncol=3,byrow=T)
-          # Add the first one as last (close the loop)
-          listaROI[[i]][[   SOPInstance  ]][[ length(listaROI[[i]][[   SOPInstance  ]]) ]]<-rbind(listaROI[[i]][[   SOPInstance  ]][[length(listaROI[[i]][[   SOPInstance  ]])]],listaROI[[i]][[   SOPInstance  ]][[length(listaROI[[i]][[   SOPInstance  ]])]][1,])
-        }   
-      }
-    }
-    
-    return(listaROI); 
-  }    
   #=================================================================================
   # getAttrFromSOPiUID
   # Create the association between ROI and images
   #=================================================================================
   getAttrFromSOPiUID<-function( serUID, sopUID , attrName) {
     return( dataStorage$info[[serUID]][[sopUID]][[attrName]] )
+  }
+  getROIVoxelCube.v2<-function(ROINAME,typeOfVoxels='image',SeriesInstanceUID=NA,pixelSpacing=NA) {
+    if(is.na(pixelSpacing)) pixelSpacing<-getPixelSpacing();
+    if(is.na(SeriesInstanceUID) & typeOfVoxels=='image')  SeriesInstanceUID<-giveBackImageSeriesInstanceUID();
+    
   }
   #=================================================================================
   # associateROIandImageSlices
@@ -254,6 +206,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
       FrameOfReferenceUID<-dataStorage$info$structures[[nomeROI]]$FrameOfReferenceUID;
       # prendi la seriesInstanceUID con quel FrameOfReferenceUID
       # (per sapere quale serie di immagini avrà associata la ROI)
+      
       seriesInstanceUID<-giveBackImageSeriesInstanceUID(FrameOfReferenceUID=FrameOfReferenceUID)
       # bene, ora per ogni ROI scorri i contorni sui vari piani assiali
       listaPuntiROI<-getROIPointList(ROINumber = nomeROI );
@@ -288,7 +241,6 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
                   dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]][1,3]<<-FrameOfReferenceUID
                   dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]][1,4]<<-STRUCTSeriesInstanceUID
                   numeroROIAssegnate<-numeroROIAssegnate+1
-#                  colnames(dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]])<-c('nomeROI','IMGseriesInstanceUID','FrameOfReferenceUID','STRUCTSeriesInstanceUID');
                 } else {
                   # se invece c'era serve solo aggiungere una riga
                   riga<-nrow(dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]])+1
@@ -309,81 +261,16 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
       cat("ROI non associate correttamente",numeroROIAssegnate,"/",numeroROIDaAssegnare);
     }
   }
-  old_associateROIandImageSlices<-function( relaxCoPlanarity = FALSE) {
-    
-    # trova la slice che sia una CT o una risonanza per associarvi RTStruct (ad es: una dose non va bene)
-    list.index<-''
-    for(whichIdentifier in seq(1,length(dataStorage$info) )) {
-      if(names(dataStorage$info)[whichIdentifier]!="structures") {
-        if(dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'CTImageStorage' ||
-           dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'MRImageStorage' ||
-           dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'PositronEmissionTomographyImageStorage'
-        ) list.index<-whichIdentifier
-      }
-    }
-    if(list.index=='') stop("list.index is empty!")
-    #    browser();
-    # ok now try to find out which is the RMN plane
-    lista<-dataStorage$info[[list.index]]
-    planes<-list()
-    assignedSCANSandROI<-matrix(NA,ncol=4,nrow=1)
-    massimo<-0
-    for(i in names(lista)) {
-      
-      planes[[i]]<-dataStorage$info[[list.index]][[i]]$planeEquation
-      dataStorage$info[[list.index]][[i]][["ROIList"]]<<-matrix("",ncol=2);
-      
-      for(k in names(dataStorage$structures)) {
-        for(t in names(dataStorage$structures[[k]])) {
-          # se non trovi nulla (ROI non associata ad alcuna lisce)
-          if(t=='') {
-            assignedSCANSandROI<-rbind(assignedSCANSandROI,c(i,k,t,NA))
-          }
-          else # se invece c'è una slice cui associare la ROI
-          {          
-            punto<-dataStorage$structures[[k]][[t]][[1]][1,]
-            distanza<-objServ$SV.getPointPlaneDistance(Punto=punto, Piano=planes[[i]])
-            
-            sliceThickness<-as.numeric(dataStorage$info[[list.index]][[i]]$SliceThickness)
-            
-            #              if(distanza<(sliceThickness/2)) print(distanza)
-            #              browser();
-            if( abs(distanza)<0.1 |  ( abs(distanza)<=(sliceThickness/2) & relaxCoPlanarity==TRUE   ) ) {
-              if(dataStorage$info[[list.index]][[i]][["ROIList"]][1]==''  ) {
-                dataStorage$info[[list.index]][[i]][["ROIList"]]<<-matrix(c(k,t),ncol=2)
-              }
-              else {
-                dataStorage$info[[list.index]][[i]][["ROIList"]]<<-rbind(dataStorage$info[[list.index]][[i]][["ROIList"]],c(k,t))   #   <<
-              }
-              assignedSCANSandROI<-rbind(assignedSCANSandROI,c(i,k,t,distanza))
-            }
-          }
-        }
-      }      
-    }  
-    
-    # now check if it has assigned all the ROIs
-    for( i in names(dataStorage$structures) )  {
-      lunghezzaAssegnate<-length(which(assignedSCANSandROI[,2]==i))
-      lunghezzaCaricate<-length(dataStorage$structures[[i]])
-      if(lunghezzaAssegnate!=  lunghezzaCaricate) { 
-        
-        cat("\nWARNING: ROI NON CARICATE CORRETTAMENTE: ",i,"\n"); 
-      }
-    }
-  }
   #=================================================================================
   # loadCTRMRDNScans
   # Loads a DICOM CT/MR Scans
   #=================================================================================  
   loadCTRMNRDScans<-function(SOPClassUIDList,setValidCTRMNSeriesInstanceUID='any') {   
-    
     imageSerie<-list()
     objServ<-services()
     
     # loop over the list    
     for(i in names(SOPClassUIDList)) {
-      ##      if(SOPClassUIDList[[i]]$kind=="RTDoseStorage" | 
       if(  (
         SOPClassUIDList[[i]]$kind=="CTImageStorage" ||
         SOPClassUIDList[[i]]$kind=="MRImageStorage"  ||
@@ -391,102 +278,199 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
         # get the Series number
         #              seriesInstanceUID<-getDICOMTag(i,"0020,000e")
         seriesInstanceUID<-getDICOMTagFromXML(i,"0020,000e")
-        
         i<-i
         if(seriesInstanceUID == setValidCTRMNSeriesInstanceUID || 
            setValidCTRMNSeriesInstanceUID=='any') {
           
-          # get the Instance number (number of CT in the serie)
-          instanceNumber<-getDICOMTag(i,"0020,0013")              
-          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]]<-list()
-          # get the Patient Position
-          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]]<-getAttribute(attribute<-"PatientPosition",fileName=i)
-          # get the image data
-          immagine<-getDICOMTag(i,"7fe0,0010");
-          # Do I have to rotate the image?
-          imageToBeRotated <- -1
-          if( imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "HFS" ) imageToBeRotated<-1
-          if( imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "FFS" ) imageToBeRotated<-1
-          if( imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "HFP" ) imageToBeRotated<-1
-          
-          if( imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "FFP" ) imageToBeRotated<-1
-          if ( imageToBeRotated != -1 ) {
-            immagine <- objServ$SV.rotateMatrix( immagine, imageToBeRotated )
+          # carica il FrameOfReferenceUID e cerca di capire se è uguale a quello evenutalmente
+          # già caricato: se no le geometrie son troppo diverse! (e skippa la serie)
+          FrameOfReferenceUID<-getDICOMTag(i,"0020,0052")
+          if(  is.na(mainFrameOfReferenceUID) 
+               || ( !is.na(mainFrameOfReferenceUID) & FrameOfReferenceUID==mainFrameOfReferenceUID )  ) {
+            
+            # se son qui significa che il FrameOfReferenceUID  è compatibile e le geometrie sono coerenti
+            
+            # get the Instance number (number of CT in the serie)
+            instanceNumber<-getDICOMTag(i,"0020,0013")              
+            dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]]<<-list()
+            # get the Patient Position
+            dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]]<<-getAttribute(attribute<-"PatientPosition",fileName=i)
+            # get the image data
+            immagine<-getDICOMTag(i,"7fe0,0010");
+            # Do I have to rotate the image?
+            imageToBeRotated <- -1
+            if( dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "HFS" ) imageToBeRotated<-1
+            if( dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "FFS" ) imageToBeRotated<-1
+            if( dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "HFP" ) imageToBeRotated<-1
+            
+            if( dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "FFP" ) imageToBeRotated<-1
+            if ( imageToBeRotated != -1 ) {
+              immagine <- objServ$SV.rotateMatrix( immagine, imageToBeRotated )
+            }
+            
+            # now update the structure in memory
+            dataStorage[["img"]][[seriesInstanceUID]][[instanceNumber]]<<-immagine              
+            dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["SOPClassUID"]]<<-SOPClassUIDList[[i]]$kind
+            dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["SOPInstanceUID"]]<<-getDICOMTag(i,"0008,0018")
+            dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["FrameOfReferenceUID"]]<<-FrameOfReferenceUID
+            dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["fileName"]]<<-i
+            pixelSpacing<-getAttribute(attribute<-"PixelSpacing",fileName=i)
+            #pixSeriesInstanceUIDelSpacing<-getDICOMTag(i,"0028,0030")
+            oM<-getAttribute(attribute<-"orientationMatrix",fileName=i)              
+            dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["ImagePositionPatient"]]<<-getAttribute(attribute<-"ImagePositionPatient",fileName=i)
+            dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["ImageOrientationPatient"]]<<-getAttribute(attribute<-"ImageOrientationPatient",fileName=i)
+            oM[1,1]<-oM[1,1]*pixelSpacing[1]
+            oM[2,1]<-oM[2,1]*pixelSpacing[1]
+            oM[3,1]<-oM[3,1]*pixelSpacing[1]
+            oM[1,2]<-oM[1,2]*pixelSpacing[2]
+            oM[2,2]<-oM[2,2]*pixelSpacing[2]
+            oM[3,2]<-oM[3,2]*pixelSpacing[2]
+            dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["orientationMatrix"]]<<-oM
+            dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["pixelSpacing"]]<<-pixelSpacing
+            dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["Rows"]]<<-getDICOMTag(i,"0028,0010")
+            dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["Columns"]]<<-getDICOMTag(i,"0028,0011")
+            dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["SliceThickness"]]<<-getDICOMTag(i,"0018,0050")
+            if(SOPClassUIDList[[i]]$kind=="MRImageStorage") {
+              dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["RepetitionTime"]]<<-getDICOMTag(i,"0018,0080")
+              dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["EchoTime"]]<<-getDICOMTag(i,"0018,0081")
+            }
+            instanceNumber<-getDICOMTag(i,"0020,0013")
+            
+            # three points to find out plane equation
+            Pa<-c(oM[1,4],oM[2,4],oM[3,4])  
+            Pb<-objServ$SV.get3DPosFromNxNy(1000,0,oM)
+            Pc<-objServ$SV.get3DPosFromNxNy(0,1000,oM)
+            
+            abcd<-objServ$SV.getPlaneEquationBetween3Points(Pa,Pb,Pc) 
+            piano<-matrix(abcd,nrow=1)
+            colnames(piano)<-c("a","b","c","d")
+            dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["planeEquation"]]<<-piano
+            if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog(i)
           }
-          
-          # now update the structure in memory
-          imageSerie[["img"]][[seriesInstanceUID]][[instanceNumber]]<-immagine              
-          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["SOPClassUID"]]<-SOPClassUIDList[[i]]$kind
-          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["SOPInstanceUID"]]<-getDICOMTag(i,"0008,0018")
-          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["FrameOfReferenceUID"]]<-getDICOMTag(i,"0020,0052")
-          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["fileName"]]<-i
-          pixelSpacing<-getAttribute(attribute<-"PixelSpacing",fileName=i)
-          #pixSeriesInstanceUIDelSpacing<-getDICOMTag(i,"0028,0030")
-          oM<-getAttribute(attribute<-"orientationMatrix",fileName=i)              
-          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["ImagePositionPatient"]]<-getAttribute(attribute<-"ImagePositionPatient",fileName=i)
-          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["ImageOrientationPatient"]]<-getAttribute(attribute<-"ImageOrientationPatient",fileName=i)
-          oM[1,1]<-oM[1,1]*pixelSpacing[1]
-          oM[2,1]<-oM[2,1]*pixelSpacing[1]
-          oM[3,1]<-oM[3,1]*pixelSpacing[1]
-          oM[1,2]<-oM[1,2]*pixelSpacing[2]
-          oM[2,2]<-oM[2,2]*pixelSpacing[2]
-          oM[3,2]<-oM[3,2]*pixelSpacing[2]
-          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["orientationMatrix"]]<-oM
-          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["pixelSpacing"]]<-pixelSpacing
-          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["Rows"]]<-getDICOMTag(i,"0028,0010")
-          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["Columns"]]<-getDICOMTag(i,"0028,0011")
-          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["SliceThickness"]]<-getDICOMTag(i,"0018,0050")
-          if(SOPClassUIDList[[i]]$kind=="MRImageStorage") {
-            imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["RepetitionTime"]]<-getDICOMTag(i,"0018,0080")
-            imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["EchoTime"]]<-getDICOMTag(i,"0018,0081")
-          }
-          instanceNumber<-getDICOMTag(i,"0020,0013")
-          
-          # three points to find out plane equation
-          Pa<-c(oM[1,4],oM[2,4],oM[3,4])  
-          Pb<-objServ$SV.get3DPosFromNxNy(1000,0,oM)
-          Pc<-objServ$SV.get3DPosFromNxNy(0,1000,oM)
-          
-          abcd<-objServ$SV.getPlaneEquationBetween3Points(Pa,Pb,Pc) 
-          
-          piano<-matrix(abcd,nrow=1)
-          colnames(piano)<-c("a","b","c","d")
-          imageSerie[["info"]][[seriesInstanceUID]][[instanceNumber]][["planeEquation"]]<-piano
-          if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog(i)
         }
       }
       
       if(  SOPClassUIDList[[i]]$kind=="RTDoseStorage") {
-        # get the Series number
-        seriesInstanceUID<-getDICOMTag(i,"0020,000e")              
-        studyInstanceUID<-getDICOMTag(i,"0020,000d")  
-        FrameOfReferenceUID<-getDICOMTag(i,"0020,0052")
-        imagePositionPatient<-getAttribute("ImagePositionPatient",fileName=i)
-        ImageOrientationPatient<-getAttribute("ImageOrientationPatient",fileName=i)
-        GridFrameOffsetVector<-getAttribute("GridFrameOffsetVector",fileName=i)
-        PatientPosition<-getAttribute(attribute<-"PatientPosition",fileName=i)
-        Rows<-getDICOMTag(i,"0028,0010");
-        Columns<-getDICOMTag(i,"0028,0011")
         
-        pixelSpacing<-getAttribute(attribute<-"PixelSpacing",fileName=i)
-#        imageSerie[["info"]][[seriesInstanceUID]][["1"]][["FrameOfReferenceUID"]]<-FrameOfReferenceUID
-        imageSerie[["info"]][[seriesInstanceUID]][["1"]][["imagePositionPatient"]]<-imagePositionPatient
-        imageSerie[["info"]][[seriesInstanceUID]][["1"]][["FrameOfReferenceUID"]]<-FrameOfReferenceUID
-        imageSerie[["info"]][[seriesInstanceUID]][["1"]][["ImageOrientationPatient"]]<-ImageOrientationPatient
-        imageSerie[["info"]][[seriesInstanceUID]][["1"]][["PatientPosition"]]<-PatientPosition
-        imageSerie[["info"]][[seriesInstanceUID]][["1"]][["Rows"]]<-Rows
-        imageSerie[["info"]][[seriesInstanceUID]][["1"]][["Columns"]]<-Columns
-        imageSerie[["info"]][[seriesInstanceUID]][["1"]][["pixelSpacing"]]<-pixelSpacing
-        imageSerie[["info"]][[seriesInstanceUID]][["1"]][["doseType"]]<-getDICOMTag(i,"0020,000d") 
-        imageSerie[["info"]][[seriesInstanceUID]][["1"]][["GridFrameOffsetVector"]]<-GridFrameOffsetVector
-        imageSerie[["info"]][[seriesInstanceUID]][["1"]][["DoseGridScaling"]]<-getDICOMTag(i,"3004,000e") 
-        imageSerie[["info"]][[seriesInstanceUID]][["1"]][["SOPClassUID"]]<-SOPClassUIDList[[i]]$kind
-        immagine<-getDICOMTag(i,"7fe0,0010");
-        imageSerie[["dose"]][[seriesInstanceUID]]<-immagine * as.numeric( imageSerie[["info"]][[seriesInstanceUID]][["1"]][["DoseGridScaling"]] )
+        # get the mainFrameOfReferenceUID
+        FrameOfReferenceUID<-getDICOMTag(i,"0020,0052")
+        
+        # carica il FrameOfReferenceUID e cerca di capire se è uguale a quello evenutalmente
+        # già caricato: se no le geometrie son troppo diverse! (e skippa la serie)        
+        if(  is.na(mainFrameOfReferenceUID) 
+             || ( !is.na(mainFrameOfReferenceUID) & FrameOfReferenceUID==mainFrameOfReferenceUID )  ) {
+            
+          # carica l'XML ed estraine i campi
+          datiDiDose<-getDoseFromXML( i )
+
+          # verifica prima di tutto se la dose caricata fa riferimento all'RTPLAN
+          # presente in memoria (se c'è!)
+          if( is.null(dataStorage$info$plan$SOPInstanceUID) || ( 
+            !is.null(dataStorage$info$plan$SOPInstanceUID) &
+            dataStorage$info$plan$SOPInstanceUID == datiDiDose$ReferencedRTPlanSequence_ReferencedSOPInstanceUID )) {
+          
+            if(length(dataStorage[["info"]])==0) dataStorage[["info"]]<<-list();
+            if(length(dataStorage[["info"]][["doses"]])==0) dataStorage[["info"]][["doses"]]<<-list();
+            SOPInstanceUID<-datiDiDose$SOPInstanceUID;
+            dataStorage[["info"]][["doses"]][[SOPInstanceUID]]<<-list();
+            dataStorage[["info"]][["doses"]][[SOPInstanceUID]][["imagePositionPatient"]]<<-splittaTAG(datiDiDose$ImagePositionPatient)
+            dataStorage[["info"]][["doses"]][[SOPInstanceUID]][["seriesInstanceUID"]]<<-datiDiDose$SeriesInstanceUID
+            dataStorage[["info"]][["doses"]][[SOPInstanceUID]][["FrameOfReferenceUID"]]<<-FrameOfReferenceUID
+            dataStorage[["info"]][["doses"]][[SOPInstanceUID]][["ImageOrientationPatient"]]<<-splittaTAG(datiDiDose$ImageOrientationPatient)
+            dataStorage[["info"]][["doses"]][[SOPInstanceUID]][["Rows"]]<<-datiDiDose$Rows
+            dataStorage[["info"]][["doses"]][[SOPInstanceUID]][["Columns"]]<<-datiDiDose$Columns
+            dataStorage[["info"]][["doses"]][[SOPInstanceUID]][["doseType"]]<<-datiDiDose$DoseType
+            dataStorage[["info"]][["doses"]][[SOPInstanceUID]][["GridFrameOffsetVector"]]<<-splittaTAG(datiDiDose$GridFrameOffsetVector)
+            dataStorage[["info"]][["doses"]][[SOPInstanceUID]][["DoseGridScaling"]]<<-datiDiDose$DoseGridScaling
+            dataStorage[["info"]][["doses"]][[SOPInstanceUID]][["ReferencedSOPInstanceUID"]]<<-datiDiDose$ReferencedRTPlanSequence_ReferencedSOPInstanceUID 
+            dataStorage[["info"]][["doses"]][[SOPInstanceUID]][["SOPClassUID"]]<<-SOPClassUIDList[[i]]$kind
+            dataStorage[["info"]][["doses"]][[SOPInstanceUID]][["pixelSpacing"]]<<-splittaTAG(datiDiDose$PixelSpacing)
+            dataStorage[["info"]][["DVHs"]][[SOPInstanceUID]][["DVHFromFile"]]<<-datiDiDose$DVHList
+            
+            # estrai l'immagine
+            immagine<-getDICOMTag(i,"7fe0,0010");
+            if(length(dataStorage[["dose"]])==0) dataStorage[["dose"]]<<-list();
+            dataStorage[["dose"]][[SOPInstanceUID]]<<-immagine * as.numeric( dataStorage[["info"]][["doses"]][[SOPInstanceUID]][["DoseGridScaling"]] )
+            
+            # controlli 'formali' di congruità
+            # Verifica che le DOSI abbiano tutte la stessa geometria
+            if(length(dataStorage[["info"]][["doses"]])>1) {
+              if(!all(dataStorage[["info"]][["doses"]][[SOPInstanceUID]][["imagePositionPatient"]] %in% dataStorage[["info"]][["doses"]][[1]][["imagePositionPatient"]]))
+                stop("ERRORE: due dosi differiscono per 'imagePositionPatient");
+              if(dataStorage[["info"]][["doses"]][[SOPInstanceUID]][["FrameOfReferenceUID"]]!=dataStorage[["info"]][["doses"]][[1]][["FrameOfReferenceUID"]])
+                stop("ERRORE: due dosi differiscono per 'FrameOfReferenceUID");  
+              if(!all(dataStorage[["info"]][["doses"]][[SOPInstanceUID]][["ImageOrientationPatient"]] %in% dataStorage[["info"]][["doses"]][[1]][["ImageOrientationPatient"]]))
+                stop("ERRORE: due dosi differiscono per 'ImageOrientationPatient");  
+              if(dataStorage[["info"]][["doses"]][[SOPInstanceUID]][["Rows"]]!=dataStorage[["info"]][["doses"]][[1]][["Rows"]])
+                stop("ERRORE: due dosi differiscono per 'Rows");      
+              if(dataStorage[["info"]][["doses"]][[SOPInstanceUID]][["Columns"]]!=dataStorage[["info"]][["doses"]][[1]][["Columns"]])
+                stop("ERRORE: due dosi differiscono per 'Columns");    
+              if(dataStorage[["info"]][["doses"]][[SOPInstanceUID]][["pixelSpacing"]][1]!=dataStorage[["info"]][["doses"]][[1]][["pixelSpacing"]][1])
+                stop("ERRORE: due dosi differiscono per 'pixelSpacing' x-dim");    
+              if(dataStorage[["info"]][["doses"]][[SOPInstanceUID]][["pixelSpacing"]][2]!=dataStorage[["info"]][["doses"]][[1]][["pixelSpacing"]][2])
+                stop("ERRORE: due dosi differiscono per 'pixelSpacing' y-dim");            
+               if(!all(dataStorage[["info"]][["doses"]][[SOPInstanceUID]][["GridFrameOffsetVector"]] %in% dataStorage[["info"]][["doses"]][[1]][["GridFrameOffsetVector"]]))
+                 stop("ERRORE: due dosi differiscono per 'GridFrameOffsetVector");        
+              if(dataStorage[["info"]][["doses"]][[SOPInstanceUID]][["doseType"]]!="PHYSICAL")
+                stop("ERRORE: la dose non è 'PHYSICAL' (attributo 'DoseType')");
+            }
+          }
+        }
       }      
     }
-    return(imageSerie);
   }
+  #=================================================================================
+  # loadRTPlan
+  # load the RTPlan
+  #=================================================================================    
+  loadRTPlan<-function(SOPClassUIDList,setValidRTPLANSOPInstanceUID='first') {
+    setValidRTPLANSOPInstanceUID<-'first'
+    # loop over the list    
+    for(i in names(SOPClassUIDList)) {
+      if(  SOPClassUIDList[[i]]$kind=="RTPlanStorage" ) {
+        
+        strutture<-getPlanFromXML(fileName = i);
+        
+        # prendi la SOPInstanceUID e la seriesInstanceUID del piano
+        SOPInstanceUID<-getDICOMTag(i,"0008,0018")
+        seriesInstanceUID<-getDICOMTag(i,"0020,000e") 
+        toConsider<-FALSE;
+
+        if(SOPInstanceUID == setValidRTPLANSOPInstanceUID) toConsider<-TRUE;
+        if(setValidRTPLANSOPInstanceUID == 'first' & length( dataStorage$info$plan )==0) toConsider<-TRUE;
+        # se è il primo che trovi (ed era stato dichiarato di prendere il primo)
+        # o se la SOPInstanceUID coincide con quanto cercato, allora caricalo
+        if(toConsider==TRUE) {
+          
+          seriesInstanceUID<-strutture$SeriesInstanceUID
+          RTPlanGeometry<-strutture$RTPlanGeometry
+          ReferencedStructureSetSequence<-strutture$ReferencedStructureSetSequence_ReferencedSOPInstanceUID
+          FrameOfReferenceUID<-strutture$FrameOfReferenceUID
+          DoseReferenceSequence_DoseReferenceUID<-strutture$DoseReferenceSequence_DoseReferenceUID
+          
+          if(RTPlanGeometry!="PATIENT") stop("RTPlan has RTPlanGeometry set to something different than 'PATIENT'");
+          
+          if(length(dataStorage)==0) dataStorage<<-list();
+          if(length(dataStorage$info)==0) dataStorage$info<<-list();
+          if(length(dataStorage$info$plan)==0) dataStorage$info$plan<<-list();
+    
+          dataStorage$info$plan$SOPInstanceUID<<-SOPInstanceUID
+          dataStorage$info$plan$seriesInstanceUID<<-seriesInstanceUID
+          dataStorage$info$plan$RTPlanGeometry<<-RTPlanGeometry
+          dataStorage$info$plan$FrameOfReferenceUID<<-FrameOfReferenceUID
+          dataStorage$info$plan$ReferencedStructureSetSequence<<-ReferencedStructureSetSequence
+          dataStorage$info$plan$DoseReferenceSequence_DoseReferenceUID<<-DoseReferenceSequence_DoseReferenceUID
+          
+          # setta il mainFrameOfReferenceUID  
+          # ( importante: ce ne può essere solo uno)
+          mainFrameOfReferenceUID<<-FrameOfReferenceUID
+          
+          # print the line on terminal
+          if( attributeList$verbose$lv2 == TRUE ) logObj$sendLog(i)
+        }
+      }
+    }
+  }  
   #=================================================================================
   # createImageVoxelCube
   # create the imageVoxelCube for the current obj and for the image stored
@@ -508,7 +492,6 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
       cubone[,,numSlice]<-dataStorage$img[[seriesInstanceUID]][[as.character(i)]]
       numSlice<-numSlice+1
     }
-    
     return(cubone)
   }  
   #=================================================================================
@@ -550,7 +533,8 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
   #=================================================================================    
   getDoseVoxelCube<-function() {
     doseVC<-dataStorage$dose[[1]]
-    return(doseVC)
+    doseInfo<-dataStorage$info$doses[[1]]
+    return( list("voxelCube"=doseVC,"info"=doseInfo)  )
   }
   #=================================================================================
   # getPixelSpacing
@@ -583,20 +567,27 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
   #=================================================================================
   # giveBackImageSeriesInstanceUID
   # from dataStorage it gives back the SOPInstanceUID of the series which has a 
-  # SOPClassUID as 'CTImageStorage' or 'MRImageStorage'. 
+  # SOPClassUID as 'CTImageStorage' or 'MRImageStorage' or 'PET'. 
   # Frame
   #=================================================================================
   giveBackImageSeriesInstanceUID<-function(FrameOfReferenceUID=NA, ROIName=NA) {
     # se è per FrameOfReferenceUID
+
     if(!is.na(FrameOfReferenceUID)) return(searchIMGSeriesForFrameOfReferenceUID(FrameOfReferenceUID=FrameOfReferenceUID));
     # se le vuoi tutte...
     list.index<-''
     for(whichIdentifier in seq(1,length(dataStorage$info) )) {
-      if(names(dataStorage$info)[whichIdentifier]!="structures"   ) {
+      if(names(dataStorage$info)[whichIdentifier]!="structures" &
+         names(dataStorage$info)[whichIdentifier]!="plan"  &
+         names(dataStorage$info)[whichIdentifier]!="DVHs"  &
+         names(dataStorage$info)[whichIdentifier]!="doses" ) {
         if(dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'CTImageStorage' ||
            dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'MRImageStorage' ||
            dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'PositronEmissionTomographyImageStorage'
-        ) list.index<-whichIdentifier
+        ) {
+          #list.index<-whichIdentifier
+            list.index<-names(dataStorage$info)[whichIdentifier]
+          }
       }
     }
     return(list.index)
@@ -612,7 +603,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
       "PatientPosition"=ddd$PatientPosition,
       "SOPClassUID"=ddd$MRImageStorage,
       "pixelSpacing"=ddd$pixelSpacing,
-      "pixelSpacing"=ddd$pixelSpacing,
+      "ImagePositionPatient"=ddd$ImagePositionPatient,
       "Rows"=ddd$Rows,
       "Columns"=ddd$Columns,
       "SliceThickness"=ddd$SliceThickness,
@@ -622,47 +613,145 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     ))
   }
   #=================================================================================
-  # getImageFromRAW
-  # build a row data from a DICOM file stored on filesystem and load it 
-  # into memory (using DCMTK)
+  # getPlanFromXML
+  # get the interesting tag via XML instead of via normal dump (more robust)
+  #=================================================================================   
+  getDoseFromXML<-function(fileName) { 
+    obj.S<-services();
+    
+    # build the XML file and get the XML structure
+    doc<-obj.S$getXMLStructureFromDICOMFile(fileName = fileName, folderCleanUp = folderCleanUp)
+    
+    ImagePositionPatient<-xpathApply(doc,'/file-format/data-set/element[@tag="0020,0032" and @name="ImagePositionPatient"]',xmlValue)[[1]]
+    ImageOrientationPatient<-xpathApply(doc,'/file-format/data-set/element[@tag="0020,0037" and @name="ImageOrientationPatient"]',xmlValue)[[1]]
+    Rows<-xpathApply(doc,'/file-format/data-set/element[@tag="0028,0010" and @name="Rows"]',xmlValue)[[1]]
+    Columns<-xpathApply(doc,'/file-format/data-set/element[@tag="0028,0011" and @name="Columns"]',xmlValue)[[1]]
+    PixelSpacing<-xpathApply(doc,'/file-format/data-set/element[@tag="0028,0030" and @name="PixelSpacing"]',xmlValue)[[1]]
+    PixelRepresentation<-xpathApply(doc,'/file-format/data-set/element[@tag="0028,0103" and @name="PixelRepresentation"]',xmlValue)[[1]]
+    SOPInstanceUID<-xpathApply(doc,'/file-format/data-set/element[@tag="0008,0018" and @name="SOPInstanceUID"]',xmlValue)[[1]]
+    SOPInstanceUID<-xpathApply(doc,'/file-format/data-set/element[@tag="0008,0018" and @name="SOPInstanceUID"]',xmlValue)[[1]]
+    SeriesInstanceUID<-xpathApply(doc,'/file-format/data-set/element[@tag="0020,000e" and @name="SeriesInstanceUID"]',xmlValue)[[1]]
+    GridFrameOffsetVector<-xpathApply(doc,'/file-format/data-set/element[@tag="3004,000c" and @name="GridFrameOffsetVector"]',xmlValue)[[1]]
+    DoseUnits<-xpathApply(doc,'/file-format/data-set/element[@tag="3004,0002" and @name="DoseUnits"]',xmlValue)[[1]]
+    DoseType<-xpathApply(doc,'/file-format/data-set/element[@tag="3004,0004" and @name="DoseType"]',xmlValue)[[1]]
+    DoseGridScaling<-xpathApply(doc,'/file-format/data-set/element[@tag="3004,000e" and @name="DoseGridScaling"]',xmlValue)[[1]]
+    ReferencedRTPlanSequence_ReferencedSOPInstanceUID<-xpathApply(doc,'/file-format/data-set/sequence[@tag="300c,0002" and @name="ReferencedRTPlanSequence"]//element[@tag="0008,1155" and @name="ReferencedSOPInstanceUID"]',xmlValue)[[1]]    
+    
+    # now look for some DVHs
+    #a<-xpathApply(doc,'/file-format/data-set/sequence[@tag="3004,0050" and @name="DVHSequence"]',xmlValue)[[1]]
+    a<-getNodeSet(doc,'/file-format/data-set/sequence[@tag="3004,0050" and @name="DVHSequence"]/item')
+    
+    DVHList<-list();
+    ct<-1
+    if(length(a)>0) {
+      for(ct in seq(1,length(a))) {
+        
+        ReferencedROINumber<-xpathApply(a[[ct]],'//item/sequence[@tag="3004,0060"]//element[@tag="3006,0084"]',xmlValue)[[ct]]
+        #ROIName<-getROIList()[2,which(getROIList()[1,]==ReferencedROINumber)]
+        ROIName<-as.character(ReferencedROINumber)
+        
+        DVHList[[ROIName]]<-list();
+        
+        DVHList[[ROIName]][["DVHType"]]<-xpathApply(a[[ct]],'//item/element[@tag="3004,0001"]',xmlValue)[[ct]]
+        DVHList[[ROIName]][["DoseUnits"]]<-xpathApply(a[[ct]],'//item/element[@tag="3004,0002"]',xmlValue)[[ct]]
+        DVHList[[ROIName]][["DoseType"]]<-xpathApply(a[[ct]],'//item/element[@tag="3004,0004"]',xmlValue)[[ct]]
+        DVHList[[ROIName]][["DVHDoseScaling"]]<-xpathApply(a[[ct]],'//item/element[@tag="3004,0052"]',xmlValue)[[ct]]
+        DVHList[[ROIName]][["DVHVolumeUnits"]]<-xpathApply(a[[ct]],'//item/element[@tag="3004,0054"]',xmlValue)[[ct]]
+        DVHList[[ROIName]][["DVHNumberOfBins"]]<-xpathApply(a[[ct]],'//item/element[@tag="3004,0056"]',xmlValue)[[ct]]
+        DVHList[[ROIName]][["DVHMeanDose"]]<-xpathApply(a[[ct]],'//item/element[@tag="3004,0074"]',xmlValue)[[ct]]
+        DVHList[[ROIName]][["DVHMaximumDose"]]<-xpathApply(a[[ct]],'//item/element[@tag="3004,0072"]',xmlValue)[[ct]]
+        DVHList[[ROIName]][["ReferencedROINumber"]]<-xpathApply(a[[ct]],'//item/sequence[@tag="3004,0060"]//element[@tag="3006,0084"]',xmlValue)[[ct]]
+        #DVHList[[ct]][["DVHData"]]<-xpathApply(a[[ct]],'//item/element[@tag="3004,0058"]',xmlValue)[[1]]
+        dvhString<-xpathApply(a[[ct]],'//item/element[@tag="3004,0058"]',xmlValue)[[ct]];
+        dvhArr<-strsplit(dvhString,"\\\\");
+        DVHList[[ROIName]][["DVHData.volume"]]<-as.numeric(dvhArr[[1]][seq(2,length(dvhArr[[1]]),by=2 )])
+        DVHList[[ROIName]][["DVHData.dose"]]<-cumsum(  as.numeric(dvhArr[[1]][seq(1,length(dvhArr[[1]]),by=2 )])  )
+      }
+    }    
+
+    return(list(
+      "ImagePositionPatient"=ImagePositionPatient,"ImageOrientationPatient"=ImageOrientationPatient,
+      "Rows"=Rows,"Columns"=Columns,"PixelSpacing"=PixelSpacing,"PixelRepresentation"=PixelRepresentation,
+      "SOPInstanceUID"=SOPInstanceUID,"SeriesInstanceUID"=SeriesInstanceUID,"GridFrameOffsetVector"=GridFrameOffsetVector,
+      "DoseUnits"=DoseUnits,"DoseType"=DoseType,"DoseGridScaling"=DoseGridScaling,"ReferencedRTPlanSequence_ReferencedSOPInstanceUID"=ReferencedRTPlanSequence_ReferencedSOPInstanceUID,
+      "DVHList"=DVHList
+    ))
+  }
+  #=================================================================================
+  # getPlanFromXML
+  # get the interesting tag via XML instead of via normal dump (more robust)
+  #=================================================================================   
+  getPlanFromXML<-function(fileName) { 
+    obj.S<-services();
+    
+    # Load the XML file
+    doc<-obj.S$getXMLStructureFromDICOMFile(fileName = fileName, folderCleanUp = folderCleanUp)
+    
+    SOPInstanceUID<-xpathApply(doc,'//element[@tag="0008,0018" and @name="SOPInstanceUID"]',xmlValue)[[1]]
+    StudyDate<-xpathApply(doc,'//element[@tag="0008,0020" and @name="StudyDate"]',xmlValue)[[1]]
+    SeriesInstanceUID<-xpathApply(doc,'//element[@tag="0020,000e" and @name="SeriesInstanceUID"]',xmlValue)[[1]]
+    FrameOfReferenceUID<-xpathApply(doc,'//element[@tag="0020,0052" and @name="FrameOfReferenceUID"]',xmlValue)[[1]]
+    RTPlanGeometry<-xpathApply(doc,'//element[@tag="300a,000c" and @name="RTPlanGeometry"]',xmlValue)[[1]]
+    ReferencedStructureSetSequence_ReferencedSOPInstanceUID<-xpathApply(doc,'//sequence[@tag="300c,0060" and @name="ReferencedStructureSetSequence"]//element[@tag="0008,1155" and @name="ReferencedSOPInstanceUID"]',xmlValue)[[1]]
+    DoseReferenceSequence_DoseReferenceUID<-xpathApply(doc,'//sequence[@tag="300a,0010" and @name="DoseReferenceSequence"]//element[@tag="300a,0013" and @name="DoseReferenceUID"]',xmlValue)
+    
+    return( list("SOPInstanceUID"=SOPInstanceUID,"StudyDate"=StudyDate,"SeriesInstanceUID"=SeriesInstanceUID,
+                 "FrameOfReferenceUID"=FrameOfReferenceUID,"RTPlanGeometry"=RTPlanGeometry,
+                 "ReferencedStructureSetSequence_ReferencedSOPInstanceUID"=ReferencedStructureSetSequence_ReferencedSOPInstanceUID,
+                 "DoseReferenceSequence_DoseReferenceUID" = DoseReferenceSequence_DoseReferenceUID))
+  }
+  getXYZFromNxNyNzOfDoseVolume<-function(Nx, Ny, Nz, startFromZero=FALSE) {
+    objS<-services();
+    if(length(dataStorage$info$doses)==1) {seriesInstanceUID<-names(dataStorage$info$doses)[[1]];}
+    else {stop(" caso non ancora previsto ( più volumi di dose a questo livello #njj9)");} 
+    pixelSpacing<-dataStorage$info$doses[[seriesInstanceUID]]$pixelSpacing
+    imagePositionPatient<-dataStorage$info$doses[[seriesInstanceUID]]$imagePositionPatient
+    ImageOrientationPatient<-dataStorage$info$doses[[seriesInstanceUID]]$ImageOrientationPatient
+    mat<-array(dataStorage$info$doses[[seriesInstanceUID]]$ImageOrientationPatient,dim=c(3,2))
+    mat<-rbind(mat,c(0,0));    mat<-cbind(mat,c(0,0,0,0));
+    mat[,1]<-mat[,1]*pixelSpacing[1];   mat[,2]<-mat[,2]*pixelSpacing[2];
+    mat<-cbind(mat,c(0,0,0,1)); mat[1:3,4]<-imagePositionPatient;
+    mat[3,4]<-dataStorage$info$doses[[seriesInstanceUID]]$GridFrameOffsetVector[Nz]
+    punto<-objS$SV.get3DPosFromNxNy(Nx,Ny,mat);
+    return(punto);
+  }
+  getXYZFromNxNyNzOfImageVolume<-function(Nx, Ny, Nz, startFromZero=FALSE) {
+    objS<-services();
+    
+    serieInstanceUID<-giveBackImageSeriesInstanceUID();
+    istanceNumbers<-as.character(sort(as.numeric(names(dataStorage$info[[serieInstanceUID]]))))
+    if(startFromZero==FALSE) ct<-1;
+    if(startFromZero==TRUE) ct<-0;
+    for(slice in istanceNumbers) {
+      if(ct==Nz) {
+        imagePosition<-dataStorage$info[[serieInstanceUID]][[slice]]$ImagePositionPatient;
+        ImageOrientationPatient<-dataStorage$info[[serieInstanceUID]][[slice]]$ImageOrientationPatient;
+        pixelSpacing<-dataStorage$info[[serieInstanceUID]][[slice]]$pixelSpacing;
+        orientationMatrix<-dataStorage$info[[serieInstanceUID]][[slice]]$orientationMatrix;
+        punto<-objS$SV.get3DPosFromNxNy(Nx,Ny,orientationMatrix);
+#        print(punto);
+        return(punto);
+      }
+      ct<-ct+1;
+    }
+    stop();
+    print(c(Nx,Ny,Nz))
+  }
+  #=================================================================================
+  # getStructuresFromXML
+  # get the interesting tag via XML instead of via normal dump (more robust)
   #================================================================================= 
   getStructuresFromXML<-function(fileName) {    
     obj.S<-services();
     massimo<-0
-    fileNameXML<-paste(fileName,".xml")    
-    fileNameXML<-str_replace_all(string = fileNameXML , pattern = " .xml",replacement = ".xml")
-    pathToStore<-substr(fileName,1,tail(which(strsplit(fileName, '')[[1]]=='/'),1)-1)
-    
-    # dcmodify -i "(0008,0005)=ISO_IR 100" ./RTSTRUCT999.61977.8337.20150525122026787.dcm
-    
-    if(!file.exists( fileNameXML ) | folderCleanUp==TRUE) {
-      # now check the problem of viewRAY is the 0008,0005 present?
-      stringa1<-"dcmdump";
-      stringa2<-paste(" ",fileName," | grep '0008,0005'",collapse='')
-      options(warn=-1)
-      aTMPa<-system2( stringa1,stringa2,stdout=TRUE )
-      options(warn=0)
-      if(length(aTMPa)==0) {
-        stringa1<-"dcmodify";
-        stringa2<-paste(" -i '(0008,0005)=ISO_IR 100'  ",fileName,collapse='')
-        options(warn=-1)
-        system2(stringa1,stringa2,stdout=NULL)
-        options(warn=0)        
-      }
-      
-      stringa1<-"dcm2xml";
-      stringa2<-paste(" +M  ",fileName,fileNameXML,collapse='')
-      options(warn=-1)
-      system2(stringa1,stringa2,stdout=NULL)
-      options(warn=0)
-    }
-    
+
     # Load the XML file
-    doc = xmlInternalTreeParse(fileNameXML)
+    doc<-obj.S$getXMLStructureFromDICOMFile(fileName = fileName, folderCleanUp = folderCleanUp)
     
     # prima di tutto controlla che la FrameOfReferenceUID sia la stessa OVUNQUE e che punti
     # ad una serie di immagini ESISTENTE!
     # E' un chiodo ma .... ragionevole, almeno per ora
+    RTStructSeriesInstanceUID<-xpathApply(doc,'//element[@tag="0020,000e" and @name="SeriesInstanceUID"]',xmlValue)[[1]]
     FORUID.m<-xpathApply(doc,'//element[@tag="0020,0052" and @name="FrameOfReferenceUID"]',xmlValue)[[1]]
     FORUID.d<-xpathApply(doc,'//element[@tag="3006,0024" and @name="ReferencedFrameOfReferenceUID"]',xmlValue)
     for(FORUID.d_index in seq(1,length(FORUID.d))) {
@@ -710,10 +799,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
         ReferencedSOPInstanceUID<-''
         #        list.index<-''
         list.index<-giveBackImageSeriesInstanceUID()
-        #         for(whichIdentifier in seq(1,length(dataStorage$info) )) {
-        #           if(dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'CTImageStorage' ||
-        #                dataStorage$info[[whichIdentifier]][[1]]$SOPClassUID == 'MRImageStorage' ) list.index<-whichIdentifier
-        #         }
+
         if(list.index=='') stop("list.index is empty!")
         for(slice.index in seq(1,length(dataStorage$info[[list.index]]))) {
           distanza<-obj.S$SV.getPointPlaneDistance(c(fPoint.x,fPoint.y,fPoint.z),dataStorage$info[[list.index]][[slice.index]]$planeEquation)
@@ -726,7 +812,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
         matrice3<-rbind(matrice3,c(ROINumber,ROIName,ROIPointList,ReferencedSOPInstanceUID))
       }
     }
-    return(list("IDROINameAssociation"=matrice2,"tableROIPointList"=matrice3,"FORUID.m"=FORUID.m))
+    return(list("IDROINameAssociation"=matrice2,"tableROIPointList"=matrice3,"FORUID.m"=FORUID.m,"RTStructSeriesInstanceUID"=RTStructSeriesInstanceUID))
   }
   #=================================================================================
   # searchIMGSeriesForFrameOfReferenceUID
@@ -861,7 +947,10 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
   # getAttribute: what else?
   #=================================================================================
   getAttribute<-function(attribute,seriesInstanceUID="",fileName="") {
-    if(fileName == "" ) fileName<-getDefaultFileName(seriesInstanceUID)    
+    if(fileName == "" ) {
+      primoIndice<-names(dataStorage$info[[  giveBackImageSeriesInstanceUID()  ]])[1]
+      fileName<-dataStorage$info[[seriesInstanceUID]][[primoIndice]]$fileName
+    }
     
     # internal DATA
     if(attribute=="dataStorage")  return(dataStorage)  
@@ -905,16 +994,6 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     iOP<-getAttribute(attribute="ImageOrientationPatient",fileName=fileName)
     matrice<-matrix(c(iOP[1],iOP[2],iOP[3],0,iOP[4],iOP[5],iOP[6],0,0,0,0,0,iPP[1],iPP[2],iPP[3],1),ncol=4); 
     return(matrice)
-  }
-  #=================================================================================
-  # getDefaultFileName
-  # give back the filename of the first CT Scan of the seriesInstanceUID 
-  # (if specified)
-  #=================================================================================
-  getDefaultFileName<-function(seriesInstanceUID="") {
-    if(seriesInstanceUID=="") seriesInstanceUID<-names(dataStorage$info)[1]
-    primoIndice<-names(dataStorage$info[[seriesInstanceUID]])[1]
-    return(dataStorage$info[[seriesInstanceUID]][[primoIndice]]$fileName)
   }
   #=================================================================================
   # NAME: getDICOMTag
@@ -1001,6 +1080,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     if(pathToOpen=="") pathToOpen<-attributeList[["path"]];
     
     DCMFilenameArray<-list.files(pathToOpen,"*.dcm")    
+    
     SOPClassUIDList<-list()
     for(i in 1:length(DCMFilenameArray) ) {
       fileNameWithPath<-paste(pathToOpen,"/",DCMFilenameArray[i] , sep="");
@@ -1039,12 +1119,38 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     attributeList[[ attribute ]]<<-value    
   }
   #=================================================================================
+  # NAME: getDoseInformation
+  # give back the information about DOSES in the space
+  #=================================================================================    
+  getDoseInformation<-function() {
+    # da modificare (ora aggancia solo il primo!)
+    informazioniDose<-ds$info$doses[[1]]
+    return(informazioniDose)
+  }  
+  getSpatialInformationOfVoxelCube<-function(SeriesInstanceUID) {
+    zpos<-c()
+    objS<-services();
+    for(istanceNumber in dataStorage$info[[SeriesInstanceUID]]) {
+      m.DOM<-dataStorage$info[[SeriesInstanceUID]][[istanceNumber]]$orientationMatrix
+      zpos<-c(zpos,m.DOM[3,4])
+    }
+    min.z<-min(zpos)
+    max.z<-max(zpos)
+    m.DOM.min<-m.DOM; m.DOM.min[3,4]<-min.z;
+    m.DOM.max<-m.DOM; m.DOM.max[3,4]<-max.z;
+    xyz.min<-objS$SV.get3DPosFromNxNy(0,0,m.DOM.min);
+    xyz.max<-objS$SV.get3DPosFromNxNy(0,0,m.DOM.max);
+    return( list(
+      "xyz.min"=xyz.min,"xyz.max"=xyz.max
+    )  );
+  }
+  #=================================================================================
   # NAME: getROIVoxels
   # restituisce i voxel interni ad una data ROI
   #=================================================================================    
   getROIVoxels<-function( Structure = Structure ) {
     objS<-services();
-#    browser();
+
     # cerca nella cache di memoria, se attivata, la presenza della ROI già estratta
     if(ROIVoxelMemoryCache==TRUE  & !is.null(ROIVoxelMemoryCacheArray[[Structure]]) ) {
       return(ROIVoxelMemoryCacheArray[[Structure]]);
@@ -1281,7 +1387,6 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
   }
   rotateToAlign<-function(ROIName) {
     SeriesInstanceUID<-giveBackImageSeriesInstanceUID();
-    
     tabella1<-getAssociationTable( "SOPInstance_vs_SliceLocation" , ROIName )
     pointList<-getROIPointList( ROIName )
     newPointList<-pointList
@@ -1289,8 +1394,10 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     
     for(index in names( pointList )) {
       for(internalIndex in seq(1,length(pointList[[index]]))) {
-        IMGsliceInfo<-dataStorage$info[[SeriesInstanceUID]][[ tabella1[ which(tabella1[,2]==index)  ,3  ]  ]]
-        sliceLocation<-as.numeric(tabella1[which(tabella1[,2]==index),3])
+        #IMGsliceInfo<-dataStorage$info[[SeriesInstanceUID]][[ tabella1[ which(tabella1[,2]==index)  ,3  ]  ]]
+        #sliceLocation<-as.numeric(tabella1[which(tabella1[,2]==index),3])
+        IMGsliceInfo<-dataStorage$info[[SeriesInstanceUID]][[ tabella1[ which(tabella1[,4]==index)  ,5  ]  ]]
+        sliceLocation<-as.numeric(tabella1[which(tabella1[,4]==index),5])
         DOM<-IMGsliceInfo$orientationMatrix
         
         m<-pointList[[index]][[internalIndex]];
@@ -1335,6 +1442,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     attributeList$virtualMemory$fileName<<-paste(c(format(Sys.time(), "%a%b%d_%H%M%S%Y_"),as.integer(runif(1)*10000),"_",as.integer(runif(1)*10000) ) , collapse='');
     ROIVoxelMemoryCache<<-ROIVoxelMemoryCache;
     folderCleanUp<<-folderCleanUp;
+    mainFrameOfReferenceUID<<-NA
     
   }
   constructor( ROIVoxelMemoryCache , folderCleanUp)
@@ -1348,6 +1456,10 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
               getPixelSpacing = getPixelSpacing,
               importStructures=importStructures,
               rotateToAlign = rotateToAlign,
-              getDoseVoxelCube = getDoseVoxelCube
+              getDoseVoxelCube = getDoseVoxelCube,
+              getDoseInformation = getDoseInformation,
+              giveBackImageSeriesInstanceUID = giveBackImageSeriesInstanceUID,
+              getXYZFromNxNyNzOfImageVolume = getXYZFromNxNyNzOfImageVolume,
+              getXYZFromNxNyNzOfDoseVolume = getXYZFromNxNyNzOfDoseVolume
   ))
 }

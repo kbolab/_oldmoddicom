@@ -21,15 +21,17 @@ viewer<-function() {
     }
     if(metodo == "wired" ) {
       if (is.null (parametri$col ) ) parametri$col = 8
-      wire3d( mesh , col = parametri$col )
+  wire3d( mesh , col = parametri$col )
     }
     if(metodo == "smothed" ) {
       if (is.null (parametri$mu ) ) parametri$mu = -0.53 
       if (is.null (parametri$lambda ) ) parametri$lambda = 0.5
       if (is.null (parametri$col ) ) parametri$col = 8
       #shade3d(vcgSmooth(mesh = mesh, lambda = parametri$lambda, mu = parametri$mu) , col = parametri$col)
+      
+      shade3d(vcgSmooth(mesh = mesh, lambda = parametri$lambda, mu = parametri$mu) , color = "grey")   
+      return();
       return(list(mesh=mesh, lambda=parametri$lambda, mu = parametri$mu))
-      shade3d(vcgSmooth(mesh = mesh, lambda = parametri$lambda, mu = parametri$mu) , color = "red")      
     } 
   }
   
@@ -61,6 +63,7 @@ viewer<-function() {
     
     
   } 
+
   plotROIs<-function(obj , arrayROINames = NA , sliceNumber = 1, ps.x = NA, ps.y = NA, ps.z = NA) {
     # controlli formali
     if( length(arrayROINames)>20 )  stop("Ahahahahahahah!!!! Ciccio, al massimo 20 ROI, forse meno.....");
