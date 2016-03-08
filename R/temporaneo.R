@@ -1,50 +1,24 @@
-# 
-# rm(obj);rm(dati);rm(a)
+# # 
 # obj<-geoLet()
-# #obj$openDICOMFolder("/progetti/immagini/SarhoshTest")
-# obj$openDICOMFolder("/progetti/immagini/CONTOURED/Negative/PRE/Alimenti")
-# dati <- obj$getAttribute("dataStorage")
-# #ROIName<-"Ossa, NOS"
-# ROIName<-"GTV"
-# orientationMatrix<-dataStorage$info[[1]][[1]]$orientationMatrix
+# #obj$openDICOMFolder("/progetti/immagini/SaroshTest")
+# obj$openDICOMFolder("/progetti/immagini/doloreAcuto")
+# #obj$openDICOMFolder("/progetti/immagini/doloreOttuso")
+#  objS<-services();
+#  objV<-viewer();
+# # 
+#  ds<-obj$getAttribute("dataStorage")
+# # 
+# GTV.voxel<-obj$getROIVoxels(Structure = "Ossa1")
+# GTV.rotated<-obj$rotateToAlign(ROIName = "Ossa1")
+# GTV.normal<-obj$getROIPointList(ROINumber = "Ossa1")
 # 
-# estrappolaVoxel<-function( obj,   ROIName ,  Nx, Ny, Nz, orientationMatrix, nPoints.x, nPoints.z, nPoints.y  ) {
-#   
-#   matrice<-c()
-#   dataStorage<-obj$getAttribute("dataStorage")
-#   ROIPointList<-obj$getROIPointList( ROIName );
+# CT<-objS$expandCube(littleCube = GTV.voxel$masked.images$voxelCube,x.start = GTV.voxel$masked.images$location$min.x,y.start = GTV.voxel$masked.images$location$min.y,z.start = GTV.voxel$masked.images$location$min.z,fe = GTV.voxel$masked.images$location$fe,se = GTV.voxel$masked.images$location$se,te = GTV.voxel$masked.images$location$te)
+# #CT<-obj$getDoseVoxelCube()
 # 
-#   a11<-orientationMatrix[1,1]; a21<-orientationMatrix[2,1];
-#   a31<-orientationMatrix[3,1]; a12<-orientationMatrix[1,2];
-#   a22<-orientationMatrix[2,2]; a32<-orientationMatrix[3,2];
-#   Ox<orientationMatrix[1,4]; Oy<-orientationMatrix[2,4];  Oy<-orientationMatrix[3,4];
-#   
-#   coords.x<-seq(from = 0, to = (nPoints.x-1))
-#   coords.y<-seq(from = 0, to = (nPoints.y-1))
-#   coords.z<-seq(from = 0, to = (nPoints.z-1))
-#   coors.grid <- expand.grid( coords.x , coords.y , coords.z  ) 
-#   
-#   
-#   
-#   
-#   for( i in names(ROIPointList)) {    
-#     for( t in seq(1,length( ROIPointList[[i]] ))) {
-#       matrice<-rbind(matrice,ROIPointList[[i]][[t]] )
-#     }    
-#   }
-#   
-#   box.minX<-min(matrice[,1]); box.maxX<-max(matrice[,1])
-#   box.minY<-min(matrice[,2]); box.maxY<-max(matrice[,2])
-#   box.minZ<-min(matrice[,3]); box.maxZ<-max(matrice[,3])
-#   
-#     
-#   
-#   
-#   
-#   
-#   samples.x<-seq( from=box.minX,  to=box.maxX,  by =  (box.maxX-box.minX)/Nx )
-#   samples.y<-seq( from=box.minY,  to=box.maxY,  by =  (box.maxY-box.minY)/Ny )
-#   samples.z<-seq( from=box.minZ,  to=box.maxZ,  by =  (box.maxZ-box.minZ)/Nz )
-#   Grid<-expand.grid(x = samples.x, y = samples.y , z = samples.z)
-#   
-# }
+# step.x<-obj$getPixelSpacing()[1]
+# step.y<-obj$getPixelSpacing()[2]
+# step.z<-as.numeric(obj$getAttribute("SliceThickness"))
+# x<-seq(from = 0, to = (dim(CT)[1]-1)*step.x, by = step.x)
+# y<-seq(from = 0, to = (dim(CT)[2]-1)*step.y, by = step.y)
+# z<-seq(from = 0, to = (dim(CT)[3]-1)*step.z, by = step.z)
+# contour3d(f = CT,level = 1,x = x,y = y,z = z)

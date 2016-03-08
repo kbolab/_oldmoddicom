@@ -37,6 +37,18 @@ services<-function() {
     if(rotations == 3 ) m<-t(m)[ncol(m):1,]
     return( m )
   }
+  SV.rotateMatrix3D<-function( matrice , rotations = 1, inverti=FALSE) {
+    for(corsa in seq(1,dim(matrice)[3])) {
+      m<-matrice[,,corsa]
+      if(rotations == 1 ) m<-t(m[nrow(m):1,])
+      if(rotations == 2 ) m<-m[nrow(m):1,ncol(m):1]
+      if(rotations == 3 ) m<-t(m)[ncol(m):1,]
+      if(inverti==FALSE) nuovaPosizione<-corsa
+      else nuovaPosizione<-dim(m)[3]-corsa;
+      matrice[,,nuovaPosizione]<-m
+    }
+    return( matrice )
+  }  
   SV.LoadAccordingOSType<-function(library.name) {
     if (Sys.info()["sysname"]=="Windows") 
       return(paste(library.name, ".dll", sep=""))
@@ -159,6 +171,7 @@ services<-function() {
   # cropCube: crop a voxel cube in order to limit its dimension to the needs
   # ========================================================================================   
   cropCube<-function( bigCube ) {
+
     matPos<-which(bigCube!=0,arr.ind = T)
     min.x<-min(matPos[,1]);     max.x<-max(matPos[,1])
     min.y<-min(matPos[,2]);     max.y<-max(matPos[,2])
@@ -167,6 +180,14 @@ services<-function() {
     location<-list( "min.x"=min.x, "max.x"=max.x, "min.y"=min.y, "max.y"=max.y, "min.z"=min.z, "max.z"=max.z  )
     return( list ( "voxelCube"=newCube, "location"=location) )
   }    
+  adjCommandLinePar<-function(stringa) {
+    if ( Sys.info()["sysname"] == "Windows") {
+      nuovaStringa<-str_replace_all(string = stringa,pattern = "'",replacement = "")
+    }
+    else nuovaStringa<-stringa;
+    
+    return(nuovaStringa);
+  }  
   # ========================================================================================
   # expandCube: expand a cropped voxel cube
   # ========================================================================================     
@@ -202,6 +223,35 @@ services<-function() {
     class(v) <- "mesh3d"
     return(v)
   }  
+  getXMLStructureFromDICOMFile<-function(fileName, folderCleanUp = FALSE) {
+    fileNameXML<-paste(fileName,".xml")    
+    fileNameXML<-str_replace_all(string = fileNameXML , pattern = " .xml",replacement = ".xml")
+    pathToStore<-substr(fileName,1,tail(which(strsplit(fileName, '')[[1]]=='/'),1)-1)
+    if(!file.exists( fileNameXML ) | folderCleanUp==TRUE) {
+      # now check the problem of viewRAY is the 0008,0005 present?
+      stringa1<-"dcmdump";
+      stringa2<-paste(" ",fileName," | grep '0008,0005'",collapse='')
+      options(warn=-1)
+      aTMPa<-system2( stringa1,stringa2,stdout=TRUE )
+      options(warn=0)
+      if(length(aTMPa)==0) {
+        stringa1<-"dcmodify";
+        stringa2<-paste(" -i '(0008,0005)=ISO_IR 100'  ",fileName,collapse='')
+        options(warn=-1)
+        system2(stringa1,stringa2,stdout=NULL)
+        options(warn=0)        
+      }
+      
+      stringa1<-"dcm2xml";
+      stringa2<-paste(" +M  ",fileName,fileNameXML,collapse='')
+      options(warn=-1)
+      system2(stringa1,stringa2,stdout=NULL)
+      options(warn=0)
+    }
+    # Load the XML file
+    doc = xmlInternalTreeParse(fileNameXML)
+    return(doc);
+  }
 #   elaboraCarlottaggio<-function( ds.n ,nx=2,ny=2,nz=0) {
 #     
 #     UpperBoundDiNormalizzazione<-max(c(obj.n$ROIStats("Urina")$total$max,obj.p$ROIStats("Urina")$total$max))
@@ -252,13 +302,16 @@ services<-function() {
               SV.rotateMatrix = SV.rotateMatrix,
               SV.LoadAccordingOSType = SV.LoadAccordingOSType,
               SV.rotateMatrix = SV.rotateMatrix,
+              SV.rotateMatrix3D = SV.rotateMatrix3D,
               SV.rawSurface = SV.rawSurface,
               triangle2mesh = triangle2mesh,
               cropCube = cropCube,
               expandCube = expandCube,
               new.SV.trilinearInterpolator = new.SV.trilinearInterpolator,
               new.SV.trilinearInterpolator.onGivenPoints= new.SV.trilinearInterpolator.onGivenPoints,
-              SV.list2XML = SV.list2XML
+              SV.list2XML = SV.list2XML,
+              adjCommandLinePar = adjCommandLinePar,
+              getXMLStructureFromDICOMFile = getXMLStructureFromDICOMFile
               ))  
 }
 

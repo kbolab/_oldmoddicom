@@ -29,8 +29,8 @@
 #' b<-DVH.generate(dvh.number=150, dvh.type="cumulative", vol.distr="absolute", max.dose=60)
 #' @export
 DVH.generate<-function(dvh.number, type=c("random","convex","concave","mix"), 
-                      dvh.type=c("differential", "cumulative"), vol.distr=c("relative", "absolute"),
-                      max.dose = 75, dose.bin = 0.5, volbin.side = 2.5, min.vol=180, max.vol=220) {
+                       dvh.type=c("differential", "cumulative"), vol.distr=c("relative", "absolute"),
+                       max.dose = 75, dose.bin = 0.5, volbin.side = 2.5, min.vol=180, max.vol=220) {
   if (min.vol<2) {
     warning("Minimum volumes under 2 cc aren't allowed, min.vol set to 2.")
     min.vol <- 2
@@ -137,13 +137,13 @@ DVH.diff.to.cum <- function(dvh) {
   if ((!is.matrix(dvh))&&(class(dvh)!="dvhmatrix")) stop("dvh MUST be either an object of class dvhmatrix or a matrix")
   if (class(dvh)=="dvhmatrix") dvh.matrix<-dvh@dvh else dvh.matrix<-dvh  
   if (class(dvh)=="dvhmatrix") if (dvh@dvh.type=="cumulative") return(dvh)
-
+  
   dvh.size <- dim(dvh.matrix)
   DVHList <- matrix(nrow=dvh.size[1] + 1, ncol=dvh.size[2])   # create the matrix of cumulative DVHs     
   for (m in 2:dvh.size[2]) {                                  
     total.volume <- sum(dvh.matrix[,m])    
     for (n in 1:dvh.size[1])                                     # loop for rows
-        DVHList[n+1, m] <- total.volume - sum(dvh.matrix[c(1:n),m]) # elements of the matrix as relative volume
+      DVHList[n+1, m] <- total.volume - sum(dvh.matrix[c(1:n),m]) # elements of the matrix as relative volume
     DVHList[1,m] <- total.volume  # first element is total volume by default    
   }
   DVHList[1,1]<-0
@@ -204,7 +204,7 @@ DVH.cum.to.diff <- function(dvh) {
 #' DVH<-DVH.extract(x = doses)
 #' @export
 DVH.extract<-function(x, max.dose=NULL, dose.bin=.25, dvh.type=c("differential","cumulative"), 
-                     vol.distr=c("relative","absolute"), createObj=TRUE, volbin.side=2.5) {
+                      vol.distr=c("relative","absolute"), createObj=TRUE, volbin.side=2.5) {
   # default VolBin is given in cm3
   VolBin<-(volbin.side/10)^3 
   TotalVol<-length(x)*VolBin
@@ -288,8 +288,8 @@ DVH.mean<-function(dvh)  {
 DVH.relative<-function(dvh) {
   if (dvh@vol.distr=="absolute")
     for (n in 1:(ncol(dvh@dvh) - 1)) dvh@dvh[,n+1]<-dvh@dvh[,n+1]/dvh@volume[n]
-  dvh@vol.distr<-"relative"
-  return(dvh)
+    dvh@vol.distr<-"relative"
+    return(dvh)
 }
 
 #' Converts relative \code{dvhmatrix} class objects to absolute
@@ -304,8 +304,8 @@ DVH.relative<-function(dvh) {
 DVH.absolute<-function(dvh) {
   if (dvh@vol.distr=="relative")
     for (n in 1:(ncol(dvh@dvh) - 1)) dvh@dvh[,n+1]<-dvh@dvh[,n+1]*dvh@volume[n]
-  dvh@vol.distr<-"absolute"
-  return(dvh)
+    dvh@vol.distr<-"absolute"
+    return(dvh)
 }
 
 #' Calculates Equivalent Uniform Dose for a \code{dvhmatrix} object
@@ -673,11 +673,11 @@ DVH.baseStat<-function(dvh, C.I.width = .95, n.boot = 2000) {
   # generate the median CI DVH
   medianDvh<-matrix(data = result[[7]], nrow = nrow(dvh@dvh))
   medianCI<-apply(X = medianDvh, MARGIN = 1, FUN = quantile, probs = c((1-C.I.width)/2, (1+C.I.width)/2))
-#  return(new("dvhmatrix", dvh = cbind(dvh@dvh[,1], medianDvh), dvh.type = dvh@dvh.type,
-#             vol.distr = dvh@vol.distr, volume = rep.int(x = mean(dvh@volume), times = n.boot)))
+  #  return(new("dvhmatrix", dvh = cbind(dvh@dvh[,1], medianDvh), dvh.type = dvh@dvh.type,
+  #             vol.distr = dvh@vol.distr, volume = rep.int(x = mean(dvh@volume), times = n.boot)))
   result.DVH<-new("dvhmatrix", dvh = cbind(dvh@dvh[,1], mean.dvh, meanCI[1,], meanCI[2,], median.dvh, medianCI[1,], medianCI[2,]), dvh.type = dvh@dvh.type,
-                                           vol.distr = dvh@vol.distr, volume = c(rep.int(x = mean(dvh@volume), times = 3),
-                                                                                 rep.int(x = median(dvh@volume), times = 3)))
+                  vol.distr = dvh@vol.distr, volume = c(rep.int(x = mean(dvh@volume), times = 3),
+                                                        rep.int(x = median(dvh@volume), times = 3)))
   colnames(x = result.DVH@dvh)<-c("Dose [Gy]", "mean", paste((1-C.I.width)/2,"% C.I. of mean"), paste((1+C.I.width)/2,"% C.I. of mean"),
                                   "median", paste((1-C.I.width)/2,"% C.I. of median"), paste((1+C.I.width)/2,"% C.I. of median"))
   return(result.DVH)
@@ -725,7 +725,7 @@ DVH.lq.correct<-function(dvh, ref.frac = 2, nf, alphabeta = 3) {
 DR.fit.DoseVolume<-function(dvh, outcome, model, type = c("Vdose", "Dvolume"), CI = FALSE, CI.width = 0.95, epsilon = 1e-6) {
   type <- match.arg(arg = type)
   if (dvh@dvh.type == "differential") dvh<-DVH.diff.to.cum(dvh = dvh) # transform in cumulative if differential
-
+  
   if (type == "Vdose")   { # create the approxfun and the fitting Vdose function (FUN)
     value<-seq(from = 1, to = max(floor(dvh@dvh[,1])), by = .5) # create the dose vector
     apf <- apply(X = dvh@dvh[, 2:ncol(dvh@dvh)], MARGIN = 2, FUN = approxfun, x = dvh@dvh[, 1]) # approxfun list
@@ -857,7 +857,7 @@ DR.fit.DoseVolume<-function(dvh, outcome, model, type = c("Vdose", "Dvolume"), C
     names(CI.val) <- c(paste((1-CI.width)/2, "%"), paste((1+CI.width)/2, "%"))
   }
   
-
+  
   
   return(list(output.matrix = output.matrix, optimized.model = optimized.model, fit.par = fit.par, CI = CI.val))
 }

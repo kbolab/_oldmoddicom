@@ -666,7 +666,7 @@ ShowDose3D<-function (geoLet, type=c("pointcloud", "isosurface", "isodoses"), do
     if (max(dose.levels) > MaxDose/PrescrDose) 
       dose.levels<-dose.levels[1:(max(which(dose.levels<=MaxDose/PrescrDose)))]
     # normalize doses to maximum and sets isodoses colors
-    colV<-rgb(colorRamp(color.scale)(dose.levels/(MaxDose/PrescrDose))/255)
+    colV<-rgb( ramp(seq(0, 1, length = 5)), max = 255)
     # set alpha level of isosurfaces    
     if (missingArg(density)) density<-.1
     require("misc3d")

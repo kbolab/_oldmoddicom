@@ -11,6 +11,11 @@ struct pointInSpace{
 	double y;
 	double z;
 };
+struct cube3dcoord{
+  int x;
+  int y;
+  int z;
+};
 struct planeEquation{
 	double a;
 	double b;
@@ -29,6 +34,8 @@ struct DICOM_OrientationMatrix{
 	double Sz;		// 3nd element of ImagePositionPatient
 	double XpixelSpacing;	// 1st element of Pixel Spacing
 	double YpixelSpacing;	// 2nd element of Pixel Spacing
+	struct DICOM_OrientationMatrix *next;
+	struct DICOM_OrientationMatrix *prev;
 };
 
 /*
@@ -639,4 +646,289 @@ void erosion( double *cube, int *nX, int *nY, int *nZ, int *mx, int *my, int *mz
   // rilancia ricorsivamente
   *iterator = *iterator + 1;
   erosion( cube, nX, nY, nZ, mx, my, mz, iterator );
+}
+/*
+ * give back row, cloumn, slice from cIndec (index of aa linearized matrix)
+ */
+void RCSfromC( int cIndex, struct pointInSpace *point, int NX, int NY, int NZ ) {
+  int x,y,z;
+  z = (int)(cIndex / (NY*NX));
+  y = (int)((cIndex - z*(NY*NX) )/NX);
+  x = cIndex - NX*y - z*NX*NY;
+  point->x = x;
+  point->y = y;
+  point->z = z;
+//  printf("\n punto calcolato in cIndex = %d RCS: %d %d %d, pxyz=%d,%d,%d (nxnynz=%d,%d,%d)",cIndex,x,y,z,point->x,point->y,point->z,(int)NX,(int)NY,(int)NZ);
+  return;
+}
+void getNxNyFrom3D(double Px, double Py, 
+                   double a11, double a21, double a31, double a12, 
+                   double a22, double a32, double a14, double a24, struct cube3dcoord *coord) {
+  coord->y = (a21*(Px-a14)+a11*(a24-Py)) / (a12*a21-a22*a11 ) ;
+  coord->x = (a22*(Px-a14)+a12*(a24-Py)) / (a11*a22-a21*a12 ) ;
+  return;
+}
+double trilineareGeneralizzata(
+    double x0y0z0, double x0y0z1, double x0y1z0, 
+    double x0y1z1, double x1y0z0, double x1y0z1, 
+    double x1y1z0, double x1y1z1, 
+    double x0,double y0, double z0, 
+    double dx1x0, double dy1y0, double dz1z0, 
+    double x, double y,double z) {
+  
+  double xd,yd,zd,c00,c01,c10,c11,c0,c1,c;
+  xd = (x-x0)/dx1x0;
+  yd = (y-y0)/dy1y0;
+  zd = (z-z0)/dz1z0;
+  c00 = x0y0z0*(1-xd)+x1y0z0*xd;
+  c10 = x0y1z0*(1-xd)+x1y1z0*xd;
+  c01 = x0y0z1*(1-xd)+x1y0z1*xd;
+  c11 = x0y1z1*(1-xd)+x1y1z1*xd;
+  c0 = c00*(1-yd)+c10*yd;
+  c1 = c01*(1-yd)+c11*yd;
+  c = c0*(1-zd)+c1*zd;
+  return c;
+}
+/*
+ * NAME: interpolaPerPuntiSparsi
+ * DESCRIZIONE: calcola le coordinate di ogni voxel di una matrice di voxel 
+ *              partendo da i DOM delle varie slice.
+ *              
+ *  NX,NY,NZ: the number of row, clumns, slices
+ *  directionCosinesArray: the array with the direction cosines, uno per ogni slice (9 per slice)
+ *  xNew,yNew,zNew: le coordinate dei punti x,y,z di cui voglio calcolare l'interpolata
+ *  numberOfInputPoints : numero dei punti da interpolare
+ *  interpolatedValues :  array contenente i valori interpolati (output)
+ *  originalValues : array contenente la matrice originale (input)
+ */
+void interpolaPerPuntiSparsi(
+    int *NX, int *NY,int *NZ,
+    double *directionCosinesArray,  
+    double *xNew, double *yNew, double *zNew, 
+    int *numberOfInputPoints,
+    double *interpolatedValues, double *originalValues)  {
+  
+  int x,y,z,ct,punto;
+  struct pointInSpace point;
+  struct cube3dcoord cubeCoord;
+  struct DICOM_OrientationMatrix DOM;  
+  double *xOld, *yOld, *zOld;
+  int *xOldN, *yOldN, *zOldN;  // to remove
+  double distanza;
+  int numeroDiVoxel,x0,x1,y0,y1,z0,z1;
+  double valoreCalcolato;
+  struct DICOM_OrientationMatrix *DOMStruct;
+  
+  numeroDiVoxel = (*NX) * (*NY) * (*NZ) ;
+  
+  xOld = (double*)calloc( numeroDiVoxel , sizeof(double));
+  yOld = (double*)calloc( numeroDiVoxel , sizeof(double));
+  zOld = (double*)calloc( numeroDiVoxel , sizeof(double));
+  
+  xOldN = (int*)calloc( numeroDiVoxel , sizeof(int)); // to remove
+  yOldN = (int*)calloc( numeroDiVoxel , sizeof(int)); // to remove
+  zOldN = (int*)calloc( numeroDiVoxel , sizeof(int)); // to remove
+  
+  DOMStruct = (struct DICOM_OrientationMatrix*)calloc((*NZ), sizeof(struct DICOM_OrientationMatrix));
+  
+  if( xOld == NULL || yOld==NULL || zOld==NULL || xOldN==NULL || yOldN==NULL || zOldN==NULL) {
+    printf("\n Error in allocating memory");
+    return;
+  }
+  
+  // ------------------------------------
+  // calcola gli array con le posizioni per ogni punto della matrice di input
+  // (della matrice interpolante)
+  // ------------------------------------
+  ct=0;
+  for( z = 0; z < (*NZ); z++ ) {
+    for( y = 0; y < (*NY); y++ ) {
+      for( x = 0; x < (*NX); x++ ) {
+        DOM.a11= directionCosinesArray[z * 9 + 0];	// position 0 in array
+        DOM.a21= directionCosinesArray[z * 9 + 1];
+        DOM.a31= directionCosinesArray[z * 9 + 2];
+        DOM.a12= directionCosinesArray[z * 9 + 3];
+        DOM.a22= directionCosinesArray[z * 9 + 4];
+        DOM.a32= directionCosinesArray[z * 9 + 5];
+        DOM.Sx=  directionCosinesArray[z * 9 + 6];
+        DOM.Sy=  directionCosinesArray[z * 9 + 7];
+        DOM.Sz=  directionCosinesArray[z * 9 + 8];
+        DOM.XpixelSpacing=1;    DOM.YpixelSpacing=1;  // lo immagino già nella DOM
+        point = get3DPosFromNxNy(x, y, DOM);
+        xOld[ct] = point.x;         yOld[ct] = point.y;         zOld[ct] = point.z;
+        xOldN[ct] = x;         yOldN[ct] = y;         zOldN[ct] = z;
+        DOMStruct[z] = DOM;
+        ct++;
+      }
+    }
+  }
+
+  // ------------------------------------
+  // ora scorri l'array dei punti da interpolare e cerca i vertici adiacenti
+  // ------------------------------------
+  // per ogni punto da interpolare
+  for(punto=0; punto < *numberOfInputPoints; punto++ ) {
+    double deltaMinore = 1000000000;
+    double deltaDOMMinore = 1000000000;
+    int posizioneMinore=0;    
+    int posizioneDOMMinore = 0;
+    // prendi le coordinate riga,colonna,slide del punto da interpolare
+    // scorri i DOM, prendi quello con la Z più vicina
+    for(z=0; z<(*NZ); z++) {
+      if( fabs(DOMStruct[z].Sz - zNew[punto]) < deltaDOMMinore  ) {
+        deltaDOMMinore = fabs(DOMStruct[z].Sz - zNew[punto]) ; 
+        posizioneDOMMinore = z;
+      }
+    }
+    // prendi le coordinate riga,colonna,slide del punto da interpolare
+    getNxNyFrom3D(xNew[punto], yNew[punto], 
+                  DOMStruct[posizioneDOMMinore].a11, DOMStruct[posizioneDOMMinore].a21, 
+                  DOMStruct[posizioneDOMMinore].a31, DOMStruct[posizioneDOMMinore].a12, 
+                  DOMStruct[posizioneDOMMinore].a22, DOMStruct[posizioneDOMMinore].a32, 
+                  DOMStruct[posizioneDOMMinore].Sx, DOMStruct[posizioneDOMMinore].Sy, 
+                  &cubeCoord);
+    // guarda in un intorno del punto identificato per cercare il punto più vicino.
+    // assumo che la coordinata z sia corretta (l'ho calcolata prima)
+    int arrIndici[9];
+    int counter;
+    
+    arrIndici[0] = posDecod(cubeCoord.x-1, cubeCoord.y-1, posizioneDOMMinore, *NX, *NY, *NZ);
+    arrIndici[1] = posDecod(cubeCoord.x,   cubeCoord.y-1, posizioneDOMMinore, *NX, *NY, *NZ);
+    arrIndici[2] = posDecod(cubeCoord.x+1, cubeCoord.y-1, posizioneDOMMinore, *NX, *NY, *NZ);
+    arrIndici[3] = posDecod(cubeCoord.x-1, cubeCoord.y,   posizioneDOMMinore, *NX, *NY, *NZ);
+    arrIndici[4] = posDecod(cubeCoord.x,   cubeCoord.y,   posizioneDOMMinore, *NX, *NY, *NZ);
+    arrIndici[5] = posDecod(cubeCoord.x+1, cubeCoord.y,   posizioneDOMMinore, *NX, *NY, *NZ);
+    arrIndici[6] = posDecod(cubeCoord.x-1, cubeCoord.y+1, posizioneDOMMinore, *NX, *NY, *NZ);
+    arrIndici[7] = posDecod(cubeCoord.x,   cubeCoord.y+1, posizioneDOMMinore, *NX, *NY, *NZ);
+    arrIndici[8] = posDecod(cubeCoord.x+1, cubeCoord.y+1, posizioneDOMMinore, *NX, *NY, *NZ);
+
+    for(counter=0; counter<9; counter++) {
+      ct = arrIndici[counter];
+      distanza = sqrt((xOld[ct] - xNew[punto])*(xOld[ct] - xNew[punto]) +
+        (yOld[ct] - yNew[punto])*(yOld[ct] - yNew[punto]) +
+        (zOld[ct] - zNew[punto])*(zOld[ct] - zNew[punto]));
+      if( distanza <  deltaMinore ) {  
+        deltaMinore = distanza;  
+        posizioneMinore = ct;   
+      }
+    }
+    /*
+    // cerchiamo il punto, nella matrice interpolante,
+    // più vicino in politica di distanza euclidea
+    for(  ct=0 ; ct < numeroDiVoxel ; ct++  ) {
+      distanza = sqrt((xOld[ct] - xNew[punto])*(xOld[ct] - xNew[punto]) +
+              (yOld[ct] - yNew[punto])*(yOld[ct] - yNew[punto]) +
+              (zOld[ct] - zNew[punto])*(zOld[ct] - zNew[punto]));
+      if( distanza <  deltaMinore ) {  
+        deltaMinore = distanza;  
+        posizioneMinore = ct;   
+      }
+    }
+    */
+//    printf("\n\n  nx=%d ny=%d nz=%d",cubeCoord.x,cubeCoord.y,posizioneDOMMinore);
+//    printf("\n\n  nxOld=%d nyOld=%d nzOld=%d",xOldN[posizioneMinore],yOldN[posizioneMinore],zOldN[posizioneMinore]);
+//    return;
+    // ora in 'posizionMinore' c'è l'indice corrispondente al punto della matrice interpolante più
+    // prossimo al punto 'punto' da analizzare
+    
+    // prendi la posizione riga, colonna, slide del punto più vicino corrispondente
+    RCSfromC( posizioneMinore, &point, *NX, *NY, *NZ );
+    
+    // ora cerca i vertici adiacenti
+    int cx0,cx1,cy0,cy1,cz0,cz1;
+    cx0 = posDecod(point.x-1, point.y, point.z, *NX, *NY, *NZ);
+    cx1 = posDecod(point.x+1, point.y, point.z, *NX, *NY, *NZ);
+    cy0 = posDecod(point.x, point.y-1, point.z, *NX, *NY, *NZ);
+    cy1 = posDecod(point.x, point.y+1, point.z, *NX, *NY, *NZ);
+    cz0 = posDecod(point.x, point.y, point.z-1, *NX, *NY, *NZ);
+    cz1 = posDecod(point.x, point.y, point.z+1, *NX, *NY, *NZ);
+
+    double x00, x01, y00, y01, z00, z01;
+    int x00Adder,x01Adder,y00Adder,y01Adder,z00Adder,z01Adder;
+    
+    if( fabs(xNew[punto]-xOld[cx0])-fabs(xNew[punto]-xOld[cx1]) <0 ) {
+      x00 = xOld[cx0]; x01 = xOld[posizioneMinore]; 
+      x00Adder = -1;  x01Adder = 0;
+      }  
+    else { 
+      x00 = xOld[posizioneMinore];  x01=xOld[cx1]; 
+      x00Adder = 0;  x01Adder = +1;
+      }
+    if( fabs(yNew[punto]-yOld[cy0])-fabs(yNew[punto]-yOld[cy1]) <0) {
+      y00 = yOld[cy0]; y01 = yOld[posizioneMinore];
+      y00Adder = -1; y01Adder = 0;
+      }  
+    else { 
+      y00 = yOld[posizioneMinore];  y01=yOld[cy1]; 
+      y00Adder = 0; y01Adder = +1;
+      }
+    if( fabs(zNew[punto]-zOld[cz0])-fabs(zNew[punto]-zOld[cz1]) <0 ) {
+      z00 = zOld[cz0]; z01 = zOld[posizioneMinore];
+      z00Adder = -1; z01Adder = +1;
+      }  
+    else { 
+      z00 = zOld[posizioneMinore];  z01=zOld[cz1]; 
+      z00Adder = 0; z01Adder = +1;
+      }    
+    
+    int v000,v001,v010,v011,v100,v101,v110,v111;
+    v000 = posDecod(point.x + x00Adder, point.y + y00Adder, point.z + z00Adder, *NX, *NY, *NZ);
+    v001 = posDecod(point.x + x00Adder, point.y + y00Adder, point.z + z01Adder, *NX, *NY, *NZ);
+    v010 = posDecod(point.x + x00Adder, point.y + y01Adder, point.z + z00Adder, *NX, *NY, *NZ);
+    v011 = posDecod(point.x + x00Adder, point.y + y01Adder, point.z + z01Adder, *NX, *NY, *NZ);
+    v100 = posDecod(point.x + x01Adder, point.y + y00Adder, point.z + z00Adder, *NX, *NY, *NZ);
+    v101 = posDecod(point.x + x01Adder, point.y + y00Adder, point.z + z01Adder, *NX, *NY, *NZ);
+    v110 = posDecod(point.x + x01Adder, point.y + y01Adder, point.z + z00Adder, *NX, *NY, *NZ);
+    v111 = posDecod(point.x + x01Adder, point.y + y01Adder, point.z + z01Adder, *NX, *NY, *NZ);
+    
+    
+        
+    //    printf("\n x::  %lf < %lf < %lf scelto:<%lf, %lf>",xOld[cx0],xNew[punto],xOld[cx1],x00,x01);
+    //    printf("\n y::  %lf < %lf < %lf scelto:<%lf, %lf>",yOld[cy0],yNew[punto],yOld[cy1],y00,y01);
+    //    printf("\n z::  %lf < %lf < %lf scelto:<%lf, %lf>",zOld[cz0],zNew[punto],zOld[cz1],z00,z01);
+    if(  fabs(x01-x00)>=5 || fabs(y01-y00)>=5 || fabs(z00-z01)>=5  ) {
+      printf("\n\n punto da interpolare = %lf,%lf,%lf",xNew[punto],yNew[punto],zNew[punto]);
+      printf("\n x00,x01=%lf,%lf  y00,y01=%lf,%lf   z00,z01=%lf,%lf",x00,x01,y00,y01,z00,z01);
+      return;
+    }
+
+    
+    valoreCalcolato = trilineareGeneralizzata(
+      originalValues[v000],  //x0y0z0 (sample value)
+      originalValues[v001],  //x0y0z1 (sample value)
+      originalValues[v010],  //x0y1z0 (sample value)
+      originalValues[v011],  //x0y1z1 (sample value)
+      originalValues[v100],  //x1y0z0 (sample value)
+      originalValues[v101],  //x1y0z1 (sample value)
+      originalValues[v110],  //x1y1z0 (sample value)
+      originalValues[v111],  //x1y1z1 (sample value)
+      xOld[v000], //x0
+      yOld[v000], //y0,
+      zOld[v000], //z0,
+      xOld[v000]-xOld[v100], //dx1x0,
+      yOld[v000]-xOld[v010], //dy1y0,
+      zOld[v000]-xOld[v001], //dz1z0,
+      xNew[punto], yNew[punto], zNew[punto]);
+              
+              
+    interpolatedValues[punto] = valoreCalcolato;              
+                                       
+/*
+    printf("\n\n Punto da interpolare: <%lf,%lf,%lf>",xNew[punto], yNew[punto], zNew[punto]); 
+    printf("\n (000=<%lf,%lf,%lf>,001=<%lf,%lf,%lf>, \n010=<%lf,%lf,%lf>,011=<%lf,%lf,%lf>, \n100=<%lf,%lf,%lf>,101=<%lf,%lf,%lf>, \n110=<%lf,%lf,%lf>,111=<%lf,%lf,%lf>) ",
+          xOld[v000],yOld[v000],zOld[v000],xOld[v001],yOld[v001],zOld[v001],
+          xOld[v010],yOld[v010],zOld[v010],xOld[v011],yOld[v011],zOld[v011],
+          xOld[v100],yOld[v100],zOld[v100],xOld[v101],yOld[v101],zOld[v101],
+          xOld[v110],yOld[v110],zOld[v110],xOld[v111],yOld[v111],zOld[v111]
+    );
+    printf("\n\n (000=%lf,001=%lf,010=%lf,011=%lf,100=%lf,101=%lf,110=%lf,111=%lf) ",originalValues[v000],originalValues[v001],originalValues[v010],originalValues[v011],originalValues[v100],originalValues[v101],originalValues[v110],originalValues[v111]);  
+    printf("\n\n x0=%lf  y0=%lf   z0=%lf  ",xOld[v000],yOld[v000],zOld[v000] ); 
+    printf("\n\n dx1x0=%lf   dy1y0=%lf   dz1z0=%lf",xOld[v000]-xOld[v100],yOld[v000]-yOld[v010],zOld[v000]-zOld[v001]);
+    printf("\n\n VALORE = %lf",valoreCalcolato);
+ */     
+
+  }
+  free(xOld);  free(yOld);  free(zOld);
+  free(xOldN);  free(yOldN);  free(zOldN);
+  return;
 }
