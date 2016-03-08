@@ -107,6 +107,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     #    createImageVoxelCube();
     # set the internal attribute indicating the path
     attributeList[["path"]]<<-pathToOpen
+    changeDVHROIIDInROINames();
   }
   #=================================================================================
   # loadRTStructFiles
@@ -386,7 +387,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
             dataStorage[["info"]][["doses"]][[SOPInstanceUID]][["SOPClassUID"]]<<-SOPClassUIDList[[i]]$kind
             dataStorage[["info"]][["doses"]][[SOPInstanceUID]][["pixelSpacing"]]<<-splittaTAG(datiDiDose$PixelSpacing)
             dataStorage[["info"]][["DVHs"]][[SOPInstanceUID]][["DVHFromFile"]]<<-datiDiDose$DVHList
-            
+
             # estrai l'immagine
             immagine<-getDICOMTag(i,"7fe0,0010");
             if(length(dataStorage[["dose"]])==0) dataStorage[["dose"]]<<-list();
@@ -638,18 +639,18 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     ReferencedRTPlanSequence_ReferencedSOPInstanceUID<-xpathApply(doc,'/file-format/data-set/sequence[@tag="300c,0002" and @name="ReferencedRTPlanSequence"]//element[@tag="0008,1155" and @name="ReferencedSOPInstanceUID"]',xmlValue)[[1]]    
     
     # now look for some DVHs
-    #a<-xpathApply(doc,'/file-format/data-set/sequence[@tag="3004,0050" and @name="DVHSequence"]',xmlValue)[[1]]
+    #a<-xpathApply(doc,'/file-format/data-set/sequence[@tag="3004,0050" and @name="DVHSequence"]',xmlValue)
     a<-getNodeSet(doc,'/file-format/data-set/sequence[@tag="3004,0050" and @name="DVHSequence"]/item')
-    
+
     DVHList<-list();
     ct<-1
     if(length(a)>0) {
       for(ct in seq(1,length(a))) {
-        
+
         ReferencedROINumber<-xpathApply(a[[ct]],'//item/sequence[@tag="3004,0060"]//element[@tag="3006,0084"]',xmlValue)[[ct]]
-        #ROIName<-getROIList()[2,which(getROIList()[1,]==ReferencedROINumber)]
-        ROIName<-as.character(ReferencedROINumber)
         
+        ROIName<-as.character(ReferencedROINumber);
+
         DVHList[[ROIName]]<-list();
         
         DVHList[[ROIName]][["DVHType"]]<-xpathApply(a[[ct]],'//item/element[@tag="3004,0001"]',xmlValue)[[ct]]
@@ -661,11 +662,23 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
         DVHList[[ROIName]][["DVHMeanDose"]]<-xpathApply(a[[ct]],'//item/element[@tag="3004,0074"]',xmlValue)[[ct]]
         DVHList[[ROIName]][["DVHMaximumDose"]]<-xpathApply(a[[ct]],'//item/element[@tag="3004,0072"]',xmlValue)[[ct]]
         DVHList[[ROIName]][["ReferencedROINumber"]]<-xpathApply(a[[ct]],'//item/sequence[@tag="3004,0060"]//element[@tag="3006,0084"]',xmlValue)[[ct]]
-        #DVHList[[ct]][["DVHData"]]<-xpathApply(a[[ct]],'//item/element[@tag="3004,0058"]',xmlValue)[[1]]
+        
         dvhString<-xpathApply(a[[ct]],'//item/element[@tag="3004,0058"]',xmlValue)[[ct]];
         dvhArr<-strsplit(dvhString,"\\\\");
         DVHList[[ROIName]][["DVHData.volume"]]<-as.numeric(dvhArr[[1]][seq(2,length(dvhArr[[1]]),by=2 )])
         DVHList[[ROIName]][["DVHData.dose"]]<-cumsum(  as.numeric(dvhArr[[1]][seq(1,length(dvhArr[[1]]),by=2 )])  )
+        dvh.type<-''
+        final.matrix<-as.matrix(  cbind( DVHList[[ROIName]][["DVHData.volume"]],DVHList[[ROIName]][["DVHData.dose"]] ) )
+        if(DVHList[[ROIName]][["DVHType"]]=="CUMULATIVE") dvh.type<-"cumulative";
+        if(DVHList[[ROIName]][["DVHType"]]=="DIFFERENTIAL") dvh.type<-"differential";
+        if(dvh.type=='') stop("ERROR: type of DVH not yet supported");
+        if(DVHList[[ROIName]][["DoseUnits"]]!='GY') stop("ERROR: only 'GY' are supported as DoseUnit");
+        if(DVHList[[ROIName]][["DoseType"]]!='PHYSICAL') stop("ERROR: only DoseType 'physical' is supported");
+        if(DVHList[[ROIName]][["DVHDoseScaling"]]!='1') stop("ERROR: only DVHDoseScaling equal to 1 is supported");
+        if(DVHList[[ROIName]][["DVHVolumeUnits"]]!='CM3') stop("ERROR: only DVHVolumeUnits equal to 'CM3' is supported");
+        final.matrix<-as.matrix(cbind(DVHList[[ROIName]][["DVHData.dose"]],DVHList[[ROIName]][["DVHData.volume"]]))
+        DVHObj<-new("dvhmatrix", dvh=final.matrix, dvh.type=dvh.type, vol.distr='absolute', volume=final.matrix[1,1])
+        DVHList[[ROIName]][["DVHObj"]]<-DVHObj
       }
     }    
 
@@ -673,9 +686,33 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
       "ImagePositionPatient"=ImagePositionPatient,"ImageOrientationPatient"=ImageOrientationPatient,
       "Rows"=Rows,"Columns"=Columns,"PixelSpacing"=PixelSpacing,"PixelRepresentation"=PixelRepresentation,
       "SOPInstanceUID"=SOPInstanceUID,"SeriesInstanceUID"=SeriesInstanceUID,"GridFrameOffsetVector"=GridFrameOffsetVector,
-      "DoseUnits"=DoseUnits,"DoseType"=DoseType,"DoseGridScaling"=DoseGridScaling,"ReferencedRTPlanSequence_ReferencedSOPInstanceUID"=ReferencedRTPlanSequence_ReferencedSOPInstanceUID,
+      "DoseUnits"=DoseUnits,"DoseType"=DoseType,"DoseGridScaling"=DoseGridScaling,
+      "ReferencedRTPlanSequence_ReferencedSOPInstanceUID"=ReferencedRTPlanSequence_ReferencedSOPInstanceUID,
       "DVHList"=DVHList
     ))
+  }
+  #=================================================================================
+  # changeDVHROIIDInROINames
+  # at the end of the computation, change the ROIId in the ROINames. This cannot be 
+  # done at the beginning because DicomRT object can be loaded in any order
+  #=================================================================================   
+  changeDVHROIIDInROINames<-function() {
+    matriceNomiROI<-getROIList();
+    if(!is.list(dataStorage$info$DVHs)) return;
+    if(!is.list(dataStorage$info$DVHs[[1]])) return;
+    for( SOPInstanceUID in names(dataStorage$info$DVHs) ) {
+      listaDaSostituire<-list();
+      for(indColonna in seq(1,dim(matriceNomiROI)[2] )) {
+        for(numericID in names( dataStorage$info$DVHs[[SOPInstanceUID]]$DVHFromFile )) {
+          nuovoNome<-matriceNomiROI[2,which(matriceNomiROI[1,]==numericID,arr.ind = T)]
+          if(length(nuovoNome)>0) {
+            listaDaSostituire[[nuovoNome]]<-dataStorage$info$DVHs[[SOPInstanceUID]]$DVHFromFile[[numericID]]
+          }
+        }
+      }
+      dataStorage$info$DVHs[[SOPInstanceUID]]$DVHFromFile<<-list();
+      dataStorage$info$DVHs[[SOPInstanceUID]]$DVHFromFile<<-listaDaSostituire
+    }
   }
   #=================================================================================
   # getPlanFromXML
@@ -973,9 +1010,24 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     if(attribute=="PixelSpacing" | attribute=="(0028,0030)")  return(splittaTAG(getDICOMTag(fileName,"0028,0030")))
     if(attribute=="GridFrameOffsetVector" | attribute=="(3004,000c)")  return(splittaTAG(getDICOMTag(fileName,"3004,000c")))
     if(attribute=="ROIVoxelMemoryCache") return (ROIVoxelMemoryCache);
+    if(attribute=="DVHsFromFile") return (giveBackDVHsFromFile());
     
     if(attribute=="orientationMatrix")  return( buildOrientationMatrix(fileName)  )
     return(getDICOMTag(fileName,attribute))  
+  }
+  #=================================================================================
+  # giveBackDVHsFromFile
+  # give back the DVH loaded from File
+  #=================================================================================  
+  giveBackDVHsFromFile<-function() {
+    listaDVH<-list();
+    for(SOPInstanceUID in names(dataStorage$info$DVHs)) {
+      for(ROINumber in names(dataStorage$info$DVHs[[SOPInstanceUID]]$DVHFromFile)) {
+        if(is.list(listaDVH[[ROINumber]])) stop("ERRORE: lo stesso ROINUMBER compare in diversi RTDose");
+        listaDVH[[ROINumber]]<-dataStorage$info$DVHs[[SOPInstanceUID]]$DVHFromFile[[ROINumber]]
+      }
+    }
+    return(listaDVH);
   }
   #=================================================================================
   # splittaTAG

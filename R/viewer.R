@@ -105,8 +105,18 @@ viewer<-function() {
       }
     }
   }
+  plot.DVH<-function(obj, whichDVH=1) {
+    a<-obj$getAttribute(attribute = "DVHsFromFile");
+    volume<-a[[as.character(whichDVH)]]$DVHData.volume
+    dose<-a[[as.character(whichDVH)]]$DVHData.dose
+    mainTitle<-paste( c("DVH of '",as.character(whichDVH),"'"),collapse='');
+    plot(x=dose,y=volume,type='l', main=mainTitle)
+
+  }
   
-  return( list( isosurface = isosurface, plotROIs = plotROIs )  )
+  return( list( isosurface = isosurface, 
+                plotROIs = plotROIs,
+                plot.DVH = plot.DVH)  )
   
 }
 
