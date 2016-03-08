@@ -213,6 +213,45 @@ DVH.extract<-function(x, max.dose=NULL, dose.bin=.25, dvh.type=c("differential",
   if (is.null(x=max.dose)) max.dose<-max(x)+dose.bin*4
   h<-hist(x=x, breaks=seq(from=0, to=max.dose,by=dose.bin), plot=FALSE)
   diff<-cbind(h$mids, h$density/sum(h$density)*TotalVol)
+  # function for converting differential DVHs into
+  # relative differential DVHS
+  rel.diff.dvh <- function(dvh.matrix) {
+    dvh.size <- dim(dvh.matrix)
+    DVHList <- matrix(nrow=dvh.size[1], ncol=dvh.size[2])       # create the matrix of  DVHs
+    for (m in 2:dvh.size[2]) {                                  # loop for columns (volumes) 
+      total.volume <- sum(dvh.matrix[,m])                       # calculate the total volume
+      for (n in 1:dvh.size[1]) {                                # loop for rows
+        DVHList[n, m] <- dvh.matrix[n, m]/total.volume          # elements of the matrix as relative volume
+      }    
+    }
+    DVHList[,1]<-dvh.matrix[,1]                                 # sets the dose column  
+    return(DVHList)
+  }
+  # function for converting a matrix of differential DVH 
+  # into matrix of cumulative DVH (relative volume)
+  cum.dvh <- function(dvh.matrix, relative=TRUE)
+  {
+    dvh.size <- dim(dvh.matrix)
+    DVHList <- matrix(nrow=dvh.size[1] + 1, ncol=dvh.size[2])   # create the matrix of cumulative DVHs     
+    for (m in 2:dvh.size[2]) {                                  # loop for columns (volumes) 
+      total.volume <- sum(dvh.matrix[,m])                       # calculate the total volume
+      if (relative==TRUE) {
+        for (n in 1:dvh.size[1]) {                                    # loop for rows
+          DVHList[n+1, m] <- (total.volume - sum(dvh.matrix[c(1:n),m]))/total.volume # elements of the matrix as relative volume
+        }
+        DVHList[1,m] <- 1 # first element is 1 by default if relative==TRUE
+      } else {
+        for (n in 1:dvh.size[1]) {                                    # loop for rows
+          DVHList[n+1, m] <- total.volume - sum(dvh.matrix[c(1:n),m]) # elements of the matrix as relative volume
+        }
+        DVHList[1,m] <- total.volume  # first element is total volume by default
+      }                                       
+    }
+    DVHList[1,1]<-0
+    #  DVHList[2:nrow(DVHList),1]<-dvh.matrix[,1]
+    for (n in 2:nrow(DVHList)) DVHList[n,1]<-2*dvh.matrix[n-1,1]-DVHList[n-1,1]
+    return(DVHList)
+  }
   # return matrix without dvhmatrix class structure
   if ((dvh.type=="differential") && (vol.distr=="absolute"))  final.matrix<-diff
   if ((dvh.type=="differential") && (vol.distr=="relative"))  final.matrix<-rel.diff.dvh(diff)
