@@ -550,12 +550,18 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     return(ps);
   }  
   getAlignedStructureAndVoxelCube<-function(  ps.x=NA, ps.y=NA, ps.z=NA, ROIName ) {
+    if(is.na(ps.x) & is.na(ps.y) & is.na(ps.z)) {
+      ps.x<-getPixelSpacing()[1]
+      ps.y<-getPixelSpacing()[2]
+      ps.z<-getPixelSpacing()[3]
+    }
     voxelCube<-getImageVoxelCube( ps.x = ps.x, ps.y = ps.y, ps.z = ps.z ) 
     ROI<-rotateToAlign(ROIName = ROIName)
     old.ps<-getPixelSpacing();
     delta.x<-old.ps[1] / ps.x;
     delta.y<-old.ps[2] / ps.y;
     delta.z<-old.ps[3] / ps.z;
+#    browser();
     for(i in names(ROI$pointList)) {
       for( ct in seq(1,length(ROI$pointList[[i]]) ) ) {
         ROI$pointList[[i]][[ct]][,3]<-ROI$pointList[[i]][[ct]][,3] * delta.z;
@@ -1404,7 +1410,6 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
   # ...............................................................
   
   getAssociationTable<-function( tipoTabella="SOPInstance_vs_SliceLocation", ROIName ) {
-    
     SeriesInstanceUID<-giveBackImageSeriesInstanceUID();
     
     if(tipoTabella=="SOPInstance_vs_SliceLocation") {
@@ -1412,7 +1417,9 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
       involvedCT<-names(dataStorage$structures[[ROIName]]);
       
       for(index in names(dataStorage$info[[SeriesInstanceUID]]) ) {
-        matrice<-rbind(matrice,cbind(dataStorage$info[[SeriesInstanceUID]][[index]]$ROIList,index) );
+        if(!is.null(dataStorage$info[[SeriesInstanceUID]][[index]]$ROIList)) {
+          matrice<-rbind(matrice,cbind(dataStorage$info[[SeriesInstanceUID]][[index]]$ROIList,index) );
+        }
       }
       matrice<-matrice[which(matrice[,1]==ROIName),]
       return(matrice)
