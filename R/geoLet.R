@@ -1143,8 +1143,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     if(attribute=="ImagePositionPatient" | attribute=="(0020,0032)")  return(  splittaTAG(getDICOMTag(fileName,"0020,0032"))   )      
     if(attribute=="ImageOrientationPatient" | attribute=="(0020,0037)")  return(   splittaTAG(getDICOMTag(fileName,"0020,0037"))  )
     if(attribute=="PatientPosition" | attribute=="(0018,5100)")  return(  getDICOMTag(fileName,"0018,5100")   )      
-    if(attribute=="PixelSpacing" | attribute=="(0028,0030)")  return(splittaTAG(getDICOMTag(fileName,"0028,0030")))
-    if(attribute=="PixelSpacing" | attribute=="(0028,0030)")  return(splittaTAG(getDICOMTag(fileName,"0028,0030")))
+    if(attribute=="PixelSpacing" | attribute=="(0028,0030)")  return(splittaTAG(getDICOMTag(fileName,"0028,0030",debug=TRUE)))
     if(attribute=="GridFrameOffsetVector" | attribute=="(3004,000c)")  return(splittaTAG(getDICOMTag(fileName,"3004,000c")))
     if(attribute=="ROIVoxelMemoryCache") return (ROIVoxelMemoryCache);
     if(attribute=="DVHsFromFile") return (giveBackDVHsFromFile());
@@ -1188,9 +1187,9 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
   # NAME: getDICOMTag
   # it queries a DICOM file for a specific tag (short content, no image data)
   #=================================================================================
-  getDICOMTag<-function(fileName="",tag=tag) {
+  getDICOMTag<-function(fileName="",tag=tag,debug=FALSE) {
     stringa1<-"dcmdump"
-    
+#    if(debug==TRUE) browser();
     # if he want an image, grab it by a raw dump
     if(tag == "7fe0,0010") return( 
       getImageFromRAW(fileName) 
@@ -1379,6 +1378,191 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     if(ROIVoxelMemoryCache==TRUE) ROIVoxelMemoryCacheArray[[Structure]]<<-croppedRes;
     return( croppedRes )
   }
+  #=================================================================================
+  # NAME: extractDoseVoxels
+  # estrae i voxel di dose interni ad una ROI
+  #=================================================================================    
+  extractDoseVoxels<-function(ROIName ,newPixelSpacing=NA, plotIT = FALSE) {
+    objS<-services();
+    if(length(newPixelSpacing)==1) newPixelSpacing<-getPixelSpacing();
+    pixelSpacing<-getPixelSpacing();
+    # ---------------------------------------------------
+    # Prendi la ROI e informazioni preliminari
+    # ---------------------------------------------------  
+    ROIVoxels<-getROIVoxels(Structure = ROIName)
+    ROILocations<-ROIVoxels$masked.images$location
+    pip.arr<-ROIVoxels$masked.images$voxelCube
+    pip.arr.exploded<-objS$expandCube(littleCube = ROIVoxels$masked.images$voxelCube,
+                                      x.start = ROIVoxels$masked.images$location$min.x,
+                                      y.start = ROIVoxels$masked.images$location$min.y,
+                                      z.start = ROIVoxels$masked.images$location$min.z,
+                                      fe = ROIVoxels$masked.images$location$fe,
+                                      se = ROIVoxels$masked.images$location$se,te = ROIVoxels$masked.images$location$te)
+    geomInfo<-getGeometricalInformationOfImage();
+    
+    # prendi il DoseVoxelCube
+    doseList<-getDoseVoxelCube();
+    doseVoxelCube<-doseList$voxelCube
+    doseInfo<-doseList$info
+    CTVC<-getImageVoxelCube();
+    # ---------------------------------------------------
+    # costruisci gli assi con le coordinate (si tratta delle coordinate dei voxel della CT interni al
+    # voxelCube della ROI di interesse, ovviamente calcolati con il pixelspacing della CT)
+    # ---------------------------------------------------    
+    
+    # ROIBoundingBox
+    bBox.min.x<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$min.x, Ny = ROILocations$min.y, Nz = ROILocations$min.z)[1]
+    bBox.min.y<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$min.x, Ny = ROILocations$min.y, Nz = ROILocations$min.z)[2]
+    bBox.min.z<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$min.x, Ny = ROILocations$min.y, Nz = ROILocations$min.z)[3]
+    bBox.max.x<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$max.x, Ny = ROILocations$max.y, Nz = ROILocations$max.z)[1]
+    bBox.max.y<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$max.x, Ny = ROILocations$max.y, Nz = ROILocations$max.z)[2]
+    bBox.max.z<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$max.x, Ny = ROILocations$max.y, Nz = ROILocations$max.z)[3]
+    
+    min.x<-0; max.x<-as.numeric(geomInfo$Columns)-1;
+    min.y<-0; max.y<-as.numeric(geomInfo$Rows)-1;
+    min.z<-1; max.z<-geomInfo$supposedNumberOfSlices;
+    
+    fromX<-getXYZFromNxNyNzOfImageVolume(Nx = min.x, Ny = 0, Nz = 1)[1];
+    toX<-getXYZFromNxNyNzOfImageVolume(Nx = max.x, Ny = 0, Nz = 1)[1];
+    fromY<-getXYZFromNxNyNzOfImageVolume(Nx = 0, Ny = min.y, Nz = 1)[2];
+    toY<-getXYZFromNxNyNzOfImageVolume(Nx = 0, Ny = max.y, Nz = 1)[2];
+    fromZ<-getXYZFromNxNyNzOfImageVolume(Nx = 0, Ny = 0, Nz = min.z)[3];
+    toZ<-getXYZFromNxNyNzOfImageVolume(Nx = 0, Ny = 0, Nz = max.z)[3];
+    
+    if( (toX-fromX)>0 ) x.coor<-seq(fromX, toX, by = pixelSpacing[1]    )
+    else x.coor<-seq(toX, fromX, by = pixelSpacing[1]    )
+    if( (toY-fromY)>0 ) y.coor<-seq(fromY, toY, by =  pixelSpacing[2]    )
+    else y.coor<-seq(toY, fromY, by =  pixelSpacing[2]    )
+    if( (toZ-fromZ)>0 ) z.coor<-seq(fromZ, toZ, by =  as.numeric(geomInfo$SliceThickness)    )
+    else z.coor<-seq(toZ, fromZ, by =  as.numeric(geomInfo$SliceThickness)   )
+    
+    # ---------------------------------------------------
+    # calcola le MESH
+    # dalla struttura della ROI, nell'intero spazio della CT
+    # ---------------------------------------------------
+    # fai la mesh (senza visualizzare)
+    mesh.triangle<-contour3d(f = pip.arr.exploded, level = 1, x = x.coor, y = y.coor, rev(z.coor), engine = "none")
+    # passa dai triangoli alle mesh
+    mesh<-objS$triangle2mesh(x = mesh.triangle) 
+    # pulizia
+    mesh<-vcgClean(mesh = mesh, sel = c(0,0,1,1,2,2,3,3,4,4,5,5,6,6,0,0))  
+    # ---------------------------------------------------
+    # interpola la DOSE
+    # ---------------------------------------------------  
+    # imposta le dinamiche lungo i 3 assi con i NUOVI PIXELSPACING
+    resampling.coords.x<-seq(min(x.coor),max(x.coor), by = newPixelSpacing[1])
+    resampling.coords.y<-seq(min(y.coor),max(y.coor), by = newPixelSpacing[2])
+    resampling.coords.z<-seq(min(z.coor),max(z.coor), by = newPixelSpacing[3])
+    
+    resampling.coords.grid<-expand.grid(resampling.coords.x,resampling.coords.y,resampling.coords.z)
+    
+    pptmp1<-doseInfo$pixelSpacing
+    pptmp2<-doseInfo$GridFrameOffsetVector
+    dose.px<-pptmp1[1];  dose.py<-pptmp1[2];  dose.pz<-abs(pptmp2[1]-pptmp2[2])
+    
+    interpolatedValues<-array(0,nrow(resampling.coords.grid))
+    ps.x<-doseInfo$pixelSpacing[1]; ps.y<-doseInfo$pixelSpacing[2];
+    
+    f.x<-getXYZFromNxNyNzOfDoseVolume(Nx = 0,Ny = 0,Nz = 1)[1]
+    f.y<-getXYZFromNxNyNzOfDoseVolume(Nx = 0,Ny = 0,Nz = 1)[2]
+    t.x<-getXYZFromNxNyNzOfDoseVolume(Nx = as.numeric(doseInfo$Columns)-1 ,Ny = 0,Nz = 1)[1];
+    t.y<-getXYZFromNxNyNzOfDoseVolume(Nx = 0 ,Ny = as.numeric(doseInfo$Rows)-1,Nz = 1)[2];
+    
+    if(t.x>f.x) {  xDosePointsCoord<-seq(f.x, t.x,by=ps.x ) }
+    else { xDosePointsCoord<-seq(t.x, f.x,by=ps.x )   }
+    if( t.y> f.y ){  yDosePointsCoord<-seq(f.y, t.y,by=ps.y  )  }
+    else {  yDosePointsCoord<-seq(t.y, f.y,by=ps.y  )  }
+    zDosePointsCoord<-doseInfo$GridFrameOffsetVector+doseInfo$imagePositionPatient[3];
+    
+    # shifta il valore della Y rispetto al valore centrale
+    # (raffinatissimo problema di ribaltamento della y non percepibile dato il passaggio
+    # alla gestione in punti nello spazio)
+    delta1<-min(yDosePointsCoord) - min(resampling.coords.grid[,2])
+    delta2<-max(resampling.coords.grid[,2]) - max(yDosePointsCoord)
+    deltaT<-delta1-delta2;
+    yDosePointsCoord<-yDosePointsCoord-deltaT
+    xDosePointsCoord<-xDosePointsCoord-ps.x
+    interpolata <- approx3d(x = xDosePointsCoord, y = yDosePointsCoord, z = zDosePointsCoord, 
+                            f = doseVoxelCube, 
+                            xout = as.array(resampling.coords.grid[,1]),
+                            yout = as.array(resampling.coords.grid[,2]), 
+                            zout = as.array(resampling.coords.grid[,3]))  
+    
+    # costruisci la matrice 3D
+    matriciona<-array(interpolata,dim=c(length(resampling.coords.x),length(resampling.coords.y),length(resampling.coords.z)   ))
+    # e ribalta l'asse Z
+    matriciona[,,seq(1,dim(matriciona)[3])]<-matriciona[,,seq(dim(matriciona)[3],1,by=-1)]
+    
+    # ---------------------------------------------------
+    # ora calcola PUNTI INTERNI/PUNTI ESTERNI
+    # ---------------------------------------------------   
+    # prendi la CT originale
+    # ricampionala
+    CTVC.interpolata <- approx3d(x = x.coor, y = y.coor, z = rev(z.coor), 
+                                 f = CTVC, 
+                                 xout = as.array(resampling.coords.grid[,1]),
+                                 yout = as.array(resampling.coords.grid[,2]), 
+                                 zout = as.array(resampling.coords.grid[,3]))  
+    # costruisci la matrice 3D
+    CTInterpolata<-array(CTVC.interpolata,dim=c(length(resampling.coords.x),length(resampling.coords.y),length(resampling.coords.z)   ))
+    # e ribalta l'asse Z
+    CTInterpolata[,,seq(1,dim(CTInterpolata)[3])]<-CTInterpolata[,,seq(dim(CTInterpolata)[3],1,by=-1)]  
+    
+    
+    
+    voxelCube.CTInterpolata<-array(0,dim=c(  length(resampling.coords.x),length(resampling.coords.y),length(resampling.coords.z)   ))
+    voxelCube.DoseInterpolata<-array(0,dim=c(  length(resampling.coords.x),length(resampling.coords.y),length(resampling.coords.z)   ))
+    
+    casted.coords.x<-resampling.coords.x[resampling.coords.x>=bBox.min.x & resampling.coords.x<=bBox.max.x]
+    casted.coords.y<-resampling.coords.y[resampling.coords.y>=bBox.min.y & resampling.coords.y<=bBox.max.y]
+    casted.coords.z<-resampling.coords.z[resampling.coords.z<=bBox.min.z & resampling.coords.z>=bBox.max.z]
+    
+    firstX<-which(resampling.coords.x>=bBox.min.x & resampling.coords.x<=bBox.max.x)[1]
+    firstY<-which(resampling.coords.y>=bBox.min.y & resampling.coords.y<=bBox.max.y)[1]
+    
+    
+    cat(  paste(  c("\n|",rep("-",length(resampling.coords.z)),"|\n|"),collapse='')    )
+    ct<-1;
+    for(sliceRunner in seq(1,length(resampling.coords.z) )) {
+      
+      sliceZLocation<-rev(resampling.coords.z)[sliceRunner]
+      
+      if(bBox.max.z<rev(resampling.coords.z)[sliceRunner] &
+         bBox.min.z>rev(resampling.coords.z)[sliceRunner] 
+      ) {
+        cat("*")
+        casted.coords.x<-resampling.coords.x[resampling.coords.x>=bBox.min.x & resampling.coords.x<=bBox.max.x]
+        casted.coords.y<-resampling.coords.y[resampling.coords.y>=bBox.min.y & resampling.coords.y<=bBox.max.y]
+        casted.coords.z<-resampling.coords.z[resampling.coords.z<=bBox.min.z & resampling.coords.z>=bBox.max.z]
+        
+        firstX<-which(resampling.coords.x>=bBox.min.x & resampling.coords.x<=bBox.max.x)[1]
+        firstY<-which(resampling.coords.y>=bBox.min.y & resampling.coords.y<=bBox.max.y)[1]
+        
+        #resampling.coords.grid.single.slice<-expand.grid(resampling.coords.x,resampling.coords.y,rev(resampling.coords.z)[sliceRunner])
+        resampling.coords.grid.single.slice<-expand.grid(casted.coords.x,casted.coords.y,rev(resampling.coords.z)[sliceRunner])
+        
+        clost <- vcgClostKD(as.matrix(resampling.coords.grid.single.slice), mesh)
+        arrayOne<-array(0,length(resampling.coords.grid.single.slice));
+        arrayOne[which(clost$quality<0)]<-1
+        arrayOne[which(is.na(arrayOne))]<-0
+        
+        bigMaskCube<-array(arrayOne,dim=c( length(casted.coords.x),length(casted.coords.y),length(resampling.coords.z[sliceRunner])  ))
+        bigMaskCubeTMP<-array(0,dim=c( length(resampling.coords.x),length(resampling.coords.y), 1  ))
+        bigMaskCubeTMP[firstX:(firstX+dim(bigMaskCube)[1]-1), firstY:(firstY+dim(bigMaskCube)[2]-1),1 ] <-bigMaskCube[,,1]
+        
+        if(plotIT == TRUE) {
+          image(CTInterpolata[,,sliceRunner], col = grey.colors(255*255))  
+          image(matriciona[,,sliceRunner]*bigMaskCubeTMP[,,1], col = heat.colors(20, alpha = 0.5),add = TRUE)  
+        }
+        voxelCube.CTInterpolata[,,ct]<-CTInterpolata[,,sliceRunner]
+        voxelCube.DoseInterpolata[,,ct]<-matriciona[,,sliceRunner]*bigMaskCubeTMP[,,1]
+        ct<-ct+1;
+      }
+      else { cat(".") }
+    }
+    cat("|");
+    return(list("voxelCube.CT"=voxelCube.CTInterpolata,"voxelCube.Dose"=voxelCube.DoseInterpolata)) ;
+  }  
   #=================================================================================
   # NAME: getROIVoxelsFromCTRMN
   # Estrae i voxel da scansioni CT,MR
@@ -1649,6 +1833,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
               getDoseInformation = getDoseInformation,
               giveBackImageSeriesInstanceUID = giveBackImageSeriesInstanceUID,
               getXYZFromNxNyNzOfImageVolume = getXYZFromNxNyNzOfImageVolume,
-              getXYZFromNxNyNzOfDoseVolume = getXYZFromNxNyNzOfDoseVolume
+              getXYZFromNxNyNzOfDoseVolume = getXYZFromNxNyNzOfDoseVolume,
+              extractDoseVoxels = extractDoseVoxels
   ))
 }
