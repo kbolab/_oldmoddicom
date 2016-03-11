@@ -1563,16 +1563,18 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
         clost <- vcgClostKD(as.matrix(resampling.coords.grid.single.slice), mesh)
         arrayOne<-array(0,length(resampling.coords.grid.single.slice));
         arrayOne[which(clost$quality<0)]<-1
-        arrayOne[which(is.na(arrayOne))]<-0
+        #arrayOne[which(is.na(arrayOne))]<-0
+        arrayOne[which(is.na(arrayOne))]<-NA
         
         bigMaskCube<-array(arrayOne,dim=c( length(casted.coords.x),length(casted.coords.y),length(resampling.coords.z[sliceRunner])  ))
-        bigMaskCubeTMP<-array(0,dim=c( length(resampling.coords.x),length(resampling.coords.y), 1  ))
+        bigMaskCubeTMP<-array(NA,dim=c( length(resampling.coords.x),length(resampling.coords.y), 1  ))
         bigMaskCubeTMP[firstX:(firstX+dim(bigMaskCube)[1]-1), firstY:(firstY+dim(bigMaskCube)[2]-1),1 ] <-bigMaskCube[,,1]
         
         if(plotIT == TRUE) {
           image(CTInterpolata[,,sliceRunner], col = grey.colors(255*255))  
           image(matriciona[,,sliceRunner]*bigMaskCubeTMP[,,1], col = heat.colors(20, alpha = 0.5),add = TRUE)  
         }
+
         voxelCube.CTInterpolata[,,ct]<-CTInterpolata[,,sliceRunner]
         #voxelCube.DoseInterpolata[,,ct]<-matriciona[,,sliceRunner]*bigMaskCubeTMP[,,1]
         bigMaskCubeTMP[ which( bigMaskCubeTMP ==0,arr.ind = TRUE)   ]<-NA
