@@ -1378,12 +1378,31 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     if(ROIVoxelMemoryCache==TRUE) ROIVoxelMemoryCacheArray[[Structure]]<<-croppedRes;
     return( croppedRes )
   }
+  calculateDVH<-function(ROIName, pixelSpacing=NA) {
+    if(length(pixelSpacing)==1) pixelSpacing<-getPixelSpacing();
+    
+    vv<-extractDoseVoxels(ROIName = ROIName, newPixelSpacing = pixelSpacing);
+    voxelCube.Dose<-vv$voxelCube.Dose
+    voxelCube.Dose<-array(voxelCube.Dose);
+    array.Dose<-as.array(voxelCube.Dose[which(  !is.na(voxelCube.Dose),arr.ind = TRUE  )])
+    return(array.Dose);
+  }
   #=================================================================================
   # NAME: extractDoseVoxels
   # estrae i voxel di dose interni ad una ROI
   #=================================================================================    
-  extractDoseVoxels<-function(ROIName ,newPixelSpacing=NA, plotIT = FALSE) {
+  extractDoseVoxels<-function(ROIName ,newPixelSpacing=NA, plotIT = FALSE, verbose=FALSE, forceReCalculus=FALSE) {
     objS<-services();
+    
+    # check the cache
+    if(forceReCalculus==FALSE) {
+      if(!is.list(dataChache)) dataChache<<-list();
+      if(!is.list(dataChache$calculatedDVH)) dataChache$calculatedDVH<<-list();
+      if(!is.list(dataChache$calculatedDVH[[ROIName]])) dataChache$calculatedDVH[[ROIName]]<<-list() 
+      else return (dataChache$calculatedDVH[[ROIName]])
+    }
+    
+    # if it not in cache... well, go on
     if(length(newPixelSpacing)==1) newPixelSpacing<-getPixelSpacing();
     pixelSpacing<-getPixelSpacing();
     # ---------------------------------------------------
@@ -1521,7 +1540,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     firstY<-which(resampling.coords.y>=bBox.min.y & resampling.coords.y<=bBox.max.y)[1]
     
     
-    cat(  paste(  c("\n|",rep("-",length(resampling.coords.z)),"|\n|"),collapse='')    )
+    if(verbose==TRUE) {cat(  paste(  c("\n|",rep("-",length(resampling.coords.z)),"|\n|"),collapse='')    ) }
     ct<-1;
     for(sliceRunner in seq(1,length(resampling.coords.z) )) {
       
@@ -1530,7 +1549,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
       if(bBox.max.z<rev(resampling.coords.z)[sliceRunner] &
          bBox.min.z>rev(resampling.coords.z)[sliceRunner] 
       ) {
-        cat("*")
+        if(verbose==TRUE) {cat("*")}
         casted.coords.x<-resampling.coords.x[resampling.coords.x>=bBox.min.x & resampling.coords.x<=bBox.max.x]
         casted.coords.y<-resampling.coords.y[resampling.coords.y>=bBox.min.y & resampling.coords.y<=bBox.max.y]
         casted.coords.z<-resampling.coords.z[resampling.coords.z<=bBox.min.z & resampling.coords.z>=bBox.max.z]
@@ -1555,13 +1574,20 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
           image(matriciona[,,sliceRunner]*bigMaskCubeTMP[,,1], col = heat.colors(20, alpha = 0.5),add = TRUE)  
         }
         voxelCube.CTInterpolata[,,ct]<-CTInterpolata[,,sliceRunner]
+        #voxelCube.DoseInterpolata[,,ct]<-matriciona[,,sliceRunner]*bigMaskCubeTMP[,,1]
+        bigMaskCubeTMP[ which( bigMaskCubeTMP ==0,arr.ind = TRUE)   ]<-NA
         voxelCube.DoseInterpolata[,,ct]<-matriciona[,,sliceRunner]*bigMaskCubeTMP[,,1]
         ct<-ct+1;
       }
-      else { cat(".") }
+      else { if(verbose==TRUE) {cat(".")} }
     }
-    cat("|");
-    return(list("voxelCube.CT"=voxelCube.CTInterpolata,"voxelCube.Dose"=voxelCube.DoseInterpolata)) ;
+    if(verbose==TRUE) {cat("|");}
+    if(!is.list(dataChache)) dataChache<<-list();
+    if(!is.list(dataChache$calculatedDVH)) dataChache$calculatedDVH<<-list();
+    if(!is.list(dataChache$calculatedDVH[[ROIName]])) dataChache$calculatedDVH[[ROIName]]<<-list();
+    res<-list("voxelCube.CT"=voxelCube.CTInterpolata,"voxelCube.Dose"=voxelCube.DoseInterpolata);
+    dataChache$calculatedDVH[[ROIName]]<<-res
+    return( res ) ;
   }  
   #=================================================================================
   # NAME: getROIVoxelsFromCTRMN
