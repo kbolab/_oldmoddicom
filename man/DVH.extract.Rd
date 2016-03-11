@@ -6,7 +6,8 @@
 \usage{
 DVH.extract(x, max.dose = NULL, dose.bin = 0.25,
   dvh.type = c("differential", "cumulative"), vol.distr = c("relative",
-  "absolute"), createObj = TRUE, volbin.side = 2.5)
+  "absolute"), createObj = TRUE, volbin.side = NULL, voxel.volume = NULL,
+  total.volume = NULL)
 }
 \arguments{
 \item{x}{vector of dose bins.}
@@ -21,14 +22,19 @@ DVH.extract(x, max.dose = NULL, dose.bin = 0.25,
 
 \item{createObj}{if \code{TRUE} returns a \code{dvhmatrix} class object.}
 
-\item{volbin.side}{The value of the side of each cube (in mm) that builds the final volume of the structure.}
+\item{volbin.side}{The value of the side of each cube (in cm) that builds the final volume of the structure.}
+
+\item{voxel.volume}{The value of the volume of a single voxel (in cc) to compute the ROI total volume}
+
+\item{total.volume}{The value of the total volume of the ROI (in cc)}
 }
 \value{
 Either an object of class \code{dvhmatrix} or a \code{matrix} according the argument \code{dvh} type.
 }
 \description{
 Function that given a vector of dose bins (either a vector got from sampling a 3D mesh or a vector of
-simple values of dose) extracts the DVH that summarizes that vector.
+simple values of dose) extracts the DVH that summarizes that vector. Either \code{volbin.side}, \code{voxel.volume} or \code{total.volume} have to be
+not \code{NULL} values. The priority list for computing the volume (if more than one argument is not \code{NULL}) is total.volume \code{->} voxel.volume \code{->} volbin.side.
 }
 \examples{
 ## simulate a vector of dose bins
