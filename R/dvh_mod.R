@@ -206,6 +206,7 @@ DVH.cum.to.diff <- function(dvh) {
 DVH.extract<-function(x, max.dose=NULL, dose.bin=.25, dvh.type=c("differential","cumulative"), 
                       vol.distr=c("relative","absolute"), createObj=TRUE, volbin.side=2.5) {
   # default VolBin is given in cm3
+  browser()
   VolBin<-(volbin.side/10)^3 
   TotalVol<-length(x)*VolBin
   dvh.type=match.arg(dvh.type)

@@ -136,6 +136,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
       matrice3<-rbind(matrice3,TMP[[i]]$tableROIPointList)
       # .im
       # Aggiungi le informazioni relative al FrameOfReferenceUID delle ROI caricate
+      # ed il ReferencedROINumber!!!!! (xè non è il numero della ROI di moddicom, possono essere diversi)
       if(!is.list(dataStorage$info[["structures"]])) dataStorage$info[["structures"]]<-list();
       for( nomeROI in TMP[[i]]$IDROINameAssociation[2,] ) {
         dataStorage$info[["structures"]][[nomeROI]]<<-list();
@@ -148,6 +149,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     
     # for each ROI
     for(i in matrice2[2,]) {
+     
       # get the points
       subMatrix<-matrice3[which(matrice3[,2]==i,arr.ind = TRUE),]
       # if some points exist
@@ -179,6 +181,10 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
           # Add the first one as last (close the loop)
           listaROI[[i]][[   SOPInstance  ]][[ length(listaROI[[i]][[   SOPInstance  ]]) ]]<-rbind(listaROI[[i]][[   SOPInstance  ]][[length(listaROI[[i]][[   SOPInstance  ]])]],listaROI[[i]][[   SOPInstance  ]][[length(listaROI[[i]][[   SOPInstance  ]])]][1,])
         }   
+      } else {
+        # -im
+        listaROI[[i]]<-NA
+        #-fm
       }
     }
     return(listaROI); 
@@ -203,6 +209,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     numeroROIDaAssegnare<-0;
     numeroROIAssegnate<-0;
     ROINames<-getROIList();
+    
     for(nomeROI in ROINames[2,]) {
       FrameOfReferenceUID<-dataStorage$info$structures[[nomeROI]]$FrameOfReferenceUID;
       # prendi la seriesInstanceUID con quel FrameOfReferenceUID
@@ -211,46 +218,49 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
       seriesInstanceUID<-giveBackImageSeriesInstanceUID(FrameOfReferenceUID=FrameOfReferenceUID)
       # bene, ora per ogni ROI scorri i contorni sui vari piani assiali
       listaPuntiROI<-getROIPointList(ROINumber = nomeROI );
+
       # frulla su ogni assiale
-      for( indiciROI in seq(1,length(listaPuntiROI) )) {
-        if(length(listaPuntiROI[[indiciROI]])>0) {
-          numeroROIDaAssegnare<-numeroROIDaAssegnare+1
-          # prendi un punto campione
-          sampleROIPoint<-listaPuntiROI[[indiciROI]][[1]][1,]
-          # ora cicla sulla serie di immagini identificata come pertinente 
-          # l'indice è l'instance number
-          for(  imgInstanceNumber  in names(dataStorage$img[[seriesInstanceUID]] ) ) {
-            # prendi l'equazione del piano di quella fetta
-            planeEquation<-dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]]$planeEquation
-            # calcola la distanza fra il piano dell'immagine in esame ed il punto campione della ROI
-            distanza<-objServ$SV.getPointPlaneDistance(Punto=sampleROIPoint, Piano=planeEquation)
-            # prendi la slice Thickness
-            sliceThickness<-as.numeric(dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]]$SliceThickness) 
-            # RSTruct SeriesInstanceUID
-            STRUCTSeriesInstanceUID<-names(listaPuntiROI)[indiciROI]
-            # verifica se la distanza è inferiore ad un dato delta, se sì
-            # ciò per decidere se la ROI giace sulla slice
-            if( abs(distanza)<0.1 |  ( abs(distanza)<=(sliceThickness/2) & relaxCoPlanarity==TRUE   ) ) {
-              if( nomeROI %in% dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]][,1] ) {
-                stop("ERRORE: La ROI sembra essere inaspettatamente associata due volte alla stessa slice (problema di posizionamento dei punti nello spazio?)");
-              } else {
-                # se la tabella manco c'era
-                if(length(dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]])==0) {
-                  dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]]<<-matrix(0,ncol=4,nrow=1)
-                  dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]][1,1]<<-nomeROI
-                  dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]][1,2]<<-seriesInstanceUID
-                  dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]][1,3]<<-FrameOfReferenceUID
-                  dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]][1,4]<<-STRUCTSeriesInstanceUID
-                  numeroROIAssegnate<-numeroROIAssegnate+1
+      if(is.list(listaPuntiROI)) {
+        for( indiciROI in seq(1,length(listaPuntiROI) )) {
+          if(length(listaPuntiROI[[indiciROI]])>0) {
+            numeroROIDaAssegnare<-numeroROIDaAssegnare+1
+            # prendi un punto campione
+            sampleROIPoint<-listaPuntiROI[[indiciROI]][[1]][1,]
+            # ora cicla sulla serie di immagini identificata come pertinente 
+            # l'indice è l'instance number
+            for(  imgInstanceNumber  in names(dataStorage$img[[seriesInstanceUID]] ) ) {
+              # prendi l'equazione del piano di quella fetta
+              planeEquation<-dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]]$planeEquation
+              # calcola la distanza fra il piano dell'immagine in esame ed il punto campione della ROI
+              distanza<-objServ$SV.getPointPlaneDistance(Punto=sampleROIPoint, Piano=planeEquation)
+              # prendi la slice Thickness
+              sliceThickness<-as.numeric(dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]]$SliceThickness) 
+              # RSTruct SeriesInstanceUID
+              STRUCTSeriesInstanceUID<-names(listaPuntiROI)[indiciROI]
+              # verifica se la distanza è inferiore ad un dato delta, se sì
+              # ciò per decidere se la ROI giace sulla slice
+              if( abs(distanza)<0.1 |  ( abs(distanza)<=(sliceThickness/2) & relaxCoPlanarity==TRUE   ) ) {
+                if( nomeROI %in% dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]][,1] ) {
+                  stop("ERRORE: La ROI sembra essere inaspettatamente associata due volte alla stessa slice (problema di posizionamento dei punti nello spazio?)");
                 } else {
-                  # se invece c'era serve solo aggiungere una riga
-                  riga<-nrow(dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]])+1
-                  dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]]<<-rbind(dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]],c("","","",""))
-                  dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]][riga,1]<<-nomeROI
-                  dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]][riga,2]<<-seriesInstanceUID
-                  dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]][riga,3]<<-FrameOfReferenceUID
-                  dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]][riga,4]<<-STRUCTSeriesInstanceUID                
-                  numeroROIAssegnate<-numeroROIAssegnate+1
+                  # se la tabella manco c'era
+                  if(length(dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]])==0) {
+                    dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]]<<-matrix(0,ncol=4,nrow=1)
+                    dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]][1,1]<<-nomeROI
+                    dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]][1,2]<<-seriesInstanceUID
+                    dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]][1,3]<<-FrameOfReferenceUID
+                    dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]][1,4]<<-STRUCTSeriesInstanceUID
+                    numeroROIAssegnate<-numeroROIAssegnate+1
+                  } else {
+                    # se invece c'era serve solo aggiungere una riga
+                    riga<-nrow(dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]])+1
+                    dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]]<<-rbind(dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]],c("","","",""))
+                    dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]][riga,1]<<-nomeROI
+                    dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]][riga,2]<<-seriesInstanceUID
+                    dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]][riga,3]<<-FrameOfReferenceUID
+                    dataStorage$info[[seriesInstanceUID]][[imgInstanceNumber]][["ROIList"]][riga,4]<<-STRUCTSeriesInstanceUID                
+                    numeroROIAssegnate<-numeroROIAssegnate+1
+                  }
                 }
               }
             }
@@ -292,12 +302,41 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
             # se son qui significa che il FrameOfReferenceUID  è compatibile e le geometrie sono coerenti
             
             # get the Instance number (number of CT in the serie)
-            instanceNumber<-getDICOMTag(i,"0020,0013")              
+            instanceNumber<-as.character(getDICOMTag(i,"0020,0013"))
             dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]]<<-list()
             # get the Patient Position
-            dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]]<<-getAttribute(attribute<-"PatientPosition",fileName=i)
+            PatientPosition<-getAttribute(attribute = "PatientPosition",fileName=i);
+            dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]]<<-PatientPosition
+
             # get the image data
             immagine<-getDICOMTag(i,"7fe0,0010");
+            # apply rescaleSlope and rescaleIntercept, if needed
+            rescale.intercept<-as.numeric(getDICOMTagFromXML(fileName = i,tag ="0028,1052" )); # rescale Intercept)
+            rescale.slope<-as.numeric(getDICOMTagFromXML(fileName = i,tag ="0028,1053" )); # rescale Slope)
+            rescale.type<-getDICOMTagFromXML(fileName = i,tag ="0028,1054" ); # rescale Type)
+            immagine<-immagine * rescale.slope + rescale.intercept
+
+            # if the unity of measures are different, track an error!
+            # ( I mean, in rescale slope/intercept and capted value in image)
+            if(SOPClassUIDList[[i]]$kind=="PositronEmissionTomographyImageStorage") {
+              UM<-getDICOMTagFromXML(fileName = i,tag ="0054,1001" ); # UM of voxel Cube
+              CountsSource<-getDICOMTagFromXML(fileName = i,tag ="0054,1002" ); # CountsSource
+              DecayCorrection<-getDICOMTagFromXML(fileName = i,tag ="0054,1102" ); # DecayCorrection
+
+              Radiopharmaceutical<-getDICOMTagFromXML(fileName = i,tag ="0018,0031" ); # Radiopharmaceutical
+              RadiopharmaceuticalStartTime<-getDICOMTagFromXML(fileName = i,tag ="0018,1072" ); # RadiopharmaceuticalStartTime
+              RadionuclideTotalDose<-as.numeric(getDICOMTagFromXML(fileName = i,tag ="0018,1074" )); # RadionuclideTotalDose
+              RadionuclideHalfLife<-as.numeric(getDICOMTagFromXML(fileName = i,tag ="0018,1075" )); # RadionuclideHalfLife
+              if( UM != rescale.type) {
+                stop("Error: in PET image the rescale slope/intercept have different UM than the one used in the image (0054,1001) vs (0028,1054) ");
+              }
+              if(CountsSource!='EMISSION' | DecayCorrection!='START') {
+                cat("\n ERROR: CountsSource!='EMISSION' or DecayCorrection!='START' ! This modality is not yet supported");
+                stop();
+              }
+              
+            } else UM<-'';
+
             # Do I have to rotate the image?
             imageToBeRotated <- -1
             if( dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "HFS" ) imageToBeRotated<-1
@@ -312,14 +351,15 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
             # now update the structure in memory
             dataStorage[["img"]][[seriesInstanceUID]][[instanceNumber]]<<-immagine              
             dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["SOPClassUID"]]<<-SOPClassUIDList[[i]]$kind
+            dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["UM"]]<<-UM
             dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["SOPInstanceUID"]]<<-getDICOMTag(i,"0008,0018")
             dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["FrameOfReferenceUID"]]<<-FrameOfReferenceUID
             dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["fileName"]]<<-i
-            pixelSpacing<-getAttribute(attribute<-"PixelSpacing",fileName=i)
+            pixelSpacing<-getAttribute(attribute="PixelSpacing",fileName=i)
             #pixSeriesInstanceUIDelSpacing<-getDICOMTag(i,"0028,0030")
-            oM<-getAttribute(attribute<-"orientationMatrix",fileName=i)              
-            dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["ImagePositionPatient"]]<<-getAttribute(attribute<-"ImagePositionPatient",fileName=i)
-            dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["ImageOrientationPatient"]]<<-getAttribute(attribute<-"ImageOrientationPatient",fileName=i)
+            oM<-getAttribute(attribute="orientationMatrix",fileName=i)              
+            dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["ImagePositionPatient"]]<<-getAttribute(attribute = "ImagePositionPatient",fileName=i)
+            dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["ImageOrientationPatient"]]<<-getAttribute(attribute = "ImageOrientationPatient",fileName=i)
             oM[1,1]<-oM[1,1]*pixelSpacing[1]
             oM[2,1]<-oM[2,1]*pixelSpacing[1]
             oM[3,1]<-oM[3,1]*pixelSpacing[1]
@@ -334,6 +374,25 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
             if(SOPClassUIDList[[i]]$kind=="MRImageStorage") {
               dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["RepetitionTime"]]<<-getDICOMTag(i,"0018,0080")
               dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["EchoTime"]]<<-getDICOMTag(i,"0018,0081")
+            }
+            if(SOPClassUIDList[[i]]$kind=="PositronEmissionTomographyImageStorage") {
+              PatientWeight<-as.numeric(getDICOMTagFromXML(fileName = i,tag ="0010,1030" ));
+              AcquisitionTime<-getDICOMTagFromXML(fileName = i,tag ="0008,0032" );
+              dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["CountsSource"]]<<-CountsSource
+              dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["DecayCorrection"]]<<-DecayCorrection
+              dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["Radiopharmaceutical"]]<<-Radiopharmaceutical
+              dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["RadiopharmaceuticalStartTime"]]<<-RadiopharmaceuticalStartTime
+              dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["AcquisitionTime"]]<<-AcquisitionTime
+              dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["RadionuclideTotalDose"]]<<-RadionuclideTotalDose
+              dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["RadionuclideHalfLife"]]<<-RadionuclideHalfLife
+              dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientWeight"]]<<-PatientWeight
+              deltaT<-as.numeric(difftime(as.POSIXct(RadiopharmaceuticalStartTime, format = "%I:%M:%S"),as.POSIXct(AcquisitionTime, format = "%I:%M:%S"),units = 'secs'))
+              if(is.na(deltaT) | is.null(deltaT) | deltaT==0) {
+                cat('\n Error: deltaT between RadiopharmaceuticalStartTime and AcquisitionTime seems to be invalid');
+                stop();
+              }
+              SUVCoefficient.BW<-PatientWeight/( RadionuclideTotalDose * 2^( deltaT/ RadionuclideHalfLife ) )
+              dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["SUVCoefficient.BW"]]<<-SUVCoefficient.BW
             }
             instanceNumber<-getDICOMTag(i,"0020,0013")
             
@@ -652,7 +711,6 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     ct<-1
     if(length(a)>0) {
       for(ct in seq(1,length(a))) {
-
         ReferencedROINumber<-xpathApply(a[[ct]],'//item/sequence[@tag="3004,0060"]//element[@tag="3006,0084"]',xmlValue)[[ct]]
         
         ROIName<-as.character(ReferencedROINumber);
@@ -697,6 +755,80 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
       "DVHList"=DVHList
     ))
   }
+  old_getDoseFromXML<-function(fileName) { 
+    obj.S<-services();
+    
+    # build the XML file and get the XML structure
+    doc<-obj.S$getXMLStructureFromDICOMFile(fileName = fileName, folderCleanUp = folderCleanUp)
+    
+    ImagePositionPatient<-xpathApply(doc,'/file-format/data-set/element[@tag="0020,0032" and @name="ImagePositionPatient"]',xmlValue)[[1]]
+    ImageOrientationPatient<-xpathApply(doc,'/file-format/data-set/element[@tag="0020,0037" and @name="ImageOrientationPatient"]',xmlValue)[[1]]
+    Rows<-xpathApply(doc,'/file-format/data-set/element[@tag="0028,0010" and @name="Rows"]',xmlValue)[[1]]
+    Columns<-xpathApply(doc,'/file-format/data-set/element[@tag="0028,0011" and @name="Columns"]',xmlValue)[[1]]
+    PixelSpacing<-xpathApply(doc,'/file-format/data-set/element[@tag="0028,0030" and @name="PixelSpacing"]',xmlValue)[[1]]
+    PixelRepresentation<-xpathApply(doc,'/file-format/data-set/element[@tag="0028,0103" and @name="PixelRepresentation"]',xmlValue)[[1]]
+    SOPInstanceUID<-xpathApply(doc,'/file-format/data-set/element[@tag="0008,0018" and @name="SOPInstanceUID"]',xmlValue)[[1]]
+    SOPInstanceUID<-xpathApply(doc,'/file-format/data-set/element[@tag="0008,0018" and @name="SOPInstanceUID"]',xmlValue)[[1]]
+    SeriesInstanceUID<-xpathApply(doc,'/file-format/data-set/element[@tag="0020,000e" and @name="SeriesInstanceUID"]',xmlValue)[[1]]
+    GridFrameOffsetVector<-xpathApply(doc,'/file-format/data-set/element[@tag="3004,000c" and @name="GridFrameOffsetVector"]',xmlValue)[[1]]
+    DoseUnits<-xpathApply(doc,'/file-format/data-set/element[@tag="3004,0002" and @name="DoseUnits"]',xmlValue)[[1]]
+    DoseType<-xpathApply(doc,'/file-format/data-set/element[@tag="3004,0004" and @name="DoseType"]',xmlValue)[[1]]
+    DoseGridScaling<-xpathApply(doc,'/file-format/data-set/element[@tag="3004,000e" and @name="DoseGridScaling"]',xmlValue)[[1]]
+    ReferencedRTPlanSequence_ReferencedSOPInstanceUID<-xpathApply(doc,'/file-format/data-set/sequence[@tag="300c,0002" and @name="ReferencedRTPlanSequence"]//element[@tag="0008,1155" and @name="ReferencedSOPInstanceUID"]',xmlValue)[[1]]    
+    
+    # now look for some DVHs
+    #a<-xpathApply(doc,'/file-format/data-set/sequence[@tag="3004,0050" and @name="DVHSequence"]',xmlValue)
+    a<-getNodeSet(doc,'/file-format/data-set/sequence[@tag="3004,0050" and @name="DVHSequence"]/item')
+    
+    DVHList<-list();
+    ct<-1
+    if(length(a)>0) {
+      for(ct in seq(1,length(a))) {
+        
+        ReferencedROINumber<-xpathApply(a[[ct]],'//item/sequence[@tag="3004,0060"]//element[@tag="3006,0084"]',xmlValue)[[ct]]
+        
+        ROIName<-as.character(ReferencedROINumber);
+        
+        DVHList[[ROIName]]<-list();
+        
+        DVHList[[ROIName]][["DVHType"]]<-xpathApply(a[[ct]],'//item/element[@tag="3004,0001"]',xmlValue)[[ct]]
+        DVHList[[ROIName]][["DoseUnits"]]<-xpathApply(a[[ct]],'//item/element[@tag="3004,0002"]',xmlValue)[[ct]]
+        DVHList[[ROIName]][["DoseType"]]<-xpathApply(a[[ct]],'//item/element[@tag="3004,0004"]',xmlValue)[[ct]]
+        DVHList[[ROIName]][["DVHDoseScaling"]]<-xpathApply(a[[ct]],'//item/element[@tag="3004,0052"]',xmlValue)[[ct]]
+        DVHList[[ROIName]][["DVHVolumeUnits"]]<-xpathApply(a[[ct]],'//item/element[@tag="3004,0054"]',xmlValue)[[ct]]
+        DVHList[[ROIName]][["DVHNumberOfBins"]]<-xpathApply(a[[ct]],'//item/element[@tag="3004,0056"]',xmlValue)[[ct]]
+        DVHList[[ROIName]][["DVHMeanDose"]]<-xpathApply(a[[ct]],'//item/element[@tag="3004,0074"]',xmlValue)[[ct]]
+        DVHList[[ROIName]][["DVHMaximumDose"]]<-xpathApply(a[[ct]],'//item/element[@tag="3004,0072"]',xmlValue)[[ct]]
+        DVHList[[ROIName]][["ReferencedROINumber"]]<-xpathApply(a[[ct]],'//item/sequence[@tag="3004,0060"]//element[@tag="3006,0084"]',xmlValue)[[ct]]
+        
+        dvhString<-xpathApply(a[[ct]],'//item/element[@tag="3004,0058"]',xmlValue)[[ct]];
+        dvhArr<-strsplit(dvhString,"\\\\");
+        DVHList[[ROIName]][["DVHData.volume"]]<-as.numeric(dvhArr[[1]][seq(2,length(dvhArr[[1]]),by=2 )])
+        DVHList[[ROIName]][["DVHData.dose"]]<-cumsum(  as.numeric(dvhArr[[1]][seq(1,length(dvhArr[[1]]),by=2 )])  )
+        dvh.type<-''
+        final.matrix<-as.matrix(  cbind( DVHList[[ROIName]][["DVHData.volume"]],DVHList[[ROIName]][["DVHData.dose"]] ) )
+        if(DVHList[[ROIName]][["DVHType"]]=="CUMULATIVE") dvh.type<-"cumulative";
+        if(DVHList[[ROIName]][["DVHType"]]=="DIFFERENTIAL") dvh.type<-"differential";
+        if(dvh.type=='') stop("ERROR: type of DVH not yet supported");
+        if(DVHList[[ROIName]][["DoseUnits"]]!='GY') stop("ERROR: only 'GY' are supported as DoseUnit");
+        if(DVHList[[ROIName]][["DoseType"]]!='PHYSICAL') stop("ERROR: only DoseType 'physical' is supported");
+        if(DVHList[[ROIName]][["DVHDoseScaling"]]!='1') stop("ERROR: only DVHDoseScaling equal to 1 is supported");
+        if(DVHList[[ROIName]][["DVHVolumeUnits"]]!='CM3') stop("ERROR: only DVHVolumeUnits equal to 'CM3' is supported");
+        final.matrix<-as.matrix(cbind(DVHList[[ROIName]][["DVHData.dose"]],DVHList[[ROIName]][["DVHData.volume"]]))
+        DVHObj<-new("dvhmatrix", dvh=final.matrix, dvh.type=dvh.type, vol.distr='absolute', volume=final.matrix[1,1])
+        DVHList[[ROIName]][["DVHObj"]]<-DVHObj
+      }
+    }    
+    
+    return(list(
+      "ImagePositionPatient"=ImagePositionPatient,"ImageOrientationPatient"=ImageOrientationPatient,
+      "Rows"=Rows,"Columns"=Columns,"PixelSpacing"=PixelSpacing,"PixelRepresentation"=PixelRepresentation,
+      "SOPInstanceUID"=SOPInstanceUID,"SeriesInstanceUID"=SeriesInstanceUID,"GridFrameOffsetVector"=GridFrameOffsetVector,
+      "DoseUnits"=DoseUnits,"DoseType"=DoseType,"DoseGridScaling"=DoseGridScaling,
+      "ReferencedRTPlanSequence_ReferencedSOPInstanceUID"=ReferencedRTPlanSequence_ReferencedSOPInstanceUID,
+      "DVHList"=DVHList
+    ))
+  }  
   #=================================================================================
   # changeDVHROIIDInROINames
   # at the end of the computation, change the ROIId in the ROINames. This cannot be 
@@ -828,7 +960,6 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
       ROINumber<-xpathApply(xmlDoc(i),'/item/element[@tag="3006,0084"]',xmlValue)[[1]]
       ROIName<-matrice2[2,which(matrice2[1,]==ROINumber)]
       listaPuntiDaRavanare<-getNodeSet(xmlDoc(i),'/item/sequence/item')
-      
       for(i2 in listaPuntiDaRavanare)   {
         # ReferencedSOPInstanceUID<-xpathApply(xmlDoc(i2),'//element[@tag="0008,1155"]',xmlValue)[[1]]
         
@@ -1061,7 +1192,9 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     stringa1<-"dcmdump"
     
     # if he want an image, grab it by a raw dump
-    if(tag == "7fe0,0010") return( getImageFromRAW(fileName) );
+    if(tag == "7fe0,0010") return( 
+      getImageFromRAW(fileName) 
+    );
     
     # otherwise go on
     stringa2<-objServ$adjCommandLinePar(paste(" +L -Un +P '",tag,"'  ",fileName,collapse=''))
@@ -1120,9 +1253,22 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     }
     # Load the XML file
     doc = xmlInternalTreeParse(fileNameXML)
+    
+    stringaQuery<-''
+    if(tag=="0018,0031" | tag=="0018,1072" | tag=="0018,1074" | tag=="0018,1075") {
+      stringaQuery<-paste(c('/file-format/data-set/sequence[@tag="0054,0016"]/item/element[@tag="',tag,'"]'),collapse='');
+#       xpathApply(doc,stringaQuery,xmlValue)[[1]]
+#       subDoc<-getNodeSet(doc,stringaQuery);
+#       browser();
+#       ROIPointList<-xpathApply(subDoc(1),'//item',xmlValue) 
+#       
+#       browser();
+#       n3XML<-getNodeSet(doc,'/file-format/data-set/sequence[@tag="3006,0039" and @name="ROIContourSequence"]/item')
+    }
+    
     # SEQUENCES: the one with the attribute  tag="3006,0020"  and name="StructureSetROISequence" 
     # is the one with association NAME<->ID
-    stringaQuery<-paste(c('/file-format/data-set/element[@tag="',tag,'"]'),collapse='');
+    if(stringaQuery=='') stringaQuery<-paste(c('/file-format/data-set/element[@tag="',tag,'"]'),collapse='');
     valore<-xpathApply(doc,stringaQuery,xmlValue);
     if(length(valore)==2) stop("ERRORE: due valori sono inattesi");
     valore<-valore[[1]]
@@ -1233,26 +1379,10 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     if(ROIVoxelMemoryCache==TRUE) ROIVoxelMemoryCacheArray[[Structure]]<<-croppedRes;
     return( croppedRes )
   }
-  old_getROIVoxels<-function( Structure = Structure ) {
-    
-    # cerca nella cache di memoria, se attivata, la presenza della ROI già estratta
-    if(ROIVoxelMemoryCache==TRUE  & !is.null(ROIVoxelMemoryCacheArray[[Structure]]) ) {
-      return(ROIVoxelMemoryCacheArray[[Structure]]);
-    }
-    
-    # try to find out which Series is the CT/MR serie
-    SeriesInstanceUID<-giveBackImageSeriesInstanceUID()
-    if(SeriesInstanceUID == '' ) stop("ERROR: missing CT/MR series")
-    res<-getROIVoxelsFromCTRMN( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID)
-    class(res)<-"geoLetStructureVoxelList"
-    
-    
-    
-    
-    # se la cache in memoria è attiva, salvane una copia
-    if(ROIVoxelMemoryCache==TRUE) ROIVoxelMemoryCacheArray[[Structure]]<<-res;
-    return( res )
-  }  
+  #=================================================================================
+  # NAME: getROIVoxelsFromCTRMN
+  # Estrae i voxel da scansioni CT,MR
+  #=================================================================================   
   getROIVoxelsFromCTRMN<-function( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID) {
     objService<-services()  
     if ( (Structure %in% getROIList()[2,]) == FALSE )  return(NA)
