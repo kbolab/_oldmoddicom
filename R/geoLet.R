@@ -334,9 +334,11 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
                 cat("\n ERROR: CountsSource!='EMISSION' or DecayCorrection!='START' ! This modality is not yet supported");
                 stop();
               }
-              
+              if(rescale.type!='BQML') { stop('ERROR: Rescale Type is not BQML, for the moment no other UM are supported.')}  
             } else UM<-'';
 
+            
+            
             # Do I have to rotate the image?
             imageToBeRotated <- -1
             if( dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientPosition"]] == "HFS" ) imageToBeRotated<-1
@@ -391,7 +393,12 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
                 cat('\n Error: deltaT between RadiopharmaceuticalStartTime and AcquisitionTime seems to be invalid');
                 stop();
               }
-              SUVCoefficient.BW<-PatientWeight/( RadionuclideTotalDose * 2^( deltaT/ RadionuclideHalfLife ) )
+              rescaleDueToUM<-1
+              #if(rescale.type=='BQML') rescaleDueToUM<-10^(-3);
+              if(rescale.type=='BQML') rescaleDueToUM<-1;
+                
+              SUVCoefficient.BW<-PatientWeight/( RadionuclideTotalDose * exp( -deltaT *log(2)/(RadionuclideHalfLife) ) )
+              SUVCoefficient.BW<-SUVCoefficient.BW*rescaleDueToUM
               dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["SUVCoefficient.BW"]]<<-SUVCoefficient.BW
             }
             instanceNumber<-getDICOMTag(i,"0020,0013")
@@ -1378,23 +1385,29 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     if(ROIVoxelMemoryCache==TRUE) ROIVoxelMemoryCacheArray[[Structure]]<<-croppedRes;
     return( croppedRes )
   }
-  calculateDVH<-function(ROIName, pixelSpacing=NA) {
+  calculateDVH<-function(ROIName, pixelSpacing=NA , justTheDVH=TRUE) {
     if(length(pixelSpacing)==1) pixelSpacing<-getPixelSpacing();
+    voxelVolume<-pixelSpacing[1]*pixelSpacing[2]*pixelSpacing[3];
     
     vv<-extractDoseVoxels(ROIName = ROIName, newPixelSpacing = pixelSpacing);
     voxelCube.Dose<-vv$voxelCube.Dose
     voxelCube.Dose<-array(voxelCube.Dose);
-    array.Dose<-as.array(voxelCube.Dose[which(  !is.na(voxelCube.Dose),arr.ind = TRUE  )])
-    return(array.Dose);
+    voxelCube.Dose<-voxelCube.Dose[ which(!is.na(voxelCube.Dose) ) ]
+    voxelCube.Dose<-voxelCube.Dose[ which( voxelCube.Dose!=0) ] 
+    max.voxelCube.Dose <- 1.05 * max(voxelCube.Dose);
+    a<-DVH.extract(x = voxelCube.Dose,dvh.type = 'cumulative',vol.distr = 'absolute',createObj = TRUE,voxel.volume = voxelVolume,max.dose = max.voxelCube.Dose)
+    if( justTheDVH == TRUE) return(a);
+    return( list("DVHobj"=a, "voxelCube.CT"=vv$voxelCube.CT, "voxelCube.Dose"=vv$voxelCube.Dose)  );
   }
   #=================================================================================
   # NAME: extractDoseVoxels
   # estrae i voxel di dose interni ad una ROI
   #=================================================================================    
-  extractDoseVoxels<-function(ROIName ,newPixelSpacing=NA, plotIT = FALSE, verbose=FALSE, forceReCalculus=FALSE) {
+  extractDoseVoxels<-function(ROIName ,newPixelSpacing=NA, plotIT = FALSE, 
+                              verbose=FALSE, forceReCalculus=FALSE, fastEngine = TRUE) {
     objS<-services();
     
-    # check the cache
+    # verifica se è in cache
     if(forceReCalculus==FALSE) {
       if(!is.list(dataChache)) dataChache<<-list();
       if(!is.list(dataChache$calculatedDVH)) dataChache$calculatedDVH<<-list();
@@ -1402,7 +1415,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
       else return (dataChache$calculatedDVH[[ROIName]])
     }
     
-    # if it not in cache... well, go on
+    # non è in cache... elabora!
     if(length(newPixelSpacing)==1) newPixelSpacing<-getPixelSpacing();
     pixelSpacing<-getPixelSpacing();
     # ---------------------------------------------------
@@ -1424,11 +1437,11 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     doseVoxelCube<-doseList$voxelCube
     doseInfo<-doseList$info
     CTVC<-getImageVoxelCube();
+    
     # ---------------------------------------------------
     # costruisci gli assi con le coordinate (si tratta delle coordinate dei voxel della CT interni al
-    # voxelCube della ROI di interesse, ovviamente calcolati con il pixelspacing della CT)
+    # voxelCube della ROI di interesse, ovviamente CALCOLATI CON IL PIXELSPACING della CT)
     # ---------------------------------------------------    
-    
     # ROIBoundingBox
     bBox.min.x<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$min.x, Ny = ROILocations$min.y, Nz = ROILocations$min.z)[1]
     bBox.min.y<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$min.x, Ny = ROILocations$min.y, Nz = ROILocations$min.z)[2]
@@ -1458,6 +1471,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     # ---------------------------------------------------
     # calcola le MESH
     # dalla struttura della ROI, nell'intero spazio della CT
+    # (fin qui lavoro ancora solo su CT e ROI, le dosi non compaiono)
     # ---------------------------------------------------
     # fai la mesh (senza visualizzare)
     mesh.triangle<-contour3d(f = pip.arr.exploded, level = 1, x = x.coor, y = y.coor, rev(z.coor), engine = "none")
@@ -1465,14 +1479,17 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     mesh<-objS$triangle2mesh(x = mesh.triangle) 
     # pulizia
     mesh<-vcgClean(mesh = mesh, sel = c(0,0,1,1,2,2,3,3,4,4,5,5,6,6,0,0))  
+    
     # ---------------------------------------------------
     # interpola la DOSE
     # ---------------------------------------------------  
     # imposta le dinamiche lungo i 3 assi con i NUOVI PIXELSPACING
+    # (che se non specificati saranno gli stessi di default della CT)
     resampling.coords.x<-seq(min(x.coor),max(x.coor), by = newPixelSpacing[1])
     resampling.coords.y<-seq(min(y.coor),max(y.coor), by = newPixelSpacing[2])
     resampling.coords.z<-seq(min(z.coor),max(z.coor), by = newPixelSpacing[3])
     
+    # fai l'expand.grid
     resampling.coords.grid<-expand.grid(resampling.coords.x,resampling.coords.y,resampling.coords.z)
     
     pptmp1<-doseInfo$pixelSpacing
@@ -1526,9 +1543,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     CTInterpolata<-array(CTVC.interpolata,dim=c(length(resampling.coords.x),length(resampling.coords.y),length(resampling.coords.z)   ))
     # e ribalta l'asse Z
     CTInterpolata[,,seq(1,dim(CTInterpolata)[3])]<-CTInterpolata[,,seq(dim(CTInterpolata)[3],1,by=-1)]  
-    
-    
-    
+
     voxelCube.CTInterpolata<-array(0,dim=c(  length(resampling.coords.x),length(resampling.coords.y),length(resampling.coords.z)   ))
     voxelCube.DoseInterpolata<-array(0,dim=c(  length(resampling.coords.x),length(resampling.coords.y),length(resampling.coords.z)   ))
     
@@ -1538,14 +1553,17 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     
     firstX<-which(resampling.coords.x>=bBox.min.x & resampling.coords.x<=bBox.max.x)[1]
     firstY<-which(resampling.coords.y>=bBox.min.y & resampling.coords.y<=bBox.max.y)[1]
-    
-    
+
     if(verbose==TRUE) {cat(  paste(  c("\n|",rep("-",length(resampling.coords.z)),"|\n|"),collapse='')    ) }
+    
+    # loop per ogni slice lungo la cranio-caudale
     ct<-1;
     for(sliceRunner in seq(1,length(resampling.coords.z) )) {
       
       sliceZLocation<-rev(resampling.coords.z)[sliceRunner]
       
+      # se la coordinata z è interna al campo di interesse
+      # allora preparati a riflettere sui punti interni/esterni
       if(bBox.max.z<rev(resampling.coords.z)[sliceRunner] &
          bBox.min.z>rev(resampling.coords.z)[sliceRunner] 
       ) {
@@ -1559,8 +1577,10 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
         
         #resampling.coords.grid.single.slice<-expand.grid(resampling.coords.x,resampling.coords.y,rev(resampling.coords.z)[sliceRunner])
         resampling.coords.grid.single.slice<-expand.grid(casted.coords.x,casted.coords.y,rev(resampling.coords.z)[sliceRunner])
+
+        if ( fastEngine == TRUE ) clost <- vcgClostKD(as.matrix(resampling.coords.grid.single.slice), mesh)
+        else clost <- vcgClost(as.matrix(resampling.coords.grid.single.slice), mesh)
         
-        clost <- vcgClostKD(as.matrix(resampling.coords.grid.single.slice), mesh)
         arrayOne<-array(0,length(resampling.coords.grid.single.slice));
         arrayOne[which(clost$quality<0)]<-1
         #arrayOne[which(is.na(arrayOne))]<-0
@@ -1862,6 +1882,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
               giveBackImageSeriesInstanceUID = giveBackImageSeriesInstanceUID,
               getXYZFromNxNyNzOfImageVolume = getXYZFromNxNyNzOfImageVolume,
               getXYZFromNxNyNzOfDoseVolume = getXYZFromNxNyNzOfDoseVolume,
-              extractDoseVoxels = extractDoseVoxels
+              extractDoseVoxels = extractDoseVoxels,
+              calculateDVH = calculateDVH
   ))
 }

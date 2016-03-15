@@ -193,9 +193,12 @@ DVH.cum.to.diff <- function(dvh) {
 #' @param dvh.type The type of volume distribution to be created: \code{differential} or \code{cumulative}.
 #' @param vol.distr Defines if the volume bins have to be divided by the total volume of the structure (\code{relative}) or not (\code{absolute}).
 #' @param createObj if \code{TRUE} returns a \code{dvhmatrix} class object.
-#' @param volbin.side The value of the side of each cube (in mm) that builds the final volume of the structure.
+#' @param volbin.side The value of the side of each cube (in cm) that builds the final volume of the structure.
+#' @param voxel.volume The value of the volume of a single voxel (in cc) to compute the ROI total volume
+#' @param total.volume The value of the total volume of the ROI (in cc)
 #' @description Function that given a vector of dose bins (either a vector got from sampling a 3D mesh or a vector of
-#' simple values of dose) extracts the DVH that summarizes that vector.
+#' simple values of dose) extracts the DVH that summarizes that vector. Either \code{volbin.side}, \code{voxel.volume} or \code{total.volume} have to be
+#' not \code{NULL} values. The priority list for computing the volume (if more than one argument is not \code{NULL}) is total.volume \code{->} voxel.volume \code{->} volbin.side.
 #' @return Either an object of class \code{dvhmatrix} or a \code{matrix} according the argument \code{dvh} type.
 #' @examples ## simulate a vector of dose bins
 #' doses <- c(rnorm(n = 10000, mean = 45, sd = 3), rnorm(n = 7000, mean = 65, sd = 2.5))
@@ -203,11 +206,12 @@ DVH.cum.to.diff <- function(dvh) {
 #' ## creates a dvhmatrix class object
 #' DVH<-DVH.extract(x = doses)
 #' @export
-DVH.extract<-function(x, max.dose=NULL, dose.bin=.25, dvh.type=c("differential","cumulative"), 
-                      vol.distr=c("relative","absolute"), createObj=TRUE, volbin.side=2.5) {
-  # default VolBin is given in cm3
-  browser()
-  VolBin<-(volbin.side/10)^3 
+DVH.extract<-function(x, max.dose=NULL, dose.bin=.25, dvh.type=c("differential","cumulative"),vol.distr=c("relative","absolute"), createObj=TRUE,  volbin.side=NULL, voxel.volume = NULL, total.volume = NULL) {
+  # default VolBin is given in cm3 
+  if (!is.null(total.volume)) VolBin <- total.volume / length(x)
+  else if (!is.null(voxel.volume)) VolBin <- voxel.volume
+  else if (is.null(volbin.side)) stop('Either total.volume, voxel.volume or volbin.side MUST be a not NULL value')
+  else VolBin <- volbin.side^3 
   TotalVol<-length(x)*VolBin
   dvh.type=match.arg(dvh.type)
   vol.distr=match.arg(vol.distr)
@@ -220,9 +224,9 @@ DVH.extract<-function(x, max.dose=NULL, dose.bin=.25, dvh.type=c("differential",
     dvh.size <- dim(dvh.matrix)
     DVHList <- matrix(nrow=dvh.size[1], ncol=dvh.size[2])       # create the matrix of  DVHs
     for (m in 2:dvh.size[2]) {                                  # loop for columns (volumes) 
-      total.volume <- sum(dvh.matrix[,m])                       # calculate the total volume
+      tot.volume <- sum(dvh.matrix[,m])                       # calculate the total volume
       for (n in 1:dvh.size[1]) {                                # loop for rows
-        DVHList[n, m] <- dvh.matrix[n, m]/total.volume          # elements of the matrix as relative volume
+        DVHList[n, m] <- dvh.matrix[n, m]/tot.volume          # elements of the matrix as relative volume
       }    
     }
     DVHList[,1]<-dvh.matrix[,1]                                 # sets the dose column  
@@ -235,17 +239,17 @@ DVH.extract<-function(x, max.dose=NULL, dose.bin=.25, dvh.type=c("differential",
     dvh.size <- dim(dvh.matrix)
     DVHList <- matrix(nrow=dvh.size[1] + 1, ncol=dvh.size[2])   # create the matrix of cumulative DVHs     
     for (m in 2:dvh.size[2]) {                                  # loop for columns (volumes) 
-      total.volume <- sum(dvh.matrix[,m])                       # calculate the total volume
+      tot.volume <- sum(dvh.matrix[,m])                       # calculate the total volume
       if (relative==TRUE) {
         for (n in 1:dvh.size[1]) {                                    # loop for rows
-          DVHList[n+1, m] <- (total.volume - sum(dvh.matrix[c(1:n),m]))/total.volume # elements of the matrix as relative volume
+          DVHList[n+1, m] <- (tot.volume - sum(dvh.matrix[c(1:n),m]))/tot.volume # elements of the matrix as relative volume
         }
         DVHList[1,m] <- 1 # first element is 1 by default if relative==TRUE
       } else {
         for (n in 1:dvh.size[1]) {                                    # loop for rows
-          DVHList[n+1, m] <- total.volume - sum(dvh.matrix[c(1:n),m]) # elements of the matrix as relative volume
+          DVHList[n+1, m] <- tot.volume - sum(dvh.matrix[c(1:n),m]) # elements of the matrix as relative volume
         }
-        DVHList[1,m] <- total.volume  # first element is total volume by default
+        DVHList[1,m] <- tot.volume  # first element is total volume by default
       }                                       
     }
     DVHList[1,1]<-0
