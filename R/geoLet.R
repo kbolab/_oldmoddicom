@@ -1417,7 +1417,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
       if(!is.list(dataChache$calculatedDVH[[ROIName]])) dataChache$calculatedDVH[[ROIName]]<<-list() 
       else return (dataChache$calculatedDVH[[ROIName]])
     }
-    
+#    browser();
     # non è in cache... elabora!
     if(length(newPixelSpacing)==1) newPixelSpacing<-getPixelSpacing();
     pixelSpacing<-getPixelSpacing();
@@ -1434,7 +1434,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
                                       fe = ROIVoxels$masked.images$location$fe,
                                       se = ROIVoxels$masked.images$location$se,te = ROIVoxels$masked.images$location$te)
     geomInfo<-getGeometricalInformationOfImage();
-    
+
     # prendi il DoseVoxelCube
     doseList<-getDoseVoxelCube();
     doseVoxelCube<-doseList$voxelCube
@@ -1445,13 +1445,20 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     # costruisci gli assi con le coordinate (si tratta delle coordinate dei voxel della CT interni al
     # voxelCube della ROI di interesse, ovviamente CALCOLATI CON IL PIXELSPACING della CT)
     # ---------------------------------------------------    
-    # ROIBoundingBox
+    # ROIBoundingBox 
     bBox.min.x<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$min.x, Ny = ROILocations$min.y, Nz = ROILocations$min.z)[1]
     bBox.min.y<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$min.x, Ny = ROILocations$min.y, Nz = ROILocations$min.z)[2]
     bBox.min.z<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$min.x, Ny = ROILocations$min.y, Nz = ROILocations$min.z)[3]
     bBox.max.x<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$max.x, Ny = ROILocations$max.y, Nz = ROILocations$max.z)[1]
     bBox.max.y<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$max.x, Ny = ROILocations$max.y, Nz = ROILocations$max.z)[2]
     bBox.max.z<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$max.x, Ny = ROILocations$max.y, Nz = ROILocations$max.z)[3]
+    
+#     bBox.min.x<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$min.x, Ny = ROILocations$min.y, Nz = ROILocations$min.z)[1] - 10*pixelSpacing[1]
+#     bBox.min.y<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$min.x, Ny = ROILocations$min.y, Nz = ROILocations$min.z)[2] - 10*pixelSpacing[2]
+#     bBox.min.z<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$min.x, Ny = ROILocations$min.y, Nz = ROILocations$min.z)[3]
+#     bBox.max.x<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$max.x, Ny = ROILocations$max.y, Nz = ROILocations$max.z)[1] + 10*pixelSpacing[2]
+#     bBox.max.y<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$max.x, Ny = ROILocations$max.y, Nz = ROILocations$max.z)[2] + 10*pixelSpacing[2]
+#     bBox.max.z<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$max.x, Ny = ROILocations$max.y, Nz = ROILocations$max.z)[3]    
     
     min.x<-0; max.x<-as.numeric(geomInfo$Columns)-1;
     min.y<-0; max.y<-as.numeric(geomInfo$Rows)-1;
@@ -1481,8 +1488,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     # passa dai triangoli alle mesh
     mesh<-objS$triangle2mesh(x = mesh.triangle) 
     # pulizia
-    mesh<-vcgClean(mesh = mesh, sel = c(0,0,1,1,2,2,3,3,4,4,5,5,6,6,0,0))  
-    
+    mesh<-vcgClean(mesh = mesh, sel = c(0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,0,0,7,7))  
     # ---------------------------------------------------
     # interpola la DOSE
     # ---------------------------------------------------  
@@ -1512,7 +1518,6 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     if( t.y> f.y ){  yDosePointsCoord<-seq(f.y, t.y,by=ps.y  )  }
     else {  yDosePointsCoord<-seq(t.y, f.y,by=ps.y  )  }
     zDosePointsCoord<-doseInfo$GridFrameOffsetVector+doseInfo$imagePositionPatient[3];
-    
     # shifta il valore della Y rispetto al valore centrale
     # (raffinatissimo problema di ribaltamento della y non percepibile dato il passaggio
     # alla gestione in punti nello spazio)
@@ -1531,7 +1536,6 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     matriciona<-array(interpolata,dim=c(length(resampling.coords.x),length(resampling.coords.y),length(resampling.coords.z)   ))
     # e ribalta l'asse Z
     matriciona[,,seq(1,dim(matriciona)[3])]<-matriciona[,,seq(dim(matriciona)[3],1,by=-1)]
-    
     # ---------------------------------------------------
     # ora calcola PUNTI INTERNI/PUNTI ESTERNI
     # ---------------------------------------------------   
@@ -1557,7 +1561,6 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     
     firstX<-which(resampling.coords.x>=bBox.min.x & resampling.coords.x<=bBox.max.x)[1]
     firstY<-which(resampling.coords.y>=bBox.min.y & resampling.coords.y<=bBox.max.y)[1]
-
     if(verbose==TRUE) {cat(  paste(  c("\n|",rep("-",length(resampling.coords.z)),"|\n|"),collapse='')    ) }
     
     # loop per ogni slice lungo la cranio-caudale
@@ -1579,14 +1582,25 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
         firstX<-which(resampling.coords.x>=bBox.min.x & resampling.coords.x<=bBox.max.x)[1]
         firstY<-which(resampling.coords.y>=bBox.min.y & resampling.coords.y<=bBox.max.y)[1]
         
-        #resampling.coords.grid.single.slice<-expand.grid(resampling.coords.x,resampling.coords.y,rev(resampling.coords.z)[sliceRunner])
         resampling.coords.grid.single.slice<-expand.grid(casted.coords.x,casted.coords.y,rev(resampling.coords.z)[sliceRunner])
-
+        #browser();
+#        if(sliceRunner==47) browser();
+        puntoInCulonia.00<-c(3*bBox.min.x,3*bBox.min.y,rev(resampling.coords.z)[sliceRunner][1]);
+        puntoInCulonia.01<-c(3*bBox.max.x,3*bBox.max.y,rev(resampling.coords.z)[sliceRunner][1]);
+        puntoInCulonia.02<-c(3*bBox.min.x,3*bBox.max.y,rev(resampling.coords.z)[sliceRunner][1]);
+        puntoInCulonia.03<-c(3*bBox.max.x,3*bBox.min.y,rev(resampling.coords.z)[sliceRunner][1]);
+        
+        matricePunti<-rbind(puntoInCulonia.00,puntoInCulonia.01,puntoInCulonia.01,puntoInCulonia.01,as.matrix(resampling.coords.grid.single.slice))
+        resampling.coords.grid.single.slice<-matricePunti
+        
         if ( fastEngine == TRUE ) clost <- vcgClostKD(as.matrix(resampling.coords.grid.single.slice), mesh)
         else clost <- vcgClost(as.matrix(resampling.coords.grid.single.slice), mesh)
         
+        qualita<-clost$quality
+        qualita<-qualita[5: (length(qualita)) ]
+        
         arrayOne<-array(0,length(resampling.coords.grid.single.slice));
-        arrayOne[which(clost$quality<0)]<-1
+        arrayOne[which(qualita<0)]<-1
         #arrayOne[which(is.na(arrayOne))]<-0
         arrayOne[which(is.na(arrayOne))]<-NA
         
