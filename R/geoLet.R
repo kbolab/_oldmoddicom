@@ -1402,6 +1402,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     voxelCube.Dose<-voxelCube.Dose[ which(!is.na(voxelCube.Dose) ) ]
     voxelCube.Dose<-voxelCube.Dose[ which( voxelCube.Dose!=0) ] 
     max.voxelCube.Dose <- 1.05 * max(voxelCube.Dose);
+    voxelVolume<-voxelVolume/1000
     a<-DVH.extract(x = voxelCube.Dose,dvh.type = 'cumulative',vol.distr = 'absolute',createObj = TRUE,voxel.volume = voxelVolume,max.dose = max.voxelCube.Dose)
     if( justTheDVH == TRUE) return(a);
     return( list("DVHobj"=a, "voxelCube.CT"=vv$voxelCube.CT, "voxelCube.Dose"=vv$voxelCube.Dose)  );
@@ -1493,6 +1494,8 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     mesh<-objS$triangle2mesh(x = mesh.triangle) 
     # pulizia
     mesh<-vcgClean(mesh = mesh, sel = c(0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,0,0,7,7))  
+#     mesh<-vcgQEdecim(mesh = mesh, percent = 0.8);
+#     mesh<-vcgSmooth(mesh = mesh, iteration = 20)
     # ---------------------------------------------------
     # interpola la DOSE
     # ---------------------------------------------------  
@@ -1630,7 +1633,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     if(!is.list(dataChache)) dataChache<<-list();
     if(!is.list(dataChache$calculatedDVH)) dataChache$calculatedDVH<<-list();
     if(!is.list(dataChache$calculatedDVH[[ROIName]])) dataChache$calculatedDVH[[ROIName]]<<-list();
-    res<-list("voxelCube.CT"=voxelCube.CTInterpolata,"voxelCube.Dose"=voxelCube.DoseInterpolata);
+    res<-list("voxelCube.CT"=voxelCube.CTInterpolata,"voxelCube.Dose"=voxelCube.DoseInterpolata,"mesh"=mesh);
     dataChache$calculatedDVH[[ROIName]]<<-res
     return( res ) ;
   }  
