@@ -56,7 +56,7 @@
 #'               \item \code{getAlignedStructureAndVoxelCube( double ps.x, double ps.y, double ps.z, string ROIName )} this function resample the image voxel cube and give back the interested ROI rotated on such cube ad adapted according with the new geometry. ps.x,y and z are optional: if not specified the normal pixel Spacing are used.
 #'               }
 #' @export
-#' @import stringr XML misc3d rgl Rvcg
+#' @import stringr XML misc3d rgl Rvcg oce
 geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
   
   dataStorage<-list();          # Attribute with ALL the data
@@ -739,7 +739,9 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
         dvhString<-xpathApply(a[[ct]],'//item/element[@tag="3004,0058"]',xmlValue)[[ct]];
         dvhArr<-strsplit(dvhString,"\\\\");
         DVHList[[ROIName]][["DVHData.volume"]]<-as.numeric(dvhArr[[1]][seq(2,length(dvhArr[[1]]),by=2 )])
+        #DVHList[[ROIName]][["DVHData.volume"]]<-DVHList[[ROIName]][["DVHData.volume"]]-(DVHList[[ROIName]][["DVHData.volume"]][2]-DVHList[[ROIName]][["DVHData.volume"]][1])/2
         DVHList[[ROIName]][["DVHData.dose"]]<-cumsum(  as.numeric(dvhArr[[1]][seq(1,length(dvhArr[[1]]),by=2 )])  )
+        DVHList[[ROIName]][["DVHData.dose"]]<- DVHList[[ROIName]][["DVHData.dose"]] - ( (DVHList[[ROIName]][["DVHData.dose"]][2]-DVHList[[ROIName]][["DVHData.dose"]][1])/2 )
         dvh.type<-''
         final.matrix<-as.matrix(  cbind( DVHList[[ROIName]][["DVHData.volume"]],DVHList[[ROIName]][["DVHData.dose"]] ) )
         if(DVHList[[ROIName]][["DVHType"]]=="CUMULATIVE") dvh.type<-"cumulative";
@@ -750,6 +752,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
         if(DVHList[[ROIName]][["DVHDoseScaling"]]!='1') stop("ERROR: only DVHDoseScaling equal to 1 is supported");
         if(DVHList[[ROIName]][["DVHVolumeUnits"]]!='CM3') stop("ERROR: only DVHVolumeUnits equal to 'CM3' is supported");
         final.matrix<-as.matrix(cbind(DVHList[[ROIName]][["DVHData.dose"]],DVHList[[ROIName]][["DVHData.volume"]]))
+        
         DVHObj<-new("dvhmatrix", dvh=final.matrix, dvh.type=dvh.type, vol.distr='absolute', volume=final.matrix[1,1])
         DVHList[[ROIName]][["DVHObj"]]<-DVHObj
       }
@@ -1549,7 +1552,8 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     CTInterpolata[,,seq(1,dim(CTInterpolata)[3])]<-CTInterpolata[,,seq(dim(CTInterpolata)[3],1,by=-1)]  
 
     voxelCube.CTInterpolata<-array(0,dim=c(  length(resampling.coords.x),length(resampling.coords.y),length(resampling.coords.z)   ))
-    voxelCube.DoseInterpolata<-array(0,dim=c(  length(resampling.coords.x),length(resampling.coords.y),length(resampling.coords.z)   ))
+    #voxelCube.DoseInterpolata<-array(0,dim=c(  length(resampling.coords.x),length(resampling.coords.y),length(resampling.coords.z)   ))
+    voxelCube.DoseInterpolata<-array(NA,dim=c(  length(resampling.coords.x),length(resampling.coords.y),length(resampling.coords.z)   ))
     
     casted.coords.x<-resampling.coords.x[resampling.coords.x>=bBox.min.x & resampling.coords.x<=bBox.max.x]
     casted.coords.y<-resampling.coords.y[resampling.coords.y>=bBox.min.y & resampling.coords.y<=bBox.max.y]
@@ -1607,6 +1611,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
       }
       else { if(verbose==TRUE) {cat(".")} }
     }
+
     if(verbose==TRUE) {cat("|");}
     if(!is.list(dataChache)) dataChache<<-list();
     if(!is.list(dataChache$calculatedDVH)) dataChache$calculatedDVH<<-list();
