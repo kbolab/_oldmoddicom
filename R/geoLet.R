@@ -314,6 +314,8 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
             rescale.intercept<-as.numeric(getDICOMTagFromXML(fileName = i,tag ="0028,1052" )); # rescale Intercept)
             rescale.slope<-as.numeric(getDICOMTagFromXML(fileName = i,tag ="0028,1053" )); # rescale Slope)
             rescale.type<-getDICOMTagFromXML(fileName = i,tag ="0028,1054" ); # rescale Type)
+            if(is.na(rescale.intercept)) rescale.intercept = 0;
+            if(is.na(rescale.slope)) rescale.slope = 1;
             immagine<-immagine * rescale.slope + rescale.intercept
 
             # if the unity of measures are different, track an error!
@@ -1277,6 +1279,8 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     if(stringaQuery=='') stringaQuery<-paste(c('/file-format/data-set/element[@tag="',tag,'"]'),collapse='');
     valore<-xpathApply(doc,stringaQuery,xmlValue);
     if(length(valore)==2) stop("ERRORE: due valori sono inattesi");
+    if(length(valore)==0) return(NA);
+    
     valore<-valore[[1]]
     return(valore);
   }  
