@@ -3,6 +3,7 @@
 #' @description  It handles messages from script to a chosen output (screen, file, etc.)
 #' @useDynLib moddicom
 #' @export
+#' @import stringr XML 
 services<-function() {
     # ------------------------------------------------
   # SV.getPointPlaneDistance
