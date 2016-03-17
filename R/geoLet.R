@@ -1392,18 +1392,26 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     if(ROIVoxelMemoryCache==TRUE) ROIVoxelMemoryCacheArray[[Structure]]<<-croppedRes;
     return( croppedRes )
   }
-  calculateDVH<-function(ROIName, pixelSpacing=NA , justTheDVH=TRUE) {
-    if(length(pixelSpacing)==1) pixelSpacing<-getPixelSpacing();
-    voxelVolume<-pixelSpacing[1]*pixelSpacing[2]*pixelSpacing[3];
-    
-    vv<-extractDoseVoxels(ROIName = ROIName, newPixelSpacing = pixelSpacing);
+  calculateDVH<-function(ROIName, newPixelSpacing=NA , justTheDVH=TRUE,
+                         verbose=FALSE, forceReCalculus=FALSE, fastEngine = TRUE,
+                         decimation=FALSE, decimation.percentage=0.8, 
+                         smoothing=FALSE, smoothing.iterations = 10) {
+    if(length(newPixelSpacing)==1) newPixelSpacing<-getPixelSpacing();
+    voxelVolume<-newPixelSpacing[1]*newPixelSpacing[2]*newPixelSpacing[3];
+    vv<-extractDoseVoxels(ROIName = ROIName, newPixelSpacing = newPixelSpacing,
+                          verbose = verbose, forceReCalculus = forceReCalculus,
+                          fastEngine = fastEngine, decimation = decimation, decimation.percentage = decimation.percentage,
+                          smoothing = smoothing, smoothing.iterations = smoothing.iterations);
+
     voxelCube.Dose<-vv$voxelCube.Dose
     voxelCube.Dose<-array(voxelCube.Dose);
     voxelCube.Dose<-voxelCube.Dose[ which(!is.na(voxelCube.Dose) ) ]
     voxelCube.Dose<-voxelCube.Dose[ which( voxelCube.Dose!=0) ] 
     max.voxelCube.Dose <- 1.05 * max(voxelCube.Dose);
     voxelVolume<-voxelVolume/1000
-    a<-DVH.extract(x = voxelCube.Dose,dvh.type = 'cumulative',vol.distr = 'absolute',createObj = TRUE,voxel.volume = voxelVolume,max.dose = max.voxelCube.Dose)
+    dose.bin<-0.25
+    if( (max.voxelCube.Dose / dose.bin)<100  ) dose.bin<-max.voxelCube.Dose/100;
+    a<-DVH.extract(x = voxelCube.Dose,dvh.type = 'cumulative',vol.distr = 'absolute',createObj = TRUE,voxel.volume = voxelVolume,max.dose = max.voxelCube.Dose,dose.bin = dose.bin)
     if( justTheDVH == TRUE) return(a);
     return( list("DVHobj"=a, "voxelCube.CT"=vv$voxelCube.CT, "voxelCube.Dose"=vv$voxelCube.Dose)  );
   }
@@ -1412,7 +1420,9 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
   # estrae i voxel di dose interni ad una ROI
   #=================================================================================    
   extractDoseVoxels<-function(ROIName ,newPixelSpacing=NA, plotIT = FALSE, 
-                              verbose=FALSE, forceReCalculus=FALSE, fastEngine = TRUE) {
+                              verbose=FALSE, forceReCalculus=FALSE, fastEngine = TRUE,
+                              decimation=FALSE, decimation.percentage=0.8, 
+                              smoothing=FALSE, smoothing.iterations = 10) {
     objS<-services();
     
     # verifica se è in cache
@@ -1494,8 +1504,8 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     mesh<-objS$triangle2mesh(x = mesh.triangle) 
     # pulizia
     mesh<-vcgClean(mesh = mesh, sel = c(0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,0,0,7,7))  
-#     mesh<-vcgQEdecim(mesh = mesh, percent = 0.8);
-#     mesh<-vcgSmooth(mesh = mesh, iteration = 20)
+    if(decimation == TRUE) mesh<-vcgQEdecim(mesh = mesh, percent = decimation.percentage);
+    if(smoothing == TRUE) mesh<-vcgSmooth(mesh = mesh, iteration = smoothing.iterations)
     # ---------------------------------------------------
     # interpola la DOSE
     # ---------------------------------------------------  

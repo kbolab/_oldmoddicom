@@ -58,10 +58,6 @@ viewer<-function() {
     wire3d( mesh , col = "gray" )
     points3d(x = dotCoords[,1],y=dotCoords[,2],z=dotCoords[,3], size=8, col="red" )
     planes3d(.6, -.9, .3, 0, alpha=.5,col="red")
-    
-    
-    
-    
   } 
 
   plotROIs<-function(obj , arrayROINames = NA , sliceNumber = 1, ps.x = NA, ps.y = NA, ps.z = NA) {
@@ -125,6 +121,136 @@ viewer<-function() {
 }
 
 
+
+checkDifferences<-function(obj_geoLet, ROIName="CTV1", plotIt = TRUE, newPixelSpacing = NA,
+                           verbose=FALSE, forceReCalculus=FALSE, fastEngine = TRUE,
+                           decimation=FALSE, decimation.percentage=0.8, 
+                           smoothing=FALSE, smoothing.iterations = 10) {
+  obj<-obj_geoLet;
+  ds<-obj$getAttribute(attribute = "dataStorage")
+  enci<-obj$calculateDVH(ROIName = ROIName, newPixelSpacing = newPixelSpacing,
+                         verbose=verbose, forceReCalculus=forceReCalculus, fastEngine = fastEngine,
+                         decimation=decimation, decimation.percentage=decimation.percentage, 
+                         smoothing=smoothing, smoothing.iterations = smoothing.iterations)
+  onci<-ds$info$DVHs[[1]]$DVHFromFile[[ROIName]]$DVHObj
+  
+  enci@volume<-enci@dvh[1,2]
+  onci@volume<-onci@dvh[1,2]
+  
+  enci.cum<-enci
+  onci.cum<-onci
+  
+  enci.diff<-DVH.cum.to.diff(enci)
+  onci.diff<-DVH.cum.to.diff(onci)
+  
+  both.cum<-DVH.merge(receiver = enci.cum,addendum = onci.cum)
+  both.diff<-DVH.merge(receiver = enci.diff,addendum = onci.diff)
+  
+  
+  # error measures
+  volumeratio<-min(both.diff@volume[1]/both.diff@volume[2], both.diff@volume[2]/both.diff@volume[1])
+  
+  delta.cum.array<-((both.cum@dvh[,2]-both.cum@dvh[,3]))
+  delta.diff.array<-((both.diff@dvh[,2]-both.diff@dvh[,3]))
+  
+#    delta.cum.array[which(is.na(delta.cum.array) | is.infinite(delta.cum.array),arr.ind = T)]<-0
+#    delta.diff.array[which(is.na(delta.diff.array) | is.infinite(delta.diff.array),arr.ind = T)]<-0
+  max.cum.tot<-max(abs(delta.cum.array))
+  max.diff.tot<-max(abs(delta.diff.array))
+  
+  if(plotIt==TRUE) {
+    par(mfrow=c(2,1))
+    #cumulatives
+    max.y.value <- max(both.cum@dvh[,2], both.cum@dvh[,3])
+    par(mar=c(5,4,4,8)+.1)
+    
+    plot(x = both.cum@dvh[,1],y = both.cum@dvh[,2], type='l',axes=T, main=paste(c('cumulative DVHs, % error (',ROIName,')'),collapse = ''), ylab='Volume', xlab='Dose', col='darkred', ylim=c(0,max.y.value))
+
+    lines(x = both.cum@dvh[,1],y = both.cum@dvh[,3], type='l',col='blue' )
+    axis(2, ylim=c(0,max(both.cum@dvh[,3])),col="black",lwd=2)
+
+    par(new=TRUE)
+    plot(x = both.cum@dvh[,1], axes=F,y = delta.cum.array, type='l',col='darkgreen', ylim=c(min(delta.cum.array),max(delta.cum.array)), ylab='' , xlab='', lty=3, lwd=2)
+    axis(4, ylim=c(min(delta.cum.array),max(delta.cum.array)),lwd=2,line=0)
+    abline(h = 0,lty=3)
+    mtext("abs error",side=4,line=3)
+    
+    #  differential
+    max.y.value <- max(both.diff@dvh[,2], both.diff@dvh[,3])
+    par(mar=c(5,4,4,8)+.1)
+    plot(x = both.diff@dvh[,1],y = both.diff@dvh[,2], type='l',axes=T, main=paste(c('differential DVHs, % error (',ROIName,')')), ylab='Volume', xlab='Dose', col='darkred', ylim=c(0,max.y.value))
+    lines(x = both.diff@dvh[,1],y = both.diff@dvh[,3], type='l',col='blue' )
+    axis(2, ylim=c(0,max(both.diff@dvh[,3])),col="black",lwd=2)
+    
+    par(new=TRUE)
+    plot(x = both.diff@dvh[,1], axes=F,y = delta.diff.array, type='l',col='darkgreen', ylim=c(min(delta.diff.array),max(delta.diff.array)), ylab='' , xlab='', lty=3, lwd=2)
+    axis(4, ylim=c(min(delta.diff.array),max(delta.diff.array)),lwd=2,line=0)
+    mtext("abs error",side=4,line=3)
+    abline(h = 0,lty=3)
+    
+    }
+  
+  return( list( "volumeratio"= volumeratio,
+                "delta.cum.array" = delta.cum.array,
+                "delta.diff.array" = delta.diff.array,
+                "max.cum.tot"= max.cum.tot,
+                "max.diff.tot"= max.diff.tot
+               )
+            )
+}
+
+
+
+checkDifferencesForAllROIs<-function(obj_geoLet, ROINameArray, plotIt = TRUE, newPixelSpacing = NA,
+                                     verbose=FALSE, forceReCalculus=FALSE, fastEngine = TRUE,
+                                     decimation=FALSE, decimation.percentage=0.8, 
+                                     smoothing=FALSE, smoothing.iterations = 10) {
+  obj<-obj_geoLet
+
+  e.list<-list();
+  
+  for( nomeROI in ROINameArray) {
+    if(length(obj$getROIPointList(ROINumber = nomeROI))!=0) {
+      a<-checkDifferences(obj_geoLet = obj,ROIName = nomeROI,plotIt = plotIt, newPixelSpacing = newPixelSpacing,
+                          verbose=verbose, forceReCalculus=forceReCalculus, fastEngine = fastEngine,
+                          decimation=decimation, decimation.percentage=decimation.percentage, 
+                          smoothing=smoothing, smoothing.iterations = smoothing.iterations                          
+                          )
+      e.list[[nomeROI]]<-list();
+      e.list[[nomeROI]]$volumeratio<-a$volumeratio
+      e.list[[nomeROI]]$max.cum.tot<-a$max.cum.tot
+      e.list[[nomeROI]]$max.diff.tot<-a$max.diff.tot
+    }
+  }
+  return(e.list);
+}
+test.smoothing<-function( obj_geoLet, ROINameArray, plotIt = TRUE, newPixelSpacing = NA,
+                          verbose=FALSE, forceReCalculus=FALSE, fastEngine = TRUE,
+                          decimation=FALSE, 
+                          smoothing.iterations.array, decimation.percentage.array) {
+  
+  tabella<-list();
+  grid.espansa<-expand.grid(smoothing.iterations.array, decimation.percentage.array )
+  
+#  for(index in seq(1,length(smoothing.iterations.array))  ) {
+  for(index in seq(1,dim(grid.espansa)[1])  ) {
+
+    smoothIterations<-grid.espansa[index,1]
+    decimation.percentage<-grid.espansa[index,2]
+    uppa<-system.time(a<-checkDifferencesForAllROIs(obj_geoLet = obj,ROINameArray = ROINameArray,
+                               plotIt = plotIt, newPixelSpacing = newPixelSpacing,
+                               verbose=verbose, forceReCalculus=TRUE, fastEngine = fastEngine,
+                               decimation=decimation, decimation.percentage=decimation.percentage, 
+                               smoothing = TRUE,smoothing.iterations = smoothIterations))
+      
+    for(ROIName in ROINameArray) {
+      if(!is.list(tabella[[ROIName]])) tabella[[ROIName]]<-list();
+      riga<-c( uppa[3],smoothIterations, decimation.percentage, a[[ROIName]]$volumeratio, a[[ROIName]]$max.cum.tot, a[[ROIName]]$max.diff.tot )
+      tabella[[ROIName]]<-rbind(tabella[[ROIName]],riga)
+    }
+  }
+  return(  tabella  );
+}
 
 
 # pointLocation<-function( mesh, x, y, z ) {
