@@ -1201,6 +1201,8 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
   # it queries a DICOM file for a specific tag (short content, no image data)
   #=================================================================================
   getDICOMTag<-function(fileName="",tag=tag,debug=FALSE) {
+    
+#    cat("\n getting tag:", tag)
     stringa1<-"dcmdump"
 #    if(debug==TRUE) browser();
     # if he want an image, grab it by a raw dump
