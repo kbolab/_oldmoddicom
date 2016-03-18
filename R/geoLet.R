@@ -196,11 +196,11 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
   getAttrFromSOPiUID<-function( serUID, sopUID , attrName) {
     return( dataStorage$info[[serUID]][[sopUID]][[attrName]] )
   }
-  getROIVoxelCube.v2<-function(ROINAME,typeOfVoxels='image',SeriesInstanceUID=NA,pixelSpacing=NA) {
-    if(is.na(pixelSpacing)) pixelSpacing<-getPixelSpacing();
-    if(is.na(SeriesInstanceUID) & typeOfVoxels=='image')  SeriesInstanceUID<-giveBackImageSeriesInstanceUID();
-    
-  }
+#   getROIVoxelCube.v2<-function(ROINAME,typeOfVoxels='image',SeriesInstanceUID=NA,pixelSpacing=NA) {
+#     if(is.na(pixelSpacing)) pixelSpacing<-getPixelSpacing();
+#     if(is.na(SeriesInstanceUID) & typeOfVoxels=='image')  SeriesInstanceUID<-giveBackImageSeriesInstanceUID();
+#     
+#   }
   #=================================================================================
   # associateROIandImageSlices
   # Create the association between ROI and images
@@ -314,6 +314,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
             rescale.intercept<-as.numeric(getDICOMTagFromXML(fileName = i,tag ="0028,1052" )); # rescale Intercept)
             rescale.slope<-as.numeric(getDICOMTagFromXML(fileName = i,tag ="0028,1053" )); # rescale Slope)
             rescale.type<-getDICOMTagFromXML(fileName = i,tag ="0028,1054" ); # rescale Type)
+
             if(is.na(rescale.intercept)) rescale.intercept = 0;
             if(is.na(rescale.slope)) rescale.slope = 1;
             immagine<-immagine * rescale.slope + rescale.intercept
@@ -1377,7 +1378,6 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     SeriesInstanceUID<-giveBackImageSeriesInstanceUID()
     if(SeriesInstanceUID == '' ) stop("ERROR: missing CT/MR series")
     res<-getROIVoxelsFromCTRMN( Structure = Structure, SeriesInstanceUID = SeriesInstanceUID)
-    
     croppedRes<-list()
     croppedRes$DOM<-res$DOM
     croppedRes$geometricalInformationOfImages<-res$geometricalInformationOfImages
@@ -1439,6 +1439,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     # ---------------------------------------------------
     # Prendi la ROI e informazioni preliminari
     # ---------------------------------------------------  
+
     ROIVoxels<-getROIVoxels(Structure = ROIName)
     ROILocations<-ROIVoxels$masked.images$location
     pip.arr<-ROIVoxels$masked.images$voxelCube
@@ -1449,7 +1450,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
                                       fe = ROIVoxels$masked.images$location$fe,
                                       se = ROIVoxels$masked.images$location$se,te = ROIVoxels$masked.images$location$te)
     geomInfo<-getGeometricalInformationOfImage();
-
+    
     # prendi il DoseVoxelCube
     doseList<-getDoseVoxelCube();
     doseVoxelCube<-doseList$voxelCube
@@ -1499,13 +1500,19 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     # (fin qui lavoro ancora solo su CT e ROI, le dosi non compaiono)
     # ---------------------------------------------------
     # fai la mesh (senza visualizzare)
-    mesh.triangle<-contour3d(f = pip.arr.exploded, level = 1, x = x.coor, y = y.coor, rev(z.coor), engine = "none")
+    
+    threshold<-min(pip.arr.exploded[which(!is.na(pip.arr.exploded))])-1000  # prendi il minimo e togli ancora 1000
+    pip.arr.exploded[which(is.na(pip.arr.exploded),arr.ind = T )]<-threshold
+    #mesh.triangle<-contour3d(f = pip.arr.exploded, level = 1, x = x.coor, y = y.coor, rev(z.coor), engine = "none")
+    mesh.triangle<-contour3d(f = pip.arr.exploded, level = threshold+10, x = x.coor, y = y.coor, rev(z.coor), engine = "none")
+    
     # passa dai triangoli alle mesh
     mesh<-objS$triangle2mesh(x = mesh.triangle) 
     # pulizia
     mesh<-vcgClean(mesh = mesh, sel = c(0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,0,0,7,7))  
     if(decimation == TRUE) mesh<-vcgQEdecim(mesh = mesh, percent = decimation.percentage);
     if(smoothing == TRUE) mesh<-vcgSmooth(mesh = mesh, iteration = smoothing.iterations)
+
     # ---------------------------------------------------
     # interpola la DOSE
     # ---------------------------------------------------  
@@ -1727,6 +1734,7 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
       nY = numberOfRows,
       nZ = numberOfSlices
     )
+
     final.array<-array(data = final.array, dim = c(   numberOfColumns, numberOfRows, numberOfSlices )   )
     # In Example: 
     #
@@ -1753,10 +1761,16 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     
     #    return(list(TotalX=TotalX, TotalY=TotalY, FullZ=FullZ, Offset=Offset, 
     #                DOM=array(DOM, dim = c(3,3,length(index))), final.array=final.array, masked.images=final.array*image.arr))
+    
+
+    immagineMascherata<- array(NA, dim=c(  dim(image.arr)[1],dim(image.arr)[2],dim(image.arr)[3]  ))
+    immagineMascherata[which(final.array==1,arr.ind = TRUE)]<-image.arr[ which(final.array==1,arr.ind = TRUE) ]
+    
     return(list(
       "DOM"=array(DOM, dim = c(3,3,length(index))), 
       "final.array"=final.array, 
-      "masked.images"=final.array*image.arr,
+      #"masked.images"=final.array*image.arr,
+      "masked.images"=immagineMascherata,
       "geometricalInformationOfImages"=getGeometricalInformationOfImage()
     )
     )
@@ -1777,7 +1791,6 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
                as.integer(nX), as.integer(nY), as.integer(nZ),             
                as.integer(arrayAssociationROIandSlice), 
                as.double(DICOMOrientationVector),as.double(minX),as.double(maxX),as.double(minY),as.double(maxY))  
-    
     return(result[[1]])
   }
   cacheLoad<-function() {

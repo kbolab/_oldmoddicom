@@ -192,10 +192,11 @@ services<-function() {
   # ========================================================================================
   # expandCube: expand a cropped voxel cube
   # ========================================================================================     
-  expandCube<-function( littleCube,  x.start, y.start, z.start, fe, se, te) {
+  expandCube<-function( littleCube,  x.start, y.start, z.start, fe, se, te, def.val.for.expanded.space = NA) {
     
     if(length(dim(littleCube))==3) {
-      bigCube<-array(0,dim=c(fe,se,te) )
+      #bigCube<-array(0,dim=c(fe,se,te) )
+      bigCube<-array(def.val.for.expanded.space,dim=c(fe,se,te) )
       for(z in seq(1,dim(littleCube)[3] ) ) {
         for(y in seq(1,dim(littleCube)[2] ) ) {
           for(x in seq(1,dim(littleCube)[1] ) ) {
