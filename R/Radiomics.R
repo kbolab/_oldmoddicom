@@ -37,26 +37,30 @@ RAD.firstOrderFeatureImage.geoLet<-function(inputData) {
   histSamples<-500
   maxVoxelValue<-max(inputData$masked.images$voxelCube);  minVoxelValue<-min(inputData$masked.images$voxelCube);
   histSamples.array<-seq( from = minVoxelValue, to=maxVoxelValue, by = (maxVoxelValue-minVoxelValue)/histSamples   )
-  
+
   istogr <- c();    freq <- c();  i<-1;
   if(is.list(inputData) == TRUE  ) {
-    voxelCube.values<-inputData$masked.images$voxelCube[ inputData$masked.images$voxelCube!=0  ] 
+    #voxelCube.values<-inputData$masked.images$voxelCube[ inputData$masked.images$voxelCube!=0  ]
+    voxelCube.values<-inputData$masked.images$voxelCube[ !is.na(inputData$masked.images$voxelCube)  ] 
+    
     # Calcola l'istogramma dei grigi
-    istogr <- hist(voxelCube.values, breaks = histSamples,  plot=FALSE)
+    #istogr <- hist(voxelCube.values, breaks = histSamples,  plot=FALSE)
+    istogr <- discretize(x = voxelCube.values[which(!is.na(voxelCube.values),arr.ind = TRUE ) ], numBins = histSamples)        
     # Calcola le frequenze da dover utilizzare nel calcolo dell'entropia
-    freq <- freqs(y = istogr$counts)
+    #freq <- freqs(y = istogr$counts)
     # Calcola l'entropia di Shannon per ogni paziente
-    ImageEntropy[i] <- entropy.plugin(freqs = freq, unit = c("log2"))
+    #ImageEntropy[i] <- entropy.plugin(freqs = freq, unit = c("log2"))
+    ImageEntropy[i] <- entropy.plugin(freqs = istogr, unit = c("log2"))
     # Calcola la Kurtosis per ogni paziente (Kurtosis=0 distribuzione normale, Kurtosis > 0 distribuzione leptocurtica
     # cioè stretta, Kurtosis < 0 distribuzione platicurtica cioè larga)
-    ImageKurtosis[i] <- kurtosis (x = voxelCube.values)
+    ImageKurtosis[i] <- kurtosis (x = voxelCube.values[which(!is.na(voxelCube.values),arr.ind = TRUE ) ])
     # Calcola la Skewness per ogni paziente (Skewness = 0 simmetria perfetta, Skewness > 0 asimmetrica verso destra
     # Skewness < 0 asimmetrica verso sinistra)
-    ImageSkewness[i] <- skewness(x = voxelCube.values)
+    ImageSkewness[i] <- skewness(x = voxelCube.values[which(!is.na(voxelCube.values),arr.ind = TRUE ) ])
     #Calcola media dei grigi dei singoli pazienti
-    ImageMean[i] <- mean(x = voxelCube.values)
+    ImageMean[i] <- mean(x = voxelCube.values[which(!is.na(voxelCube.values),arr.ind = TRUE ) ])
     #Calcola deviazione standard
-    ImageStandDeviat[i] <- sd (x = voxelCube.values)
+    ImageStandDeviat[i] <- sd (x = voxelCube.values[which(!is.na(voxelCube.values),arr.ind = TRUE ) ])
     
     #Calcola la Enery, permette di valutare l'uniformità dell'immagine. Può assumere un valore tra 0 e 1:
     # 0 = non uniforme; 1 = uniforme;
@@ -104,29 +108,34 @@ RAD.firstOrderFeatureImage.mmButo <- function ( inputData ) {
         voxelCube.values<-unlist(inputData[[i]]$masked.images$voxelCube)
         voxelCube.values<-voxelCube.values[ voxelCube.values!=0  ] 
         # Calcola l'istogramma dei grigi
-        istogr <- hist(voxelCube.values, breaks = histSamples,  plot=FALSE)
+        #istogr <- hist(voxelCube.values, breaks = histSamples,  plot=FALSE)
+        
+        #istogr <- discretize(x = voxelCube.values, numBins = histSamples)
+        istogr <- discretize(x = voxelCube.values[which(!is.na(voxelCube.values),arr.ind = TRUE ) ], numBins = histSamples)        
         # Calcola le frequenze da dover utilizzare nel calcolo dell'entropia
-        freq <- freqs(y = istogr$counts)
+        #freq <- freqs(y = istogr$counts)
         # Calcola l'entropia di Shannon per ogni paziente
-        ImageEntropy[i] <- entropy.plugin(freqs = freq, unit = c("log2"))
+        #ImageEntropy[i] <- entropy.plugin(freqs = freq, unit = c("log2"))
+        ImageEntropy[i] <- entropy.plugin(freqs = istogr, unit = c("log2"))
         # Calcola la Kurtosis per ogni paziente (Kurtosis=0 distribuzione normale, Kurtosis > 0 distribuzione leptocurtica
         # cioè stretta, Kurtosis < 0 distribuzione platicurtica cioè larga)
-        ImageKurtosis[i] <- kurtosis (x = voxelCube.values)
+        ImageKurtosis[i] <- kurtosis (x = voxelCube.values[which(!is.na(voxelCube.values),arr.ind = TRUE ) ])
         # Calcola la Skewness per ogni paziente (Skewness = 0 simmetria perfetta, Skewness > 0 asimmetrica verso destra
         # Skewness < 0 asimmetrica verso sinistra)
-        ImageSkewness[i] <- skewness(x = voxelCube.values)
+        ImageSkewness[i] <- skewness(x = voxelCube.values[which(!is.na(voxelCube.values),arr.ind = TRUE ) ])
         #Calcola media dei grigi dei singoli pazienti
-        ImageMean[i] <- mean(x = voxelCube.values)
+        ImageMean[i] <- mean(x = voxelCube.values[which(!is.na(voxelCube.values),arr.ind = TRUE ) ])
         #Calcola deviazione standard
-        ImageStandDeviat[i] <- sd (x = voxelCube.values)
+        ImageStandDeviat[i] <- sd (x = voxelCube.values[which(!is.na(voxelCube.values),arr.ind = TRUE ) ])
         
         #Calcola la Enery, permette di valutare l'uniformità dell'immagine. Può assumere un valore tra 0 e 1:
         # 0 = non uniforme; 1 = uniforme;
         Energy <- 0
-        for (j in 1:length(istogr$density))
+        for (j in 1:length(istogr))
         {
-          Energy <- Energy+(istogr$density[j])^2
+          Energy <- Energy+(freqs(istogr)[j])^2
         }
+        
         ImageEnergy[i] <- Energy
     } else {
       ImageEntropy[i] <-NA;
