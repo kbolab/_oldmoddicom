@@ -108,8 +108,10 @@ FIL.applyFilterToStudy<-function(obj.mmButo, ROINameForNormalization=NA, valueFo
       voxelData.ready<-ROIVoxelData[[patient]]
       voxelData.ready.espanso <- obj.mmButo$mmButoLittleCube.expand(   voxelData.ready   ) 
       voxelDataDaRiapplicare <- voxelData.ready.espanso;
+      
       # e crea la relativa maschera
-      voxelData.ready.espanso[voxelData.ready.espanso!=0]<-1
+      #voxelData.ready.espanso[voxelData.ready.espanso!=0]<-1
+      voxelData.ready.espanso[!is.na(voxelData.ready.espanso)]<-1
       
       # prendi l'original voxelCute non tagliato dalla ROI
       # è su questo che dovrò applicare il filtro
@@ -131,11 +133,16 @@ FIL.applyFilterToStudy<-function(obj.mmButo, ROINameForNormalization=NA, valueFo
       }
       # l'output deve essere mascherato
       u<-voxelData.ready.espanso
-      u[u[,,]!=0]<-1
-      #FUNMap[[patient]]<-originalMR * voxelData.ready.espanso;
       
+      #u[  u[,,]!=0 ]<-1
+      u[which(!is.na(u),arr.ind = TRUE)]<-1
+      u[which(is.na(u),arr.ind = TRUE)]<-0
+      
+      #FUNMap[[patient]]<-originalMR * voxelData.ready.espanso;
       # Applica la maschera
+
       FUNMap[[patient]]<-originalMR * u;
+      FUNMap[[patient]][which(is.na(voxelData.ready.espanso),arr.ind = TRUE)]<-NA
       
       # se richiesto, CROPPA!
       if ( cropResult == TRUE )  FUNMap[[patient]]<-objS$cropCube( FUNMap[[patient]] )   
