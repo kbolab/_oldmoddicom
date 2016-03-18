@@ -146,8 +146,8 @@ checkDifferences<-function(obj_geoLet, ROIName="CTV1", plotIt = TRUE, newPixelSp
   both.cum<-DVH.merge(receiver = enci.cum,addendum = onci.cum)
   both.diff<-DVH.merge(receiver = enci.diff,addendum = onci.diff)
   
-  
   # error measures
+  total.volume<-both.cum@dvh[1,2]
   volumeratio<-min(both.diff@volume[1]/both.diff@volume[2], both.diff@volume[2]/both.diff@volume[1])
   
   delta.cum.array<-((both.cum@dvh[,2]-both.cum@dvh[,3]))
@@ -194,7 +194,8 @@ checkDifferences<-function(obj_geoLet, ROIName="CTV1", plotIt = TRUE, newPixelSp
                 "delta.cum.array" = delta.cum.array,
                 "delta.diff.array" = delta.diff.array,
                 "max.cum.tot"= max.cum.tot,
-                "max.diff.tot"= max.diff.tot
+                "max.diff.tot"= max.diff.tot,
+                "total.volume"=total.volume
                )
             )
 }
@@ -220,6 +221,8 @@ checkDifferencesForAllROIs<-function(obj_geoLet, ROINameArray, plotIt = TRUE, ne
       e.list[[nomeROI]]$volumeratio<-a$volumeratio
       e.list[[nomeROI]]$max.cum.tot<-a$max.cum.tot
       e.list[[nomeROI]]$max.diff.tot<-a$max.diff.tot
+      e.list[[nomeROI]]$total.volume<-a$total.volume
+
     }
   }
   return(e.list);
@@ -242,10 +245,10 @@ test.smoothing<-function( obj_geoLet, ROINameArray, plotIt = TRUE, newPixelSpaci
                                verbose=verbose, forceReCalculus=TRUE, fastEngine = fastEngine,
                                decimation=decimation, decimation.percentage=decimation.percentage, 
                                smoothing = TRUE,smoothing.iterations = smoothIterations))
-      
+
     for(ROIName in ROINameArray) {
-      if(!is.list(tabella[[ROIName]])) tabella[[ROIName]]<-list();
-      riga<-c( uppa[3],smoothIterations, decimation.percentage, a[[ROIName]]$volumeratio, a[[ROIName]]$max.cum.tot, a[[ROIName]]$max.diff.tot )
+      if( length(tabella[[ROIName]])==0 ) tabella[[ROIName]]<-c();
+      riga<-c( as.numeric(uppa[3]),smoothIterations, decimation.percentage, a[[ROIName]]$total.volume,a[[ROIName]]$volumeratio, a[[ROIName]]$max.cum.tot, a[[ROIName]]$max.diff.tot )
       tabella[[ROIName]]<-rbind(tabella[[ROIName]],riga)
     }
   }
