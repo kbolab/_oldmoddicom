@@ -144,8 +144,9 @@ new.mmButo<-function( caching = FALSE, cacheDir='./cache') {
   list_PixelSpacing<-function( collectionID='default' ) {
     elArr<-list();
     for(patName in names(list_geoLet[[ collectionID ]]) ) {
-      elArr[[patName]]<-list_geoLet[[ collectionID ]][[patName]]$getAttribute("PixelSpacing")
-      elArr[[patName]]<-as.numeric(c(elArr[[patName]],list_geoLet[[ collectionID ]][[patName]]$getAttribute("SliceThickness") ) )
+      elArr[[patName]]<-list_geoLet[[ collectionID ]][[patName]]$getPixelSpacing();
+      #elArr[[patName]]<-list_geoLet[[ collectionID ]][[patName]]$getAttribute("PixelSpacing")
+      #elArr[[patName]]<-as.numeric(c(elArr[[patName]],list_geoLet[[ collectionID ]][[patName]]$getAttribute("SliceThickness") ) )
     }
     return(elArr);    
   }
