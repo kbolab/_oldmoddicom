@@ -321,12 +321,19 @@ RAD.VirtualBiopsy <- function ( ROIVoxelData, dx.min=2, dy.min=2, dz.min=0, dx.m
         stepX <- stepCheckX[(controlli[p])];  stepY <- stepCheckY[(controlli[p])];  stepZ <- stepCheckZ[(controlli[p])]
         lunghezza <- lungh[p]; uni<-0;
         esameCarot <- array(data = c(0), dim = dim1*dim2*dim3)
+        
+        minValue<- min(examArray[which(!is.na(examArray),arr.ind = T)]) - 10000;
+        examArray[which(is.na(examArray),arr.ind = T)]<- minValue
+        
         # call the .C procedure
         prova.carot <- .C( "new_virtualBiopsy", as.double (examArray), as.integer (dim1), as.integer (dim2), 
                            as.integer (dim3), as.integer(stepX), as.integer(stepY), 
                            as.integer(stepZ), as.integer (lunghezza), as.integer(esameCarot) ,
-                           as.integer(uni) )
+                           as.integer(uni), as.double(minValue) )
         carot <- array(data = prova.carot[[9]], dim = c(dim1, dim2, dim3))
+        
+        carot[which(examArray == minValue,arr.ind = T)]<- NA
+        examArray[which(examArray == minValue,arr.ind = T)]<- NA
 
         # calculates the coords <x,y,z> of the centroids
         carot.index <- which(carot==1, arr.ind = T )
@@ -398,9 +405,11 @@ RAD.applyErosion<-function(  ROIVoxelData, margin.x=2, margin.y=2, margin.z=1 ) 
       print( paste( c("Eroding: ",i)   ,collapse = '')    );
       # declare the lists
       res[[i]]<-list();    res[[i]]$stat<-list();
-      
+
       # get the voxel cube and prepare the erosion
       erodedVoxelCube<-ROIVoxelData[[i]]$masked.images$voxelCube;
+      minValue<- min(erodedVoxelCube[which(!is.na(erodedVoxelCube),arr.ind = T)]) - 10000;
+      erodedVoxelCube[which(is.na(erodedVoxelCube),arr.ind = T)]<- minValue
       # get the dimensions and set the desired margins
       nX<-dim(erodedVoxelCube)[1];    nY<-dim(erodedVoxelCube)[2];    nZ<-dim(erodedVoxelCube)[3];
       mx<-margin.x; my<-margin.y; mz<-margin.z;
@@ -409,9 +418,11 @@ RAD.applyErosion<-function(  ROIVoxelData, margin.x=2, margin.y=2, margin.z=1 ) 
       
       aa<-.C("erosion",as.double(erodedVoxelCube), as.integer(nX), as.integer(nY), 
              as.integer(nZ),as.integer(margin.x),as.integer(margin.y), 
-             as.integer(margin.z), as.integer(iterator)) 
-  
+             as.integer(margin.z), as.integer(iterator), as.double(minValue)) 
+      
       erodedVoxelCube<-array(aa[[1]], dim=c(nX,nY,nZ))
+      erodedVoxelCube[which(erodedVoxelCube == minValue,arr.ind = T)]<- NA
+      
       ROIVoxelData[[i]]$masked.images$voxelCube<-erodedVoxelCube;
     }
     else {
@@ -500,6 +511,57 @@ RAD.easyROI<-function( ROIVoxelData ) {
   }
   return(res);
 }
+
+
+
+
+RAD.getNeighbourhood<-function( ROIVoxelData, margin.x = 1, margin.y = 1, margin.z = 0, sampleSize = 1000) {
+  
+  wErode<-RAD.applyErosion(  ROIVoxelData, margin.x=margin.x+1, margin.y=margin.y+1, margin.z=margin.z );
+  
+  totalMatrix<-list();
+  submatrix<-c(); id<-1;
+  for(patientName in names(wErode)) {
+    coords<-which( !is.na(wErode[[ patientName ]]$masked.images$voxelCube),arr.ind = TRUE  )
+    cat("\n extracting ",patientName,'......');
+    sliceNumber<-as.integer(dim(wErode[[ patientName ]]$masked.images$voxelCube)[3]/2)
+    riga<-sliceNumber;
+    matriceCentroidi<-coords[which(coords[,3]==sliceNumber),]
+    matriceCentroidi<-matriceCentroidi[ sample( seq(1,nrow(matriceCentroidi)),size = min(sampleSize, nrow(matriceCentroidi)),replace = FALSE)   ,]
+    coords<-matriceCentroidi
+
+    matriceAddendum<-c();
+    for(riga in seq(1,dim(matriceCentroidi)[1] )) {
+
+      from.x<-(coords[riga,1]-margin.x);  to.x<-(coords[riga,1]+margin.x);
+      from.y<-(coords[riga,2]-margin.y);  to.y<-(coords[riga,2]+margin.y);
+      from.z<-(coords[riga,3]-margin.z);  to.z<-(coords[riga,3]+margin.z);
+      matriceCoordsAround<-expand.grid( seq(from.x,to.x),  seq(from.y,to.y), seq(from.z,to.z) );
+
+      submatrix<-GTV[[patientName]]$masked.images$voxelCube[ (coords[riga,1]-margin.x):(coords[riga,1]+margin.x),
+                                                              (coords[riga,2]-margin.y):(coords[riga,2]+margin.y),
+                                                              (coords[riga,3]-margin.z):(coords[riga,3]+margin.z)   ]
+      matriceCoordsAround<-cbind(
+                                rep(id,nrow(matriceCoordsAround)),
+                                rep(coords[riga,1],nrow(matriceCoordsAround)),
+                                rep(coords[riga,2],nrow(matriceCoordsAround)),
+                                rep(coords[riga,3],nrow(matriceCoordsAround)),
+                                matriceCoordsAround, array(submatrix))
+#      matriceAddendum<-rbind(matriceAddendum,matriceCoordsAround)
+#      totalMatrix[[patientName]]<-rbind(totalMatrix[[patientName]],matriceAddendum)
+#      matriceAddendum<-rbind(matriceAddendum,matriceCoordsAround)
+      totalMatrix[[patientName]]<-rbind(totalMatrix[[patientName]],matriceCoordsAround)
+      
+      id<-id+1
+    }
+    
+    colnames(totalMatrix[[patientName]])<-c("id","x.centr","y.centr","z.centr","x.neigh","y.neigh","z.neigh","value")
+  }
+  cat("\n");
+  return(totalMatrix)
+}
+
+
 #' return the biopsy 
 #' 
 #' @description  get the list of possible centroids and return the list of biopsy

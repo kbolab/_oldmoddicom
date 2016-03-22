@@ -601,7 +601,7 @@ void rawSurface(double *arr, int *nX, int *nY, int *nZ, double *pSX, double *pSY
   return;
 }
 
-void erosion( double *cube, int *nX, int *nY, int *nZ, int *mx, int *my, int *mz, int *iterator) {
+void erosion( double *cube, int *nX, int *nY, int *nZ, int *mx, int *my, int *mz, int *iterator, double *minValue) {
   int x,y,z,center,ct;
   if( *iterator >= 10) return;  // just to avoid infinite loops
   if(*mx == 0 && *my ==0 && *mz ==0 ) return;
@@ -614,26 +614,26 @@ void erosion( double *cube, int *nX, int *nY, int *nZ, int *mx, int *my, int *mz
         // prendi l'offset relativo al punto in esame
         center = posDecod(x,y,z,*nX,*nY,*nZ);
         // se != 0 vediamo l'intorno
-        if(cube[center]>0) {
+        if(cube[center]>(*minValue+1)) {
           if( *mx>0 ){
             //if(x==0 || x==*nX) cube[center]=-1;
             if(x==0 || x>=(*nX-1)) cube[center]=-1;
-            else if( cube[posDecod(x-1,y,z,*nX,*nY,*nZ)]==0 || cube[posDecod(x+1,y,z,*nX,*nY,*nZ)]==0  ) cube[center]=-1;
+            else if( cube[posDecod(x-1,y,z,*nX,*nY,*nZ)]<(*minValue+1) || cube[posDecod(x+1,y,z,*nX,*nY,*nZ)]<(*minValue+1)  ) cube[center]=-1;
           }
           if( *my>0 ){
             // if(y==0 || y==*nY) cube[center]=-1;
             if(y==0 || y==(*nY-1)) cube[center]=-1;
-            else if( cube[posDecod(x,y-1,z,*nX,*nY,*nZ)]==0 || cube[posDecod(x,y+1,z,*nX,*nY,*nZ)]==0  ) cube[center]=-1;
+            else if( cube[posDecod(x,y-1,z,*nX,*nY,*nZ)]<(*minValue+1) || cube[posDecod(x,y+1,z,*nX,*nY,*nZ)]<(*minValue+1)  ) cube[center]=-1;
           }        
           if( *mz>0 ){
             // if(z==0 || z==*nZ) cube[center]=-1;
             if(z==0 || z==(*nZ-1)) cube[center]=-1;
-            else if( cube[posDecod(x,y,z-1,*nX,*nY,*nZ)]==0 || cube[posDecod(x,y,z+1,*nX,*nY,*nZ)]==0  )  cube[center]=-1;
+            else if( cube[posDecod(x,y,z-1,*nX,*nY,*nZ)]<(*minValue+1) || cube[posDecod(x,y,z+1,*nX,*nY,*nZ)]<(*minValue+1)  )  cube[center]=-1;
           }
         }
       }
     }
-}
+  }
   // decrementa i vincoli sui margini
   if( *mx>0 ) *mx = *mx - 1;
   if( *my>0 ) *my = *my - 1;  
@@ -641,11 +641,11 @@ void erosion( double *cube, int *nX, int *nY, int *nZ, int *mx, int *my, int *mz
   // trasforma tutti i '-1' in '0' per l'iterazione successiva
   //for(ct=0; ct<= posDecod((*nX-1),(*nY-1),(*nZ-1),*nX,*nY,*nZ); ct++) {
   for(ct=0; ct<= ((*nX)*(*nY)*(*nZ)-1); ct++) {
-    if(cube[ct]==-1) cube[ct]=0;
+    if(cube[ct]==-1) cube[ct]=(*minValue);
   }
   // rilancia ricorsivamente
   *iterator = *iterator + 1;
-  erosion( cube, nX, nY, nZ, mx, my, mz, iterator );
+  erosion( cube, nX, nY, nZ, mx, my, mz, iterator, minValue );
 }
 /*
  * give back row, cloumn, slice from cIndec (index of aa linearized matrix)

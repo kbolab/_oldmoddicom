@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 void new_virtualBiopsy(   double *esame, int *dim1, int *dim2, int *dim3, int *stepX, int *stepY, 
-                   int *stepZ, int *lunghezza, int *esameCarot, int *uni    ){
+                   int *stepZ, int *lunghezza, int *esameCarot, int *uni, double *minValue    ){
   
   int i,j,k;
   int indice,indice2;
@@ -18,14 +18,16 @@ void new_virtualBiopsy(   double *esame, int *dim1, int *dim2, int *dim3, int *s
         
         // se il valore analizzato e' diverso da zero entra in questo ciclo e fa tutti expand grid 
         //nell'intorno del punto      
-        if(   esame[  indice   ]  !=  0   ) { 
+        //if(   esame[  indice   ]  !=  0   ) {
+        if(   esame[  indice   ]  >  (*minValue+1)   ) { 
           
           indsomma=0;
           for (m=-*stepX; m<=*stepX; m++) {
             for (n=-*stepY; n<=*stepY; n++) {
               for (o=-*stepZ; o<=*stepZ; o++) {
                 indice2 = ((k+o)*(*dim1)*(*dim2))  +  ((j+n)*(*dim1))  +  (i+m);
-                if ( esame   [  indice2    ] !=0) {
+                //if ( esame   [  indice2    ] !=0) {
+                if ( esame   [  indice2    ] > (*minValue+1) ) {
                   //per ogni valore dell'intorno diverso da zero incrementa la variabile indsomma
                   indsomma=indsomma + 1;
                 }
