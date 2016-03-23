@@ -391,7 +391,10 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
               dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["RadionuclideTotalDose"]]<<-RadionuclideTotalDose
               dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["RadionuclideHalfLife"]]<<-RadionuclideHalfLife
               dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["PatientWeight"]]<<-PatientWeight
-              deltaT<-as.numeric(difftime(as.POSIXct(RadiopharmaceuticalStartTime, format = "%I:%M:%S"),as.POSIXct(AcquisitionTime, format = "%I:%M:%S"),units = 'secs'))
+
+              #deltaT<-as.numeric(difftime(as.POSIXct(RadiopharmaceuticalStartTime, format = "%H:%M:%S"),as.POSIXct(AcquisitionTime, format = "%H:%M:%S"),units = 'secs'))
+              deltaT<-as.numeric(difftime(as.POSIXct(AcquisitionTime, format = "%H:%M:%S"),as.POSIXct(RadiopharmaceuticalStartTime, format = "%H:%M:%S"),units = 'secs'))
+              
               if(is.na(deltaT) | is.null(deltaT) | deltaT==0) {
                 cat('\n Error: deltaT between RadiopharmaceuticalStartTime and AcquisitionTime seems to be invalid');
                 stop();
@@ -399,10 +402,23 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
               rescaleDueToUM<-1
               #if(rescale.type=='BQML') rescaleDueToUM<-10^(-3);
               if(rescale.type=='BQML') rescaleDueToUM<-1;
-                
-              SUVCoefficient.BW<-PatientWeight/( RadionuclideTotalDose * exp( -deltaT *log(2)/(RadionuclideHalfLife) ) )
+#               cat("\n =====================================================================");
+#               cat("\n SUV calculation: ");
+#               cat("\n PatientWeight = ",PatientWeight);  
+#               cat("\n RadionuclideTotalDose = ",RadionuclideTotalDose);
+#               cat("\n RadiopharmaceuticalStartTime = ",RadiopharmaceuticalStartTime);
+#               cat("\n AcquisitionTime = ",AcquisitionTime); 
+#               cat("\n deltaT = ",deltaT);
+#               cat("\n RadionuclideHalfLife = ",RadionuclideHalfLife);
+#               cat("\n rescaleDueToUM = ",rescaleDueToUM);
+#               cat("\n rescale.intercept = ",rescale.intercept);
+#               cat("\n rescale.slope = ",rescale.slope);  
+              
+              #SUVCoefficient.BW<-PatientWeight/( RadionuclideTotalDose * exp( -deltaT *log(2)/(RadionuclideHalfLife) ) )
+              SUVCoefficient.BW<-PatientWeight/( RadionuclideTotalDose * 2^( -deltaT / RadionuclideHalfLife ) ) * 1000
               SUVCoefficient.BW<-SUVCoefficient.BW*rescaleDueToUM
               dataStorage[["info"]][[seriesInstanceUID]][[instanceNumber]][["SUVCoefficient.BW"]]<<-SUVCoefficient.BW
+              dataStorage[["img"]][[seriesInstanceUID]][[instanceNumber]]<<-dataStorage[["img"]][[seriesInstanceUID]][[instanceNumber]] * SUVCoefficient.BW
             }
             instanceNumber<-getDICOMTag(i,"0020,0013")
             
