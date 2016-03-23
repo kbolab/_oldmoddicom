@@ -1418,8 +1418,10 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     voxelVolume<-newPixelSpacing[1]*newPixelSpacing[2]*newPixelSpacing[3];
     vv<-extractDoseVoxels(ROIName = ROIName, newPixelSpacing = newPixelSpacing,
                           verbose = verbose, forceReCalculus = forceReCalculus,
-                          fastEngine = fastEngine, decimation = decimation, decimation.percentage = decimation.percentage,
-                          smoothing = smoothing, smoothing.iterations = smoothing.iterations);
+                          fastEngine = fastEngine, decimation = decimation, 
+                          decimation.percentage = decimation.percentage,
+                          smoothing = smoothing, 
+                          smoothing.iterations = smoothing.iterations);
 
     voxelCube.Dose<-vv$voxelCube.Dose
     voxelCube.Dose<-array(voxelCube.Dose);
@@ -1440,7 +1442,8 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
   extractDoseVoxels<-function(ROIName ,newPixelSpacing=NA, plotIT = FALSE, 
                               verbose=FALSE, forceReCalculus=FALSE, fastEngine = TRUE,
                               decimation=FALSE, decimation.percentage=0.8, 
-                              smoothing=FALSE, smoothing.iterations = 10) {
+                              smoothing=FALSE, smoothing.iterations = 10,
+                              interpolate.dose = TRUE) {
     objS<-services();
     
     # verifica se è in cache
@@ -1450,7 +1453,6 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
       if(!is.list(dataChache$calculatedDVH[[ROIName]])) dataChache$calculatedDVH[[ROIName]]<<-list() 
       else return (dataChache$calculatedDVH[[ROIName]])
     }
-#    browser();
     # non è in cache... elabora!
     if(length(newPixelSpacing)==1) newPixelSpacing<-getPixelSpacing();
     pixelSpacing<-getPixelSpacing();
@@ -1486,13 +1488,6 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     bBox.max.x<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$max.x, Ny = ROILocations$max.y, Nz = ROILocations$max.z)[1]
     bBox.max.y<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$max.x, Ny = ROILocations$max.y, Nz = ROILocations$max.z)[2]
     bBox.max.z<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$max.x, Ny = ROILocations$max.y, Nz = ROILocations$max.z)[3]
-    
-#     bBox.min.x<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$min.x, Ny = ROILocations$min.y, Nz = ROILocations$min.z)[1] - 10*pixelSpacing[1]
-#     bBox.min.y<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$min.x, Ny = ROILocations$min.y, Nz = ROILocations$min.z)[2] - 10*pixelSpacing[2]
-#     bBox.min.z<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$min.x, Ny = ROILocations$min.y, Nz = ROILocations$min.z)[3]
-#     bBox.max.x<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$max.x, Ny = ROILocations$max.y, Nz = ROILocations$max.z)[1] + 10*pixelSpacing[2]
-#     bBox.max.y<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$max.x, Ny = ROILocations$max.y, Nz = ROILocations$max.z)[2] + 10*pixelSpacing[2]
-#     bBox.max.z<-getXYZFromNxNyNzOfImageVolume(Nx = ROILocations$max.x, Ny = ROILocations$max.y, Nz = ROILocations$max.z)[3]    
     
     min.x<-0; max.x<-as.numeric(geomInfo$Columns)-1;
     min.y<-0; max.y<-as.numeric(geomInfo$Rows)-1;
@@ -1568,11 +1563,20 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     deltaT<-delta1-delta2;
     yDosePointsCoord<-yDosePointsCoord-deltaT
     xDosePointsCoord<-xDosePointsCoord-ps.x
-    interpolata <- approx3d(x = xDosePointsCoord, y = yDosePointsCoord, z = zDosePointsCoord, 
-                            f = doseVoxelCube, 
-                            xout = as.array(resampling.coords.grid[,1]),
-                            yout = as.array(resampling.coords.grid[,2]), 
-                            zout = as.array(resampling.coords.grid[,3]))  
+    if(interpolate.dose == TRUE) {
+      interpolata <- approx3d(x = xDosePointsCoord, y = yDosePointsCoord, z = zDosePointsCoord, 
+                              f = doseVoxelCube, 
+                              xout = as.array(resampling.coords.grid[,1]),
+                              yout = as.array(resampling.coords.grid[,2]), 
+                              zout = as.array(resampling.coords.grid[,3]))  
+    } else {
+      interpolata <- getCloserDoseValue(x = xDosePointsCoord, y = yDosePointsCoord, z = zDosePointsCoord, 
+                              f = doseVoxelCube, 
+                              xout = as.array(resampling.coords.grid[,1]),
+                              yout = as.array(resampling.coords.grid[,2]), 
+                              zout = as.array(resampling.coords.grid[,3])) 
+      browser();
+    }  
     
     # costruisci la matrice 3D
     matriciona<-array(interpolata,dim=c(length(resampling.coords.x),length(resampling.coords.y),length(resampling.coords.z)   ))
@@ -1672,6 +1676,27 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     dataChache$calculatedDVH[[ROIName]]<<-res
     return( res ) ;
   }  
+  #=================================================================================
+  # NAME: getROIVoxelsFromCTRMN
+  # Estrae i voxel da scansioni CT,MR
+  #=================================================================================   
+  getCloserDoseValue<-function(x, y, z, f, xout,  yout,  zout ) {
+    
+    new.x<-c(); new.y<-c(); new.z<-c();
+    u.xout<-unique(xout);  u.yout<-unique(yout); u.zout<-unique(zout);
+    for( i in seq(1,length(u.xout)) ) {
+      new.x<-c( new.x,  which((abs(x-u.xout[i]))==min(abs(x-u.xout[i])),arr.ind = TRUE)[1]     )
+    }
+    for( i in seq(1,length(u.yout)) ) {
+      new.y<-c( new.y,  which((abs(y-u.yout[i]))==min(abs(y-u.yout[i])),arr.ind = TRUE)[1]     )
+    }
+    for( i in seq(1,length(u.zout)) ) {
+      new.z<-c( new.z,  which((abs(z-u.zout[i]))==min(abs(z-u.zout[i])),arr.ind = TRUE)[1]     )
+    }
+    resampling.coords.grid<-expand.grid(new.x,new.y,new.z)
+    uppa<-apply(resampling.coords.grid,1,function(x) { f[x[1],x[2],x[3]]  })
+    return(uppa);
+  } 
   #=================================================================================
   # NAME: getROIVoxelsFromCTRMN
   # Estrae i voxel da scansioni CT,MR
