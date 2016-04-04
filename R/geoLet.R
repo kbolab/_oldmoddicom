@@ -1250,12 +1250,37 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     return(valore)
   }
   #=================================================================================
+  # NAME: getTag
+  # estrae una tag dal file DICOM passando dall'XML. Potrebbe sostituire in toto
+  # la vecchia funzione getDICOMTag, un po' obsoleta?
+  #=================================================================================    
+  getTag<-function(fileName="",tag=tag,whichFile='first', whichSerie='firstImageSerie') {
+    if( whichFile!='first' | whichSerie!='firstImageSerie') {
+      cat("\n Not yet implemented. At the moment only 'first' and 'firstImageSerie' are allowed");
+      stop();
+    }
+    if(fileName=="" & whichFile=='first' & whichSerie=='firstImageSerie') {
+      serieName<-giveBackImageSeriesInstanceUID();
+      fileName<-dataStorage$info[[serieName]][[1]]$fileName
+    }    
+    res<-getDICOMTagFromXML(fileName = fileName,tag = tag,whichFile = whichFile, whichSerie = whichSerie)
+    return(  res );
+  }
+  #=================================================================================
   # NAME: getDICOMTagFromXML
   # estrae una tag dall'XML
   #=================================================================================  
-  getDICOMTagFromXML<-function(fileName="",tag=tag) {    
+  getDICOMTagFromXML<-function(fileName="",tag=tag,whichFile='first', whichSerie='firstImageSerie') {    
     obj.S<-services();
     massimo<-0
+    if( whichFile!='first' | whichSerie!='firstImageSerie') {
+      cat("\n Not yet implemented. At the moment only 'first' and 'firstImageSerie' are allowed");
+      stop();
+    }
+    if(fileName=="" & whichFile!='first' & whichSerie!='firstImageSerie') {
+      serieName<-giveBackImageSeriesInstanceUID();
+      fileName<-dataStorage$info[[serieName]][[1]]$fileName
+    }
     fileNameXML<-paste(fileName,".xml")    
     fileNameXML<-str_replace_all(string = fileNameXML , pattern = " .xml",replacement = ".xml")
     pathToStore<-substr(fileName,1,tail(which(strsplit(fileName, '')[[1]]=='/'),1)-1)
@@ -1959,12 +1984,21 @@ geoLet<-function(ROIVoxelMemoryCache=TRUE,folderCleanUp=FALSE) {
     
   }
   constructor( ROIVoxelMemoryCache , folderCleanUp)
-  return(list(openDICOMFolder=openDICOMFolder,getAttribute=getAttribute,
-              getDICOMTag=getDICOMTag,getROIList=getROIList,getROIPointList=getROIPointList,
-              setAttribute=setAttribute,getFolderContent=getFolderContent,getROIVoxels=getROIVoxels,
-              getGeometricalInformationOfImage=getGeometricalInformationOfImage,
+  return(list(openDICOMFolder=openDICOMFolder,
+              getAttribute=getAttribute,
+              getDICOMTag=getDICOMTag,
+              getROIList=getROIList,
+              getROIPointList=getROIPointList,
+              getTag = getTag,
+              setAttribute=setAttribute,
+              getFolderContent=getFolderContent,
+              getROIVoxels=getROIVoxels,
+              getGeometricalInformationOfImage=
+              getGeometricalInformationOfImage,
               getImageVoxelCube=getImageVoxelCube,
-              cacheLoad=cacheLoad, cacheSave=cacheSave, cacheDrop = cacheDrop, 
+              cacheLoad=cacheLoad, 
+              cacheSave=cacheSave, 
+              cacheDrop = cacheDrop, 
               getAlignedStructureAndVoxelCube = getAlignedStructureAndVoxelCube,
               getPixelSpacing = getPixelSpacing,
               importStructures=importStructures,

@@ -346,6 +346,24 @@ new.mmButo<-function( caching = FALSE, cacheDir='./cache') {
     bigVoxelCube<-objS$expandCube(littleCube = pc$masked.images$voxelCube, x.start = x, y.start=y, z.start=z, fe = fe, se = se, te = te )    
     return(bigVoxelCube)
   }
+  getDicomSummary<-function(   tagArray,
+                               collection='default',
+                               whichFile='first',
+                               whichSerie='firstImageSerie') {
+    matrice<-matrix('',nrow=length(list_geoLet[[collection]]),ncol=length(tagArray))
+    numRiga<-1;
+    for( Paz in names(list_geoLet[[collection]])) {
+      for( tagID in seq(1,length(tagArray))) {
+        tag<-tagArray[ tagID ]
+        glObj <- list_geoLet[[ collection ]][[ Paz ]]$getTag( tag = tag,whichFile = whichFile, whichSerie = whichSerie);
+        matrice[numRiga,tagID]<-as.character(glObj);
+      }
+      numRiga<-numRiga+1
+    }
+    colnames(matrice)<-tagArray
+    rownames(matrice)<-names(list_geoLet[[collection]])
+    return(matrice);
+  }  
   # ========================================================================================
   # conctructor: initialises the attributes
   # ========================================================================================
@@ -364,7 +382,8 @@ new.mmButo<-function( caching = FALSE, cacheDir='./cache') {
                 "getCorrectedROIVoxel"=getCorrectedROIVoxel,
                 "addGeoLetObjFile"=addGeoLetObjFile,
                 "dropGeoLetObj"=dropGeoLetObj,
-                "addGeoLetObj"=addGeoLetObj
+                "addGeoLetObj"=addGeoLetObj,
+                "getDicomSummary" = getDicomSummary
   ) )
 }
 
@@ -768,7 +787,10 @@ mmButoOLD<-function() {
     }
     return( list( "medie"=medie, "devianze"=devianze  ) )    
   } 
-  
+  getDicomSummary<-function(   tagArray = c("PatientName","PatientID","SliceThickness","RepetitionTime","EchoTime")   ) {
+    browser();
+    a<-1
+  }
   # ========================================================================================
   # setAttribute
   # set an attribute of the class
@@ -820,6 +842,7 @@ mmButoOLD<-function() {
     dropGeoLetObj = dropGeoLetObj,
     addGeoLetObj = addGeoLetObj,
     killGeoLetObj = killGeoLetObj,
+    getDicomSummary = getDicomSummary,
     ROIStats=ROIStats))
 }
 
