@@ -349,7 +349,8 @@ new.mmButo<-function( caching = FALSE, cacheDir='./cache') {
   getDicomSummary<-function(   tagArray,
                                collection='default',
                                whichFile='first',
-                               whichSerie='firstImageSerie') {
+                               whichSerie='firstImageSerie',
+                               RmarkdownPDFOutput=FALSE) {
     matrice<-matrix('',nrow=length(list_geoLet[[collection]]),ncol=length(tagArray))
     numRiga<-1;
     for( Paz in names(list_geoLet[[collection]])) {
@@ -362,6 +363,10 @@ new.mmButo<-function( caching = FALSE, cacheDir='./cache') {
     }
     colnames(matrice)<-tagArray
     rownames(matrice)<-names(list_geoLet[[collection]])
+#     if(RmarkdownPDFOutput==TRUE) {
+#       fileName.PDF<-'./dicomSummary.pdf'
+#       render("./Rmd/getDicomSummary.Rmd", "pdf_document", fileName.PDF, output_dir="report")    
+#     }
     return(matrice);
   }  
   # ========================================================================================

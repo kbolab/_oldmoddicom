@@ -1,0 +1,15 @@
+---
+title: "getDicomSummary"
+output:
+  pdf_document:
+    toc: true
+    highlight: zenburn
+---
+
+
+# \textcolor{blue}{Main Table}
+getDicomSummary report
+```{r, echo=FALSE}
+knitr::kable(matrice)
+```
+
