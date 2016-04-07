@@ -405,24 +405,27 @@ RAD.applyErosion<-function(  ROIVoxelData, margin.x=2, margin.y=2, margin.z=1 ) 
       print( paste( c("Eroding: ",i)   ,collapse = '')    );
       # declare the lists
       res[[i]]<-list();    res[[i]]$stat<-list();
-
+      
       # get the voxel cube and prepare the erosion
       erodedVoxelCube<-ROIVoxelData[[i]]$masked.images$voxelCube;
-      minValue<- min(erodedVoxelCube[which(!is.na(erodedVoxelCube),arr.ind = T)]) - 10000;
-      erodedVoxelCube[which(is.na(erodedVoxelCube),arr.ind = T)]<- minValue
       # get the dimensions and set the desired margins
       nX<-dim(erodedVoxelCube)[1];    nY<-dim(erodedVoxelCube)[2];    nZ<-dim(erodedVoxelCube)[3];
       mx<-margin.x; my<-margin.y; mz<-margin.z;
+      
+      cacheMatrix<-erodedVoxelCube
+      aaa<-erodedVoxelCube-100
+      sostitutoNA <- as.integer(min(aaa[(!is.na(aaa))]))
+      aaa[which(is.na(aaa), arr.ind = T)]<-sostitutoNA
+      erodedVoxelCube<-aaa
+      
       iterator<-0; # this is just to avoid infinite loops...
       # erode it!
-      
       aa<-.C("erosion",as.double(erodedVoxelCube), as.integer(nX), as.integer(nY), 
              as.integer(nZ),as.integer(margin.x),as.integer(margin.y), 
-             as.integer(margin.z), as.integer(iterator), as.double(minValue)) 
+             as.integer(margin.z), as.integer(iterator),as.integer(sostitutoNA)) 
       
       erodedVoxelCube<-array(aa[[1]], dim=c(nX,nY,nZ))
-      erodedVoxelCube[which(erodedVoxelCube == minValue,arr.ind = T)]<- NA
-      
+      erodedVoxelCube[which(erodedVoxelCube == sostitutoNA, arr.ind = T)]<-NA
       ROIVoxelData[[i]]$masked.images$voxelCube<-erodedVoxelCube;
     }
     else {
@@ -432,7 +435,6 @@ RAD.applyErosion<-function(  ROIVoxelData, margin.x=2, margin.y=2, margin.z=1 ) 
   }
   return( ROIVoxelData )
 }
-
 
 #' Apply erosion to a set of voxelCubes
 #' 

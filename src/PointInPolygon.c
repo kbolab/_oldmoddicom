@@ -601,7 +601,7 @@ void rawSurface(double *arr, int *nX, int *nY, int *nZ, double *pSX, double *pSY
   return;
 }
 
-void erosion( double *cube, int *nX, int *nY, int *nZ, int *mx, int *my, int *mz, int *iterator, double *minValue) {
+void erosion( double *cube, int *nX, int *nY, int *nZ, int *mx, int *my, int *mz, int *iterator, int *minValue) {
   int x,y,z,center,ct;
   if( *iterator >= 10) return;  // just to avoid infinite loops
   if(*mx == 0 && *my ==0 && *mz ==0 ) return;
